@@ -8,14 +8,16 @@ import { useLoading } from "@/contexts/LoadingContext";
 import ConfirmModal from "@/components/Modal/ConfirmModal";
 import SuccessModal from "@/components/Modal/SuccessModal";
 import { destinationService, Destination } from "@/services/destinationService";
+import { tourService, Tour } from "@/services/tourService";
 import { LoadingSpinner } from "@/components/Loading";
 
 const navItems = [
-  { href: "/tours", label: "Du Lịch" },
   { href: "/flights", label: "Vé Máy Bay" },
   { href: "/hotels", label: "Khách Sạn" },
   { href: "/entertainment", label: "Giải Trí" }
 ];
+
+
 
 export default function Header() {
   const pathname = usePathname();
@@ -26,6 +28,7 @@ export default function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDestinationsOpen, setIsDestinationsOpen] = useState(false);
+  const [isToursOpen, setIsToursOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
   const [destinations, setDestinations] = useState<Destination[]>([]);
@@ -33,6 +36,7 @@ export default function Header() {
     []
   );
   const [otherDestinations, setOtherDestinations] = useState<Destination[]>([]);
+  const [featuredTours, setFeaturedTours] = useState<Tour[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState<
     Array<{
@@ -44,27 +48,34 @@ export default function Header() {
   >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Load destinations from API
+  // Load destinations and tours from API
   useEffect(() => {
-    const loadDestinations = async () => {
+    const loadData = async () => {
       try {
-        const response = await destinationService.getDestinations({
+        // Load destinations
+        const destResponse = await destinationService.getDestinations({
           limit: 50
         });
-        if (response.success) {
-          const allDestinations = response.data.destinations;
+        if (destResponse.success) {
+          const allDestinations = destResponse.data.destinations;
           setDestinations(allDestinations);
           setPopularDestinations(
             allDestinations.filter((dest) => dest.popular)
           );
           setOtherDestinations(allDestinations.filter((dest) => !dest.popular));
         }
+
+        // Load featured tours
+        const toursResponse = await tourService.getFeaturedTours(6);
+        if (toursResponse.success) {
+          setFeaturedTours(toursResponse.data);
+        }
       } catch (error) {
-        console.error("Error loading destinations:", error);
+        console.error("Error loading data:", error);
       }
     };
 
-    loadDestinations();
+    loadData();
   }, []);
 
   const toggleMobileMenu = () => {
@@ -77,6 +88,12 @@ export default function Header() {
 
   const toggleDestinations = () => {
     setIsDestinationsOpen(!isDestinationsOpen);
+    setIsToursOpen(false); // Close tours when opening destinations
+  };
+
+  const toggleTours = () => {
+    setIsToursOpen(!isToursOpen);
+    setIsDestinationsOpen(false); // Close destinations when opening tours
   };
 
   const handleLogout = () => {
@@ -102,6 +119,7 @@ export default function Header() {
     // Mobile menu close
     setIsMobileMenuOpen(false);
     setIsDestinationsOpen(false);
+    setIsToursOpen(false);
   };
 
   // Handle search input change
@@ -304,6 +322,95 @@ export default function Header() {
                         onClick={() => setIsDestinationsOpen(false)}
                       >
                         Xem tất cả địa điểm
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Tours Dropdown */}
+              <div className="relative group">
+                <button
+                  onClick={toggleTours}
+                  className="relative font-medium transition-all duration-300 px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1"
+                >
+                  <span>Du Lịch</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-300 ${
+                      isToursOpen ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {/* Tours Dropdown Menu */}
+                {isToursOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
+                    {/* Popular Destinations with Tours */}
+                    <div className="px-4 pb-3 border-b border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                        Tour theo địa điểm
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {popularDestinations.slice(0, 6).map((destination) => (
+                          <Link
+                            key={destination._id}
+                            href={`/tours/${destination.slug}`}
+                            className="block p-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
+                            onClick={() => setIsToursOpen(false)}
+                          >
+                            <div className="font-medium text-xs">
+                              {destination.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {destination.region}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Featured Tours */}
+                    <div className="px-4 pt-3">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                        Tour nổi bật
+                      </h3>
+                      <div className="space-y-1">
+                        {featuredTours.slice(0, 4).map((tour) => (
+                          <Link
+                            key={tour._id}
+                            href={`/tours/detail/${tour.slug}`}
+                            className="block px-2 py-1.5 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
+                            onClick={() => setIsToursOpen(false)}
+                          >
+                            <div className="font-medium">
+                              {tour.title}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {tour.duration} • {tour.price?.toLocaleString()}đ
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* View All Link */}
+                    <div className="px-4 pt-3 border-t border-gray-100 mt-3">
+                      <Link
+                        href="/tours"
+                        className="block w-full text-center py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors font-medium text-sm"
+                        onClick={() => setIsToursOpen(false)}
+                      >
+                        Xem tất cả tour
                       </Link>
                     </div>
                   </div>
@@ -748,6 +855,102 @@ export default function Header() {
                   )}
                 </div>
 
+                {/* Tours Section */}
+                <div className="mb-4">
+                  <button
+                    onClick={toggleTours}
+                    className="w-full flex items-center justify-between font-medium text-slate-700 hover:text-blue-600 px-4 py-3 rounded-xl transition-all duration-300"
+                  >
+                    <span>Du Lịch</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-300 ${
+                        isToursOpen ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Mobile Tours Dropdown */}
+                  {isToursOpen && (
+                    <div className="mt-2 ml-4 space-y-1">
+                      {/* Popular Destinations with Tours */}
+                      <div className="mb-3">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
+                          Tour theo địa điểm
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          {popularDestinations.slice(0, 6).map((destination) => (
+                            <Link
+                              key={destination._id}
+                              href={`/tours/${destination.slug}`}
+                              className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              onClick={() => {
+                                setIsToursOpen(false);
+                                setIsMobileMenuOpen(false);
+                              }}
+                            >
+                              <div className="font-medium">
+                                {destination.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {destination.region}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Featured Tours */}
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
+                          Tour nổi bật
+                        </div>
+                        <div className="space-y-1">
+                          {featuredTours.slice(0, 4).map((tour) => (
+                            <Link
+                              key={tour._id}
+                              href={`/tours/detail/${tour.slug}`}
+                              className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              onClick={() => {
+                                setIsToursOpen(false);
+                                setIsMobileMenuOpen(false);
+                              }}
+                            >
+                              <div className="font-medium">
+                                {tour.title}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {tour.duration} • {tour.price?.toLocaleString()}đ
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* View all */}
+                      <Link
+                        href="/tours"
+                        className="block mx-2 mt-3 py-2 text-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-medium text-sm"
+                        onClick={() => {
+                          setIsToursOpen(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        Xem tất cả tour
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
                 {/* Regular Nav Items */}
                 {navItems.map((item) => (
                   <Link
@@ -850,3 +1053,5 @@ export default function Header() {
     </>
   );
 }
+
+
