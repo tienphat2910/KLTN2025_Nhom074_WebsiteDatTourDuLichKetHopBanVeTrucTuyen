@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { LoadingSpinner } from "@/components/Loading";
 
 const tours = [
   {
@@ -39,10 +40,27 @@ const tours = [
 
 export default function Tours() {
   const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsVisible(true);
+    // Simulate data loading
+    setTimeout(() => {
+      setIsLoading(false);
+      setIsVisible(true);
+    }, 1500);
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100 flex items-center justify-center">
+        <LoadingSpinner
+          type="travel"
+          size="xl"
+          text="Đang tải danh sách tour..."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
