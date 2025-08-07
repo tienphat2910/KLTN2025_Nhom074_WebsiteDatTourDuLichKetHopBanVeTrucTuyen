@@ -82,31 +82,142 @@ const options = {
                 },
                 Tour: {
                     type: 'object',
-                    required: ['title', 'destination', 'price', 'duration'],
+                    required: ['title', 'destinationId', 'price', 'startDate', 'endDate'],
                     properties: {
-                        id: {
+                        _id: {
                             type: 'string',
                             description: 'Tour ID'
                         },
                         title: {
                             type: 'string',
-                            description: 'Tour title'
-                        },
-                        destination: {
-                            type: 'string',
-                            description: 'Tour destination'
-                        },
-                        price: {
-                            type: 'number',
-                            description: 'Tour price in VND'
-                        },
-                        duration: {
-                            type: 'string',
-                            description: 'Tour duration (e.g., "3 ngày 2 đêm")'
+                            description: 'Tour title',
+                            example: 'Tour Phú Quốc 4N3Đ - Khám phá VinWonder, Safari, Bãi Sao, Cầu Hôn'
                         },
                         description: {
                             type: 'string',
                             description: 'Tour description'
+                        },
+                        destinationId: {
+                            type: 'string',
+                            description: 'Destination ID',
+                            example: 'D004'
+                        },
+                        departureLocation: {
+                            type: 'object',
+                            properties: {
+                                name: {
+                                    type: 'string',
+                                    example: 'Hà Nội'
+                                },
+                                code: {
+                                    type: 'string',
+                                    description: 'City code',
+                                    example: 'HAN'
+                                },
+                                fullName: {
+                                    type: 'string',
+                                    description: 'Full name of departure location',
+                                    example: 'Hà Nội'
+                                },
+                                region: {
+                                    type: 'string',
+                                    enum: ['Miền Bắc', 'Miền Trung', 'Miền Nam'],
+                                    description: 'Region of departure location',
+                                    example: 'Miền Bắc'
+                                }
+                            },
+                            required: ['name'],
+                            description: 'Tour departure location information'
+                        },
+                        itinerary: {
+                            oneOf: [
+                                {
+                                    type: 'array',
+                                    items: {
+                                        type: 'string'
+                                    },
+                                    description: 'Tour itinerary as array (legacy format)'
+                                },
+                                {
+                                    type: 'object',
+                                    patternProperties: {
+                                        '^day\\d+$': {
+                                            type: 'object',
+                                            properties: {
+                                                title: {
+                                                    type: 'string',
+                                                    example: 'Ngày 1: TP.HCM - PHÚ QUỐC (Ăn trưa, tối)'
+                                                },
+                                                description: {
+                                                    type: 'string',
+                                                    example: 'Tập trung tại sân bay Tân Sơn Nhất...'
+                                                }
+                                            },
+                                            required: ['title', 'description']
+                                        }
+                                    },
+                                    additionalProperties: false,
+                                    description: 'Tour itinerary as object with day1, day2, etc.',
+                                    example: {
+                                        day1: {
+                                            title: 'Ngày 1: TP.HCM - PHÚ QUỐC (Ăn trưa, tối)',
+                                            description: 'Tập trung tại sân bay Tân Sơn Nhất...'
+                                        },
+                                        day2: {
+                                            title: 'Ngày 2: BÃI SAO - CHÙA HỘ QUỐC',
+                                            description: 'Tham quan Chùa Hộ Quốc...'
+                                        }
+                                    }
+                                }
+                            ],
+                            description: 'Tour itinerary - supports both array and object formats'
+                        },
+                        startDate: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Tour start date'
+                        },
+                        endDate: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Tour end date'
+                        },
+                        price: {
+                            type: 'number',
+                            description: 'Tour price in VND',
+                            example: 7989000
+                        },
+                        discount: {
+                            type: 'number',
+                            description: 'Discount percentage',
+                            example: 0
+                        },
+                        pricingByAge: {
+                            type: 'object',
+                            properties: {
+                                adult: {
+                                    type: 'number',
+                                    example: 7989000
+                                },
+                                child: {
+                                    type: 'number',
+                                    example: 6990000
+                                },
+                                infant: {
+                                    type: 'number',
+                                    example: 3790000
+                                }
+                            }
+                        },
+                        seats: {
+                            type: 'number',
+                            description: 'Total seats',
+                            example: 30
+                        },
+                        availableSeats: {
+                            type: 'number',
+                            description: 'Available seats',
+                            example: 30
                         },
                         images: {
                             type: 'array',
@@ -115,28 +226,10 @@ const options = {
                             },
                             description: 'Tour images URLs'
                         },
-                        highlights: {
-                            type: 'array',
-                            items: {
-                                type: 'string'
-                            },
-                            description: 'Tour highlights'
-                        },
-                        includes: {
-                            type: 'array',
-                            items: {
-                                type: 'string'
-                            },
-                            description: 'What\'s included in the tour'
-                        },
-                        category: {
-                            type: 'string',
-                            enum: ['adventure', 'cultural', 'relaxation', 'family'],
-                            description: 'Tour category'
-                        },
-                        maxGuests: {
-                            type: 'number',
-                            description: 'Maximum number of guests'
+                        isFeatured: {
+                            type: 'boolean',
+                            description: 'Whether tour is featured',
+                            example: true
                         },
                         rating: {
                             type: 'number',
@@ -144,10 +237,38 @@ const options = {
                             maximum: 5,
                             description: 'Tour rating'
                         },
+                        reviewCount: {
+                            type: 'number',
+                            description: 'Number of reviews'
+                        },
+                        category: {
+                            type: 'string',
+                            enum: ['adventure', 'cultural', 'relaxation', 'family', 'luxury', 'budget'],
+                            description: 'Tour category'
+                        },
+                        duration: {
+                            type: 'string',
+                            description: 'Tour duration',
+                            example: '4N3Đ'
+                        },
+                        slug: {
+                            type: 'string',
+                            description: 'URL-friendly slug'
+                        },
                         isActive: {
                             type: 'boolean',
                             default: true,
                             description: 'Tour availability status'
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation date'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update date'
                         }
                     }
                 },
@@ -403,3 +524,4 @@ module.exports = {
     specs,
     swaggerUi
 };
+

@@ -1,0 +1,1483 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import LoadingSpinner from "@/components/Loading/LoadingSpinner";
+import { tourService, Tour, ItineraryDay } from "@/services/tourService";
+
+export default function TourDetailPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+
+  const [tour, setTour] = useState<Tour | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [showGallery, setShowGallery] = useState(false);
+  const [selectedParticipants, setSelectedParticipants] = useState({
+    adult: 1,
+    child: 0,
+    infant: 0
+  });
+
+  // Helper function to check if title contains departure location
+  const checkTitleContainsDeparture = (
+    title: string | undefined,
+    departureName: string | undefined
+  ) => {
+    if (!title || !departureName) return false;
+
+    const titleLower = title.toLowerCase();
+    const departureNameLower = departureName.toLowerCase();
+
+    // Check for various formats of departure in title
+    if (
+      departureNameLower.includes("hồ chí minh") ||
+      departureNameLower === "tp. hồ chí minh"
+    ) {
+      return (
+        titleLower.includes("tphcm") ||
+        titleLower.includes("tp.hcm") ||
+        titleLower.includes("hồ chí minh") ||
+        titleLower.includes("sài gòn")
+      );
+    }
+
+    if (departureNameLower === "hà nội") {
+      return titleLower.includes("hà nội") || titleLower.includes("hn");
+    }
+
+    if (departureNameLower === "đà nẵng") {
+      return titleLower.includes("đà nẵng");
+    }
+
+    // Generic check
+    return titleLower.includes(departureNameLower);
+  };
+
+  // Helper function to extract departure from title
+  const extractDepartureFromTitle = (title: string | undefined) => {
+    if (!title) return null;
+
+    const titleLower = title.toLowerCase();
+
+    // Check for various keywords that indicate departure
+    if (
+      titleLower.includes("khởi hành từ tphcm") ||
+      titleLower.includes("khởi hành từ hồ chí minh") ||
+      titleLower.includes("từ tp.hcm") ||
+      titleLower.includes("từ sài gòn")
+    ) {
+      return "TP. Hồ Chí Minh";
+    }
+
+    if (
+      titleLower.includes("khởi hành từ hà nội") ||
+      titleLower.includes("từ hà nội") ||
+      titleLower.includes("từ hn")
+    ) {
+      return "Hà Nội";
+    }
+
+    if (
+      titleLower.includes("khởi hành từ đà nẵng") ||
+      titleLower.includes("từ đà nẵng")
+    ) {
+      return "Đà Nẵng";
+    }
+
+    return null;
+  };
+
+  // Helper function to extract departure from slug
+  const extractDepartureFromSlug = (slugText: string | undefined) => {
+    if (!slugText) return null;
+
+    // Check for departure indicators in slug
+    if (
+      slugText.includes("-tu-tphcm") ||
+      slugText.includes("-tu-ho-chi-minh") ||
+      slugText.includes("-tu-sai-gon")
+    ) {
+      return "TP. Hồ Chí Minh";
+    }
+
+    if (slugText.includes("-tu-ha-noi") || slugText.includes("-tu-hn")) {
+      return "Hà Nội";
+    }
+
+    if (slugText.includes("-tu-da-nang")) {
+      return "Đà Nẵng";
+    }
+
+    return null;
+  };
+
+  useEffect(() => {
+    const loadTour = async () => {
+      try {
+        console.log("🔍 Loading tour with slug:", slug);
+        console.log("🔍 Current URL:", window.location.href);
+        console.log("🔍 Full URL params:", params);
+
+        // First try exact slug match
+        let response = await tourService.getTourBySlug(slug);
+
+        // Enhanced logging for debugging
+        console.log("🎯 Tour response:", response);
+        console.log("🎯 Response success:", response.success);
+
+        if (response.success) {
+          console.log("🎯 Response data:", response.data);
+          console.log("🎯 Found tour ID:", response.data?._id);
+          console.log("🎯 Found tour slug:", response.data?.slug);
+          console.log("🎯 Found tour title:", response.data?.title);
+          console.log(
+            "🎯 Departure location:",
+            response.data?.departureLocation?.name
+          );
+
+          // Check if the tour title and departure location match
+          const titleContainsDeparture = checkTitleContainsDeparture(
+            response.data?.title,
+            response.data?.departureLocation?.name
+          );
+
+          console.log("🔍 Title contains departure:", titleContainsDeparture);
+
+          // If the title contains a departure location that doesn't match the actual departure
+          if (!titleContainsDeparture) {
+            console.log(
+              "⚠️ WARNING: Title departure might not match actual departure location"
+            );
+
+            // Try to extract departure from title
+            const departureFromTitle = extractDepartureFromTitle(
+              response.data?.title
+            );
+            console.log(
+              "🔍 Extracted departure from title:",
+              departureFromTitle
+            );
+
+            if (
+              departureFromTitle &&
+              departureFromTitle !== response.data?.departureLocation?.name
+            ) {
+              console.log("⚠️ Departure mismatch detected!");
+              console.log(`   Title indicates: ${departureFromTitle}`);
+              console.log(
+                `   Data indicates: ${response.data?.departureLocation?.name}`
+              );
+
+              // Log warning but still use the returned data
+              console.log(
+                "⚠️ Using data as returned from API - check validate-departures endpoint"
+              );
+            }
+          }
+
+          // Set the tour data
+          setTour(response.data);
+        } else {
+          console.log("🎯 Response error:", response.message);
+        }
+
+        // If not found, try partial matching
+        if (!response.success) {
+          console.log("❌ Exact slug not found, trying partial matching...");
+
+          // Get all tours and find by partial title matching
+          const allToursResponse = await tourService.getTours({ limit: 100 });
+          if (allToursResponse.success) {
+            const tours = allToursResponse.data.tours;
+            console.log(
+              "📋 All available tours:",
+              tours.map((t) => ({
+                id: t._id,
+                title: t.title,
+                slug: t.slug,
+                departure: t.departureLocation?.name
+              }))
+            );
+
+            // Try to match by slug part
+            const exactSlugParts = slug.split("-");
+            console.log("🔍 Slug parts to match:", exactSlugParts);
+
+            // First, try to match tour with departure location in slug
+            const departureMatches = exactSlugParts.some(
+              (part) =>
+                part === "tphcm" || part === "ha-noi" || part === "da-nang"
+            );
+
+            console.log(
+              "🔍 Slug contains departure location:",
+              departureMatches
+            );
+
+            // Try to extract departure from slug
+            const departureFromSlug = extractDepartureFromSlug(slug);
+            console.log("🔍 Extracted departure from slug:", departureFromSlug);
+
+            // First look for tours with matching departure if we could extract one
+            let matchedTour = null;
+
+            if (departureFromSlug) {
+              console.log(
+                "🔍 Looking for tours with departure:",
+                departureFromSlug
+              );
+              matchedTour = tours.find(
+                (tour) =>
+                  tour.slug.includes(slug) &&
+                  tour.departureLocation?.name === departureFromSlug
+              );
+
+              if (matchedTour) {
+                console.log(
+                  "✅ Found matching tour with correct departure:",
+                  matchedTour.title
+                );
+              }
+            }
+
+            // If no match yet, try a more general title match
+            if (!matchedTour) {
+              // Try to find tour by matching title keywords
+              const slugKeywords = slug
+                .split("-")
+                .filter((word) => word.length > 2);
+              console.log("🔍 Searching with keywords:", slugKeywords);
+
+              matchedTour = tours.find((tour) => {
+                const titleWords = tour.title
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .replace(/đ/g, "d")
+                  .replace(/Đ/g, "D")
+                  .split(/[\s\-_,\.]+/);
+
+                const matchCount = slugKeywords.filter((keyword) =>
+                  titleWords.some(
+                    (word) => word.includes(keyword) || keyword.includes(word)
+                  )
+                ).length;
+
+                console.log(
+                  `🔍 Checking tour: ${tour.title}, match count: ${matchCount}, departure: ${tour.departureLocation?.name}`
+                );
+                return matchCount >= Math.min(3, slugKeywords.length * 0.6);
+              });
+            }
+
+            if (matchedTour) {
+              console.log("✅ Found matching tour:", matchedTour.title);
+              console.log(
+                "🔍 Matched tour departure:",
+                matchedTour.departureLocation?.name
+              );
+              setTour(matchedTour);
+            } else {
+              console.log("❌ No matching tour found");
+            }
+          }
+        } else if (response.success && response.data) {
+          console.log("✅ Setting tour data:", response.data);
+          console.log(
+            "🔍 Tour departure location:",
+            response.data.departureLocation?.name
+          );
+          setTour(response.data);
+        }
+      } catch (error) {
+        console.error("❌ Error loading tour:", error);
+      } finally {
+        setIsLoading(false);
+        setTimeout(() => setIsVisible(true), 100);
+      }
+    };
+
+    if (slug) {
+      loadTour();
+    }
+  }, [slug, params]); // Add params to dependency array
+
+  const openGallery = (index: number = 0) => {
+    setSelectedImageIndex(index);
+    setShowGallery(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeGallery = () => {
+    setShowGallery(false);
+    document.body.style.overflow = "unset";
+  };
+
+  const nextImage = () => {
+    if (tour) {
+      setSelectedImageIndex((prev) => (prev + 1) % tour.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (tour) {
+      setSelectedImageIndex(
+        (prev) => (prev - 1 + tour.images.length) % tour.images.length
+      );
+    }
+  };
+
+  const calculateTotalPrice = () => {
+    if (!tour) return 0;
+
+    const discountedPrice = tourService.getDiscountedPrice(
+      tour.price,
+      tour.discount
+    );
+    const adultTotal = selectedParticipants.adult * discountedPrice;
+    const childTotal =
+      selectedParticipants.child *
+      tourService.getDiscountedPrice(tour.pricingByAge.child, tour.discount);
+    const infantTotal =
+      selectedParticipants.infant *
+      tourService.getDiscountedPrice(tour.pricingByAge.infant, tour.discount);
+
+    return adultTotal + childTotal + infantTotal;
+  };
+
+  const updateParticipants = (
+    type: "adult" | "child" | "infant",
+    value: number
+  ) => {
+    setSelectedParticipants((prev) => ({
+      ...prev,
+      [type]: Math.max(0, value)
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100 flex items-center justify-center">
+        <LoadingSpinner
+          type="travel"
+          size="xl"
+          text="Đang tải thông tin tour..."
+        />
+      </div>
+    );
+  }
+
+  if (!tour) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
+        <Header />
+        <div className="container mx-auto px-4 pt-24 pb-16 text-center">
+          <div className="text-6xl mb-4">😕</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">
+            Không tìm thấy tour
+          </h1>
+          <p className="text-gray-600 mb-8">
+            Tour bạn đang tìm kiếm có thể đã bị xóa hoặc không tồn tại.
+            <br />
+            <span className="text-sm text-gray-500 mt-2 block">
+              Slug tìm kiếm: {slug}
+            </span>
+          </p>
+          <div className="space-y-4">
+            <Link
+              href="/tours"
+              className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 inline-block"
+            >
+              ← Xem tất cả tour
+            </Link>
+            <br />
+            <Link
+              href="/tours/phu-quoc"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 inline-block"
+            >
+              Xem tour Phú Quốc
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Parse itinerary from new structure - Enhanced debugging
+  const getItineraryDays = (): ItineraryDay[] => {
+    console.log("🔍 Processing itinerary for tour:", tour?._id);
+    console.log("🔍 Tour title:", tour?.title);
+    console.log("🔍 Full tour object:", tour);
+    console.log("🔍 Itinerary field specifically:", tour?.itinerary);
+    console.log("🔍 Itinerary type:", typeof tour?.itinerary);
+    console.log("🔍 Itinerary is null?:", tour?.itinerary === null);
+    console.log("🔍 Itinerary is undefined?:", tour?.itinerary === undefined);
+
+    if (!tour?.itinerary) {
+      console.log("❌ No itinerary found - returning empty array");
+      return [];
+    }
+
+    const itinerary = tour.itinerary;
+    console.log("📊 Itinerary content:", itinerary);
+    console.log("📊 Itinerary type:", typeof itinerary);
+    console.log("📊 Is array:", Array.isArray(itinerary));
+
+    // Handle object-based itinerary (new format)
+    if (
+      typeof itinerary === "object" &&
+      !Array.isArray(itinerary) &&
+      itinerary !== null
+    ) {
+      const days: ItineraryDay[] = [];
+
+      // Get all keys and filter for day keys
+      const allKeys = Object.keys(itinerary);
+      console.log("🔑 All keys:", allKeys);
+
+      // Find day keys (day1, day2, etc.)
+      const dayKeys = allKeys.filter((key) => /^day\d+$/i.test(key));
+      console.log("📅 Day keys found:", dayKeys);
+
+      if (dayKeys.length === 0) {
+        console.log("❌ No day keys found in itinerary object");
+        console.log("🔍 Available keys:", allKeys);
+        console.log(
+          "🔍 Sample key values:",
+          allKeys.slice(0, 3).map((key) => ({ [key]: itinerary[key] }))
+        );
+        return [];
+      }
+
+      // Sort day keys by number
+      const sortedDayKeys = dayKeys.sort((a, b) => {
+        const numA = parseInt(a.replace(/day/i, "")) || 0;
+        const numB = parseInt(b.replace(/day/i, "")) || 0;
+        return numA - numB;
+      });
+
+      console.log("📅 Sorted day keys:", sortedDayKeys);
+
+      // Process each day
+      sortedDayKeys.forEach((dayKey, index) => {
+        const dayData = itinerary[dayKey];
+        console.log(`📝 Processing ${dayKey}:`, dayData);
+        console.log(`📝 Day data type:`, typeof dayData);
+        console.log(
+          `📝 Day data keys:`,
+          dayData ? Object.keys(dayData) : "N/A"
+        );
+
+        if (dayData && typeof dayData === "object") {
+          // Extract title and description
+          const title = dayData.title || `Ngày ${index + 1}`;
+          const description = dayData.description || "";
+
+          console.log(`📝 Extracted title:`, title);
+          console.log(`📝 Extracted description length:`, description.length);
+
+          if (title && description) {
+            days.push({ title, description });
+            console.log(`✅ Added ${dayKey}:`, {
+              title: title.substring(0, 50) + "...",
+              descLength: description.length
+            });
+          } else {
+            console.log(`⚠️ Missing data in ${dayKey}:`, {
+              hasTitle: !!title,
+              hasDescription: !!description,
+              titleValue: title,
+              descValue: description?.substring(0, 100) + "..."
+            });
+          }
+        } else {
+          console.log(`❌ Invalid day data for ${dayKey}:`, typeof dayData);
+        }
+      });
+
+      console.log("🎉 Total days processed:", days.length);
+      return days;
+    }
+
+    // Handle array-based itinerary (legacy format)
+    if (Array.isArray(itinerary)) {
+      console.log("📋 Processing as array structure");
+      console.log("📋 Array length:", itinerary.length);
+      console.log("📋 Array content sample:", itinerary.slice(0, 2));
+      return itinerary.map(
+        (item, index): ItineraryDay => ({
+          title: `Ngày ${index + 1}`,
+          description:
+            typeof item === "string"
+              ? item
+              : item?.description || JSON.stringify(item)
+        })
+      );
+    }
+
+    console.log("❌ Unknown itinerary format");
+    console.log("❌ Itinerary value:", itinerary);
+    return [];
+  };
+
+  const itineraryDays = getItineraryDays();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
+      <Header />
+
+      {/* Breadcrumb */}
+      <div className="pt-24 pb-4">
+        <div className="container mx-auto px-4">
+          <nav className="text-sm text-gray-600">
+            <Link href="/" className="hover:text-blue-600">
+              Trang chủ
+            </Link>
+            <span className="mx-2">›</span>
+            <Link href="/tours" className="hover:text-blue-600">
+              Tours
+            </Link>
+            <span className="mx-2">›</span>
+            <span className="text-gray-800 font-medium">{tour.title}</span>
+          </nav>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 pb-16">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            {/* Hero Gallery */}
+            <div
+              className={`bg-white rounded-2xl shadow-lg overflow-hidden mb-8 transition-all duration-1000 ${
+                isVisible ? "animate-fade-in" : "opacity-0"
+              }`}
+            >
+              <div className="relative h-64 md:h-80 lg:h-96">
+                <div
+                  className="w-full h-full bg-cover bg-center cursor-pointer"
+                  style={{
+                    backgroundImage: `url('${
+                      tour.images[selectedImageIndex] || tour.images[0]
+                    }')`
+                  }}
+                  onClick={() => openGallery(selectedImageIndex)}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+                {/* Gallery Controls */}
+                <button
+                  onClick={() => openGallery(selectedImageIndex)}
+                  className="absolute top-4 right-4 bg-black/50 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-black/70 transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span className="text-sm font-medium">
+                    Xem ảnh ({tour.images.length})
+                  </span>
+                </button>
+
+                {/* Navigation arrows */}
+                {tour.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImageIndex((prev) =>
+                          prev === 0 ? tour.images.length - 1 : prev - 1
+                        );
+                      }}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImageIndex(
+                          (prev) => (prev + 1) % tour.images.length
+                        );
+                      }}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </>
+                )}
+
+                {/* Image indicators */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                  {tour.images.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImageIndex(index);
+                      }}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        index === selectedImageIndex
+                          ? "bg-white"
+                          : "bg-white/50"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Thumbnail strip */}
+              {tour.images.length > 1 && (
+                <div className="p-4 border-t border-gray-200">
+                  <div className="flex space-x-2 overflow-x-auto">
+                    {tour.images.slice(0, 8).map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImageIndex(index)}
+                        className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-colors ${
+                          index === selectedImageIndex
+                            ? "border-blue-500"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <div
+                          className="w-full h-full bg-cover bg-center"
+                          style={{ backgroundImage: `url('${image}')` }}
+                        />
+                      </button>
+                    ))}
+                    {tour.images.length > 8 && (
+                      <div className="flex-shrink-0 w-16 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500 font-medium">
+                        +{tour.images.length - 8}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tour Info */}
+            <div
+              className={`bg-white rounded-2xl shadow-lg p-6 mb-8 transition-all duration-1000 delay-300 ${
+                isVisible ? "animate-slide-up" : "opacity-0"
+              }`}
+            >
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
+                    {tour.title}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
+                      <svg
+                        className="w-4 h-4 mr-1 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                      <span className="font-medium">Khởi hành từ:</span>
+                      <span className="ml-1 text-blue-700">
+                        {tour.departureLocation.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <svg
+                        className="w-4 h-4 mr-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span>Thời gian: {tour.duration}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <svg
+                        className="w-4 h-4 mr-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      {new Date(tour.startDate).toLocaleDateString("vi-VN")} -{" "}
+                      {new Date(tour.endDate).toLocaleDateString("vi-VN")}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  {tour.rating && tour.rating > 0 && (
+                    <div className="flex items-center mb-2">
+                      <span className="text-yellow-500 text-lg">⭐</span>
+                      <span className="ml-1 font-semibold">{tour.rating}</span>
+                      <span className="ml-1 text-gray-500">
+                        ({tour.reviewCount || 0} đánh giá)
+                      </span>
+                    </div>
+                  )}
+                  {tour.isFeatured && (
+                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                      ⭐ Tour nổi bật
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                  Mô tả tour
+                </h3>
+                {/* Show warning if the title doesn't match the departure location */}
+                {tour.title &&
+                  tour.departureLocation &&
+                  !checkTitleContainsDeparture(
+                    tour.title,
+                    tour.departureLocation.name
+                  ) && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                      <div className="flex items-start">
+                        <div className="text-yellow-600 mr-2">⚠️</div>
+                        <div>
+                          <h5 className="font-medium text-yellow-800">
+                            Lưu ý về điểm khởi hành
+                          </h5>
+                          <p className="text-sm text-yellow-700">
+                            Tour này sẽ khởi hành từ{" "}
+                            <strong>{tour.departureLocation.name}</strong>. Vui
+                            lòng kiểm tra thông tin chi tiết với nhân viên tư
+                            vấn.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                <p className="text-gray-600 leading-relaxed">
+                  {tour.description}
+                </p>
+              </div>
+
+              {/* Availability */}
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                  Tình trạng chỗ
+                </h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <span className="text-green-600 font-medium">
+                      Còn {tour.availableSeats} chỗ trống
+                    </span>
+                    <span className="text-gray-500">
+                      / {tour.seats} chỗ tối đa
+                    </span>
+                  </div>
+                  <div className="w-48">
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(tour.availableSeats / tour.seats) * 100}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Itinerary - Enhanced for new structure */}
+            <div
+              className={`bg-white rounded-2xl shadow-lg p-6 mb-8 transition-all duration-1000 delay-500 ${
+                isVisible ? "animate-slide-up" : "opacity-0"
+              }`}
+            >
+              <h3 className="text-xl font-semibold text-gray-800 mb-6">
+                Lịch trình tour
+              </h3>
+
+              {/* Debug info - Enhanced */}
+              {process.env.NODE_ENV === "development" && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                  <details>
+                    <summary className="cursor-pointer font-medium text-yellow-800">
+                      🔍 Debug Itinerary ({itineraryDays.length} days found)
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <strong>Tour ID:</strong> {tour?._id}
+                      </div>
+                      <div>
+                        <strong>Tour Title:</strong> {tour?.title}
+                      </div>
+                      <div>
+                        <strong>Has itinerary field:</strong>{" "}
+                        {tour?.hasOwnProperty("itinerary") ? "Yes" : "No"}
+                      </div>
+                      <div>
+                        <strong>Itinerary type:</strong>{" "}
+                        {typeof tour?.itinerary}
+                      </div>
+                      <div>
+                        <strong>Itinerary is null:</strong>{" "}
+                        {String(tour?.itinerary === null)}
+                      </div>
+                      <div>
+                        <strong>Itinerary is undefined:</strong>{" "}
+                        {String(tour?.itinerary === undefined)}
+                      </div>
+                      <div>
+                        <strong>Raw tour object keys:</strong>
+                        <pre className="mt-1 text-xs overflow-auto bg-white p-2 rounded border">
+                          {tour ? Object.keys(tour).join(", ") : "No tour"}
+                        </pre>
+                      </div>
+                      <div>
+                        <strong>Raw itinerary:</strong>
+                        <pre className="mt-1 text-xs overflow-auto bg-white p-2 rounded border">
+                          {JSON.stringify(tour?.itinerary, null, 2)}
+                        </pre>
+                      </div>
+                      <div>
+                        <strong>Processed days:</strong>
+                        <pre className="mt-1 text-xs overflow-auto bg-white p-2 rounded border">
+                          {JSON.stringify(itineraryDays, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              )}
+
+              {itineraryDays.length > 0 ? (
+                <div className="space-y-8">
+                  {itineraryDays.map((day, index) => (
+                    <div key={index} className="relative">
+                      {/* Timeline line */}
+                      {index !== itineraryDays.length - 1 && (
+                        <div className="absolute left-5 top-12 w-0.5 h-full bg-gradient-to-b from-blue-300 to-blue-100"></div>
+                      )}
+
+                      <div className="flex space-x-4">
+                        {/* Day number circle */}
+                        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg relative z-10">
+                          {index + 1}
+                        </div>
+
+                        <div className="flex-1 pb-4">
+                          {/* Day title */}
+                          <div className="mb-3">
+                            <h4 className="text-lg font-bold text-gray-800 mb-1">
+                              {day.title}
+                            </h4>
+                            <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-blue-300 rounded-full"></div>
+                          </div>
+
+                          {/* Day description */}
+                          <div className="bg-gradient-to-r from-blue-50 to-white p-4 rounded-lg border-l-4 border-blue-400 shadow-sm">
+                            <div className="text-gray-700 leading-relaxed space-y-3">
+                              {day.description
+                                .split("\n")
+                                .map((paragraph, paragraphIndex) => {
+                                  if (!paragraph.trim()) return null;
+
+                                  return (
+                                    <div key={paragraphIndex}>
+                                      {paragraph
+                                        .trim()
+                                        .startsWith("Lựa chọn") ? (
+                                        <div className="font-semibold text-blue-700 bg-blue-100 px-3 py-2 rounded-lg mb-2">
+                                          📋 {paragraph.trim()}
+                                        </div>
+                                      ) : paragraph.trim().includes(":") &&
+                                        paragraph.length < 100 ? (
+                                        <h5 className="font-semibold text-gray-800 mt-4 mb-2 flex items-center">
+                                          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                                          {paragraph.trim()}
+                                        </h5>
+                                      ) : (
+                                        <div className="text-gray-600 leading-relaxed">
+                                          <p className="mb-2">
+                                            {paragraph.trim()}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+
+                            {/* Activity icons based on content */}
+                            <div className="flex flex-wrap gap-2 mt-4">
+                              {day.description.includes("tắm biển") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  🏊‍♀️ Tắm biển
+                                </span>
+                              )}
+                              {day.description.includes("Safari") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  🦁 Safari
+                                </span>
+                              )}
+                              {day.description.includes("VinWonder") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                  🎢 VinWonder
+                                </span>
+                              )}
+                              {day.description.includes("cano") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800">
+                                  🛥️ Cano
+                                </span>
+                              )}
+                              {day.description.includes("chùa") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  🏛️ Chùa
+                                </span>
+                              )}
+                              {day.description.includes("Grand World") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                  🏰 Grand World
+                                </span>
+                              )}
+                              {day.description.includes("Dinh Cậu") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  ⛩️ Dinh Cậu
+                                </span>
+                              )}
+                              {day.description.includes("Sunset Town") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                  🌅 Sunset Town
+                                </span>
+                              )}
+                              {day.description.includes("Cầu Hôn") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                                  💕 Cầu Hôn
+                                </span>
+                              )}
+                              {day.description.includes("ngọc trai") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  🦪 Ngọc trai
+                                </span>
+                              )}
+                              {day.description.includes("lặn ngắm san hô") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  🐠 Lặn ngắm san hô
+                                </span>
+                              )}
+                              {day.description.includes("tiêu") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  🌶️ Vườn tiêu
+                                </span>
+                              )}
+                              {day.description.includes("nước mắm") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                  🐟 Nước mắm
+                                </span>
+                              )}
+                              {day.description.includes("rượu Sim") && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                  🍷 Rượu Sim
+                                </span>
+                              )}
+                              {(day.description.includes("Ăn sáng") ||
+                                day.description.includes("Ăn trưa") ||
+                                day.description.includes("Ăn tối")) && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                  🍽️ Bao gồm bữa ăn
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Add detailed breakdown for complex activities */}
+                            {day.description.includes("Lựa chọn") && (
+                              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <h6 className="font-semibold text-yellow-800 mb-2 flex items-center">
+                                  <span className="mr-2">⚡</span>
+                                  Hoạt động tùy chọn
+                                </h6>
+                                <p className="text-sm text-yellow-700">
+                                  Tour cung cấp nhiều lựa chọn hoạt động để bạn
+                                  có thể tùy chỉnh trải nghiệm theo sở thích.
+                                  Chi phí cho các hoạt động tự túc sẽ được hướng
+                                  dẫn viên thông báo cụ thể.
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Time indicators */}
+                            {(day.description.includes("sáng") ||
+                              day.description.includes("chiều") ||
+                              day.description.includes("tối")) && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {day.description.includes("sáng") && (
+                                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                                    🌅 Buổi sáng
+                                  </span>
+                                )}
+                                {day.description.includes("chiều") && (
+                                  <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                                    ☀️ Buổi chiều
+                                  </span>
+                                )}
+                                {day.description.includes("tối") && (
+                                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                    🌙 Buổi tối
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-4">📋</div>
+                  <h4 className="text-lg font-medium mb-2">
+                    Lịch trình đang được cập nhật
+                  </h4>
+                  <p className="text-sm">
+                    Thông tin chi tiết lịch trình tour sẽ được cập nhật sớm
+                    nhất.
+                  </p>
+                  {process.env.NODE_ENV === "development" && (
+                    <div className="mt-4 text-xs text-red-500">
+                      Debug: Itinerary type = {typeof tour?.itinerary}, Keys ={" "}
+                      {tour?.itinerary
+                        ? Object.keys(tour.itinerary).join(", ")
+                        : "none"}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tour highlights */}
+              <div className="mt-8 p-4 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg border border-emerald-200">
+                <h5 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="text-emerald-600 mr-2">✨</span>
+                  Điểm nổi bật của tour
+                </h5>
+                <div className="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Khám phá VinWonder & Safari
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Tắm biển Bãi Sao tuyệt đẹp
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Chiêm ngưỡng Cầu Hôn lãng mạn
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Trải nghiệm Grand World
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Sidebar */}
+          <div className="lg:col-span-1">
+            <div
+              className={`bg-white rounded-2xl shadow-lg p-6 sticky top-24 transition-all duration-1000 delay-700 ${
+                isVisible ? "animate-slide-up" : "opacity-0"
+              }`}
+            >
+              {/* Price Display */}
+              <div className="mb-6">
+                <div className="flex items-baseline space-x-2 mb-2">
+                  {tour.discount > 0 && (
+                    <span className="text-lg text-gray-500 line-through">
+                      {tourService.formatPrice(tour.price)}
+                    </span>
+                  )}
+                  <span className="text-3xl font-bold text-green-600">
+                    {tourService.formatPrice(
+                      tourService.getDiscountedPrice(tour.price, tour.discount)
+                    )}
+                  </span>
+                </div>
+                <p className="text-gray-500 text-sm">Giá/người lớn</p>
+                {tour.discount > 0 && (
+                  <span className="inline-block mt-2 bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
+                    Giảm {tour.discount}%
+                  </span>
+                )}
+              </div>
+
+              {/* Participant Selection */}
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-800 mb-4">
+                  Chọn số lượng khách
+                </h4>
+
+                {/* Adults */}
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <span className="font-medium">Người lớn</span>
+                    <p className="text-sm text-gray-500">
+                      {tourService.formatPrice(
+                        tourService.getDiscountedPrice(
+                          tour.pricingByAge.adult,
+                          tour.discount
+                        )
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() =>
+                        updateParticipants(
+                          "adult",
+                          selectedParticipants.adult - 1
+                        )
+                      }
+                      disabled={selectedParticipants.adult <= 1}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center font-medium">
+                      {selectedParticipants.adult}
+                    </span>
+                    <button
+                      onClick={() =>
+                        updateParticipants(
+                          "adult",
+                          selectedParticipants.adult + 1
+                        )
+                      }
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Children */}
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <span className="font-medium">Trẻ em</span>
+                    <p className="text-sm text-gray-500">
+                      {tourService.formatPrice(
+                        tourService.getDiscountedPrice(
+                          tour.pricingByAge.child,
+                          tour.discount
+                        )
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() =>
+                        updateParticipants(
+                          "child",
+                          selectedParticipants.child - 1
+                        )
+                      }
+                      disabled={selectedParticipants.child <= 0}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center font-medium">
+                      {selectedParticipants.child}
+                    </span>
+                    <button
+                      onClick={() =>
+                        updateParticipants(
+                          "child",
+                          selectedParticipants.child + 1
+                        )
+                      }
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Infants */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium">Em bé</span>
+                    <p className="text-sm text-gray-500">
+                      {tourService.formatPrice(
+                        tourService.getDiscountedPrice(
+                          tour.pricingByAge.infant,
+                          tour.discount
+                        )
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() =>
+                        updateParticipants(
+                          "infant",
+                          selectedParticipants.infant - 1
+                        )
+                      }
+                      disabled={selectedParticipants.infant <= 0}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center font-medium">
+                      {selectedParticipants.infant}
+                    </span>
+                    <button
+                      onClick={() =>
+                        updateParticipants(
+                          "infant",
+                          selectedParticipants.infant + 1
+                        )
+                      }
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Price */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-800">
+                    Tổng cộng:
+                  </span>
+                  <span className="text-2xl font-bold text-green-600">
+                    {tourService.formatPrice(calculateTotalPrice())}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedParticipants.adult +
+                    selectedParticipants.child +
+                    selectedParticipants.infant}{" "}
+                  khách
+                </p>
+              </div>
+
+              {/* Booking Button */}
+              <button
+                disabled={tour.availableSeats === 0}
+                className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {tour.availableSeats === 0 ? "Hết chỗ" : "Đặt Tour Ngay"}
+              </button>
+
+              {/* Contact Info */}
+              <div className="mt-6 p-4 border border-gray-200 rounded-lg">
+                <h5 className="font-semibold text-gray-800 mb-2">
+                  Cần hỗ trợ?
+                </h5>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                      />
+                    </svg>
+                    Hotline: 1900 1808
+                  </div>
+                  <div className="flex items-center">
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Email: info@lutrip.com
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Photo Gallery Modal */}
+      {showGallery && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
+          <button
+            onClick={closeGallery}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <svg
+              className="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          {tour.images.length > 1 && (
+            <>
+              <button
+                onClick={prevImage}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10"
+              >
+                <svg
+                  className="w-8 h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={nextImage}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10"
+              >
+                <svg
+                  className="w-8 h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </>
+          )}
+
+          <div className="max-w-4xl max-h-[80vh] mx-4">
+            <img
+              src={tour.images[selectedImageIndex]}
+              alt={`${tour.title} - Ảnh ${selectedImageIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm">
+            {selectedImageIndex + 1} / {tour.images.length}
+          </div>
+
+          {tour.images.length > 1 && (
+            <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-2 max-w-sm overflow-x-auto">
+              {tour.images.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedImageIndex(index)}
+                  className={`w-16 h-12 rounded-md overflow-hidden border-2 flex-shrink-0 ${
+                    index === selectedImageIndex
+                      ? "border-white"
+                      : "border-transparent"
+                  }`}
+                >
+                  <img
+                    src={image}
+                    alt={`Thumbnail ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <Footer />
+    </div>
+  );
+}

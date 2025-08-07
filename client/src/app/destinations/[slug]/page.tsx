@@ -291,7 +291,15 @@ export default function DestinationDetailPage() {
               {serviceIcons.map((service) => (
                 <Link
                   key={service.id}
-                  href={service.href}
+                  href={
+                    service.id === "tour"
+                      ? `/tours/${destination.slug}`
+                      : service.id === "hotel"
+                      ? `/hotels/${destination.slug}`
+                      : service.id === "flight"
+                      ? `/flights/${destination.slug}`
+                      : service.href
+                  }
                   className="flex flex-col items-center p-3 md:p-4 rounded-xl hover:scale-105 transition-all duration-200 group"
                 >
                   <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform group-hover:bg-blue-50">
@@ -303,6 +311,36 @@ export default function DestinationDetailPage() {
                 </Link>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="container mx-auto px-4 pb-8">
+        <div
+          className={`bg-white rounded-2xl shadow-lg p-6 transition-all duration-1000 delay-400 ${
+            isVisible ? "animate-slide-up" : "opacity-0"
+          }`}
+        >
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Link
+              href={`/tours/${destination.slug}`}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              🗺️ Xem tour du lịch
+            </Link>
+            <Link
+              href={`/hotels/${destination.slug}`}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+            >
+              🏨 Tìm khách sạn
+            </Link>
+            <Link
+              href={`/flights/${destination.slug}`}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            >
+              ✈️ Đặt vé máy bay
+            </Link>
           </div>
         </div>
       </div>

@@ -119,8 +119,10 @@ export const destinationService = {
   // Get destination by slug
   getDestinationBySlug: async (slug: string): Promise<DestinationResponse> => {
     try {
+      console.log("Fetching destination by slug:", slug);
       const response = await fetch(`${API_BASE_URL}/destinations/slug/${slug}`);
       const result = await response.json();
+      console.log("Destination service response:", result);
       return result;
     } catch (error) {
       console.error("Get destination by slug error:", error);

@@ -75,6 +75,7 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.8s ease-out forwards;
+  animation-delay: var(--animation-delay, 0ms);
 }
 
 .animate-slide-down {
