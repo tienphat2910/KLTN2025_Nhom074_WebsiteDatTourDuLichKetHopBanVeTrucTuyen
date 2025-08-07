@@ -26,7 +26,8 @@ const signInFirebaseUser = async (email, password) => {
         return {
             success: true,
             user: userCredential.user,
-            uid: userCredential.user.uid
+            uid: userCredential.user.uid,
+            emailVerified: userCredential.user.emailVerified
         };
     } catch (error) {
         console.error('Firebase sign in error:', error);
@@ -34,6 +35,23 @@ const signInFirebaseUser = async (email, password) => {
             success: false,
             error: error.message
         };
+    }
+};
+
+// Send email verification
+const sendFirebaseEmailVerification = async (user) => {
+    try {
+        const actionCodeSettings = {
+            url: process.env.CLIENT_URL + '/email-verified',
+            handleCodeInApp: false
+        };
+
+        await sendEmailVerification(user, actionCodeSettings);
+        console.log(`✅ Verification email sent to: ${user.email}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Firebase send email verification error:', error);
+        return { success: false, error: error.message };
     }
 };
 
@@ -51,5 +69,6 @@ const deleteFirebaseUser = async (user) => {
 module.exports = {
     createFirebaseUser,
     signInFirebaseUser,
+    sendFirebaseEmailVerification,
     deleteFirebaseUser
 };
