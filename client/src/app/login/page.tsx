@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { authService } from "@/services/authService";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+  const { login } = useAuth();
+
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -19,11 +27,31 @@ export default function Login() {
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login data:", formData);
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const result = await authService.login({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (result.success && result.data) {
+        login(result.data.user, result.data.token);
+        router.push("/");
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError("Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -86,17 +114,24 @@ export default function Login() {
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
             <Link href="/" className="inline-block mb-4 sm:mb-6">
-              <span className="text-2xl sm:text-3xl font-bold text-black">
+              <span className="text-2xl sm:text-3xl font-bold text-white">
                 🌎 LuTrip
               </span>
             </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-black mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
               Đăng Nhập
             </h1>
-            <p className="text-black/70 text-sm sm:text-base">
+            <p className="text-white/70 text-sm sm:text-base">
               Chào mừng bạn trở lại!
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+              {error}
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -114,21 +149,6 @@ export default function Login() {
                 required
                 className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:border-sky-400 focus:bg-white/20 auth-input text-sm sm:text-base"
               />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                <svg
-                  className="w-5 h-5 text-white/60"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
-                  />
-                </svg>
-              </div>
             </div>
 
             {/* Password Field */}
@@ -145,21 +165,6 @@ export default function Login() {
                 required
                 className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:border-sky-400 focus:bg-white/20 auth-input text-sm sm:text-base"
               />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                <svg
-                  className="w-5 h-5 text-white/60"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              </div>
             </div>
 
             {/* Forgot Password */}
@@ -175,9 +180,10 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover shadow-lg text-sm sm:text-base"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover shadow-lg text-sm sm:text-base disabled:opacity-50"
             >
-              Đăng Nhập
+              {isLoading ? "Đang đăng nhập..." : "Đăng Nhập"}
             </button>
           </form>
 

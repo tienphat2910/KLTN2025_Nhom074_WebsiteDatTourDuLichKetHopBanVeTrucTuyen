@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { href: "/tours", label: "Du Lịch" },
@@ -15,6 +16,8 @@ export default function Header() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { user, logout, isLoading } = useAuth();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -58,8 +61,9 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Desktop Search */}
+          {/* Desktop Search and Auth */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Search Bar */}
             <div className="relative">
               <input
                 type="text"
@@ -83,21 +87,78 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Auth Buttons */}
-            <div className="flex items-center space-x-3">
-              <Link
-                href="/login"
-                className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-5 py-2.5 rounded-full hover:bg-blue-50 border border-transparent hover:border-blue-200"
-              >
-                Đăng nhập
-              </Link>
-              <Link
-                href="/register"
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-5 py-2.5 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                Đăng ký
-              </Link>
-            </div>
+            {/* Auth Section */}
+            {isLoading ? (
+              <div className="flex items-center space-x-3">
+                <div className="w-20 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="w-20 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+            ) : user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center space-x-2 text-slate-700 hover:text-blue-600 font-medium transition-colors px-3 py-2 rounded-full hover:bg-blue-50"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                    {user.fullName.charAt(0).toUpperCase()}
+                  </div>
+                  <span>{user.fullName}</span>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {/* User Dropdown */}
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <Link
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Thông tin cá nhân
+                    </Link>
+                    <Link
+                      href="/bookings"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Đặt chỗ của tôi
+                    </Link>
+                    <hr className="my-1" />
+                    <button
+                      onClick={logout}
+                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Link
+                  href="/login"
+                  className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-5 py-2.5 rounded-full hover:bg-blue-50 border border-transparent hover:border-blue-200"
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-5 py-2.5 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  Đăng ký
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile Controls */}
@@ -207,22 +268,58 @@ export default function Header() {
                 </Link>
               ))}
 
-              {/* Mobile Auth Buttons */}
+              {/* Mobile Auth Section */}
               <div className="flex flex-col space-y-3 pt-3 border-t border-gray-200">
-                <Link
-                  href="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
-                >
-                  Đăng nhập
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-4 py-3 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-center shadow-md"
-                >
-                  Đăng ký
-                </Link>
+                {user ? (
+                  <>
+                    <div className="flex items-center space-x-3 px-4 py-2">
+                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        {user.fullName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-800">
+                          {user.fullName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {user.email}
+                        </div>
+                      </div>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
+                    >
+                      Thông tin cá nhân
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="text-red-600 hover:text-red-700 font-medium transition-colors px-4 py-3 rounded-full hover:bg-red-50 border border-red-200 text-center"
+                    >
+                      Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
+                    >
+                      Đăng nhập
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-4 py-3 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-center shadow-md"
+                    >
+                      Đăng ký
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
