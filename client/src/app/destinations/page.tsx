@@ -236,7 +236,15 @@ export default function DestinationsPage() {
                 {serviceIcons.map((service) => (
                   <Link
                     key={service.id}
-                    href={service.href}
+                    href={
+                      service.id === "tour" && selectedDestination
+                        ? `/tours/${selectedDestination.slug}`
+                        : service.id === "hotel" && selectedDestination
+                        ? `/hotels/${selectedDestination.slug}`
+                        : service.id === "flight" && selectedDestination
+                        ? `/flights/${selectedDestination.slug}`
+                        : service.href
+                    }
                     className="flex flex-col items-center p-3 rounded-xl hover:bg-blue-50 transition-colors group"
                   >
                     <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">

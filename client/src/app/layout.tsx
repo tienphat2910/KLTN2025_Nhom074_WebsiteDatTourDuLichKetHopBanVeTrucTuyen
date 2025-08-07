@@ -3,8 +3,8 @@
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { PageLoader } from "@/components/Loading";
-import { usePageLoading } from "@/hooks/usePageLoading";
+import { LoadingProvider } from "@/contexts/LoadingContext";
+import PageTransition from "@/components/Loading/PageTransition";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,17 +18,9 @@ const poppins = Poppins({
 });
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const { isLoading, progress } = usePageLoading();
-
   return (
     <>
-      <PageLoader
-        isLoading={isLoading}
-        type="fullscreen"
-        progress={progress}
-        showProgress={true}
-        message="Chào mừng bạn đến với LuTrip"
-      />
+      <PageTransition />
       {children}
     </>
   );
@@ -51,9 +43,11 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.variable} ${poppins.variable} font-sans`}>
-        <AuthProvider>
-          <LayoutContent>{children}</LayoutContent>
-        </AuthProvider>
+        <LoadingProvider>
+          <AuthProvider>
+            <LayoutContent>{children}</LayoutContent>
+          </AuthProvider>
+        </LoadingProvider>
       </body>
     </html>
   );

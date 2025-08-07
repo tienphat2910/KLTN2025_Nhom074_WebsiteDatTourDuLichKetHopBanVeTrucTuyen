@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLoading } from "@/contexts/LoadingContext";
+import { LoadingSpinner } from "@/components/Loading";
 
 export default function Login() {
   const [isVisible, setIsVisible] = useState(false);
@@ -12,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const router = useRouter();
   const { login } = useAuth();
+  const { startLoading, stopLoading } = useLoading();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -33,6 +36,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    startLoading("auth");
     setError("");
 
     try {
@@ -51,6 +55,7 @@ export default function Login() {
       setError("Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsLoading(false);
+      stopLoading();
     }
   };
 
@@ -243,6 +248,15 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Add loading indicator */}
+      {isLoading && (
+        <div className="absolute inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl shadow-xl">
+            <LoadingSpinner type="travel" size="lg" text="Đang đăng nhập..." />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

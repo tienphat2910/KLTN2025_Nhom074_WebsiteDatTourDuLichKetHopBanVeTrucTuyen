@@ -1,12 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLoading } from "@/contexts/LoadingContext";
 import ConfirmModal from "@/components/Modal/ConfirmModal";
 import SuccessModal from "@/components/Modal/SuccessModal";
 import { destinationService, Destination } from "@/services/destinationService";
+import { LoadingSpinner } from "@/components/Loading";
 
 const navItems = [
   { href: "/tours", label: "Du Lịch" },
@@ -17,6 +19,9 @@ const navItems = [
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isLoading, loadingType } = useLoading();
+  const { user, logout, isAuthLoading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -28,7 +33,6 @@ export default function Header() {
     []
   );
   const [otherDestinations, setOtherDestinations] = useState<Destination[]>([]);
-  const { user, logout, isLoading } = useAuth();
 
   // Load destinations from API
   useEffect(() => {
@@ -80,9 +84,26 @@ export default function Header() {
     setShowLogoutSuccess(false);
   };
 
+  // Navigation handler with loading
+  const handleNavigation = (href: string) => {
+    if (pathname !== href) {
+      router.push(href);
+    }
+    // Mobile menu close
+    setIsMobileMenuOpen(false);
+    setIsDestinationsOpen(false);
+  };
+
   return (
     <>
       <header className="fixed top-0 w-full bg-white/95 backdrop-blur-md z-50 shadow-sm border-b border-white/20">
+        {/* Loading indicator */}
+        {isLoading && loadingType === "navigation" && (
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-slide"></div>
+          </div>
+        )}
+
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -238,13 +259,14 @@ export default function Header() {
               </div>
 
               {/* Auth Section */}
-              {isLoading ? (
-                <div className="flex items-center space-x-3">
-                  <div className="w-20 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                  <div className="w-20 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+              {isAuthLoading ? (
+                <div className="flex items-center space-x-3 bg-gray-100 rounded-full px-4 py-2">
+                  <LoadingSpinner type="dots" size="sm" showText={false} />
+                  <span className="text-sm text-gray-500">Đang tải...</span>
                 </div>
               ) : user ? (
                 <div className="relative">
+                  {/* User dropdown button */}
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center space-x-2 text-slate-700 hover:text-blue-600 font-medium transition-colors px-3 py-2 rounded-full hover:bg-blue-50 cursor-pointer"
@@ -578,14 +600,6 @@ export default function Header() {
             </div>
           )}
         </div>
-
-        {/* Click outside to close destinations dropdown */}
-        {isDestinationsOpen && (
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setIsDestinationsOpen(false)}
-          />
-        )}
       </header>
 
       {/* Logout Confirmation Modal */}

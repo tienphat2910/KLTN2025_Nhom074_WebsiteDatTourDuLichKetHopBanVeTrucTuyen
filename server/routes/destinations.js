@@ -297,8 +297,16 @@ router.get('/:id', async (req, res) => {
  */
 router.get('/slug/:slug', async (req, res) => {
     try {
+        console.log('🔍 Looking for destination with slug:', req.params.slug);
+
         const destination = await Destination.findOne({ slug: req.params.slug })
             .select('_id name description image popular slug region country createdAt');
+
+        console.log('🎯 Found destination:', destination ? {
+            _id: destination._id,
+            name: destination.name,
+            slug: destination.slug
+        } : 'NOT FOUND');
 
         if (!destination) {
             return res.status(404).json({
@@ -313,7 +321,7 @@ router.get('/slug/:slug', async (req, res) => {
             data: destination
         });
     } catch (error) {
-        console.error('Get destination by slug error:', error);
+        console.error('❌ Get destination by slug error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi server, vui lòng thử lại sau'
@@ -361,6 +369,17 @@ router.post('/fix-slugs', async (req, res) => {
             success: false,
             message: 'Lỗi server, vui lòng thử lại sau'
         });
+    }
+});
+
+// Add debug endpoint to check all destinations
+router.get('/debug/all', async (req, res) => {
+    try {
+        const destinations = await Destination.find({}).select('_id name slug');
+        console.log('📋 All destinations:', destinations);
+        res.json({ destinations });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

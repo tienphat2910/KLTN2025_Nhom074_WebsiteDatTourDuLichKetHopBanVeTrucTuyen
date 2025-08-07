@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
+import { useLoading } from "@/contexts/LoadingContext";
+import { LoadingSpinner } from "@/components/Loading";
 
 export default function Register() {
   const [isVisible, setIsVisible] = useState(false);
@@ -14,6 +16,7 @@ export default function Register() {
   const [emailSent, setEmailSent] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const router = useRouter();
+  const { startLoading, stopLoading } = useLoading();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -42,6 +45,7 @@ export default function Register() {
     }
 
     setIsLoading(true);
+    startLoading("auth");
     setError("");
 
     try {
@@ -62,11 +66,13 @@ export default function Register() {
       setError("Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsLoading(false);
+      stopLoading();
     }
   };
 
   const handleResendEmail = async () => {
     setIsLoading(true);
+    startLoading("auth");
     try {
       const result = await authService.resendVerification(
         formData.email,
@@ -81,6 +87,7 @@ export default function Register() {
       setError("Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsLoading(false);
+      stopLoading();
     }
   };
 
@@ -421,6 +428,19 @@ export default function Register() {
           </div>
         </div>
       </div>
+
+      {/* Add loading indicator */}
+      {isLoading && (
+        <div className="absolute inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl shadow-xl">
+            <LoadingSpinner
+              type="travel"
+              size="lg"
+              text={emailSent ? "Đang gửi email..." : "Đang đăng ký..."}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
