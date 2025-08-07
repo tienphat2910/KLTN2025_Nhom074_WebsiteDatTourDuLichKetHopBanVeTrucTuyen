@@ -70,7 +70,7 @@ body {
 }
 
 .animate-fade-in {
-  animation: fade-in 1s ease-out forwards;
+  animation: fade-in 0.8s ease-out forwards;
 }
 
 .animate-slide-up {
@@ -199,8 +199,8 @@ body {
   content: "";
   display: none;
   background-image: url("/images/banner-main.jpg"),
-    url("/images/bannertour.jpg"), url("/images/bannerflight.jpg"),
-    url("/images/bannerhotel.jpg"), url("/images/bannerentertainment.jpg");
+    url("/images/banner-tour.jpg"), url("/images/banner-flight.webp"),
+    url("/images/banner-hotel.jpg"), url("/images/banner-entertainment.webp");
 }
 
 /* Mobile menu styling */
@@ -362,4 +362,139 @@ body {
 
 .ripple-effect:hover::after {
   animation: ripple 0.6s ease-out;
+}
+
+/* Enhanced animations for login/register pages */
+@keyframes auth-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-pulse {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes auth-bounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes auth-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Fast animations for auth pages - Keep backdrop-filter */
+.auth-fade-in {
+  animation: auth-fade-in 0.5s ease-out forwards;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+}
+
+.auth-slide-left {
+  animation: auth-slide-left 0.4s ease-out forwards;
+}
+
+.auth-slide-right {
+  animation: auth-slide-right 0.4s ease-out forwards;
+}
+
+.auth-pulse {
+  animation: auth-pulse 2s ease-in-out infinite;
+}
+
+.auth-bounce {
+  animation: auth-bounce 1.5s ease-in-out infinite;
+}
+
+.auth-glow {
+  animation: auth-glow 2s ease-in-out infinite;
+}
+
+/* Fast transitions for auth forms - Preserve backdrop-filter */
+.auth-transition {
+  transition: all 0.2s ease-out;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+}
+
+.auth-transition-slow {
+  transition: all 0.3s ease-out;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+}
+
+.auth-button-hover {
+  transition: all 0.15s ease-out;
+}
+
+.auth-button-hover:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Auth input focus effects */
+.auth-input {
+  transition: all 0.2s ease-out;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.auth-input:focus {
+  transform: scale(1.01);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
 }
