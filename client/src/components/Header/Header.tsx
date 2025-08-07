@@ -33,6 +33,16 @@ export default function Header() {
     []
   );
   const [otherDestinations, setOtherDestinations] = useState<Destination[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchSuggestions, setSearchSuggestions] = useState<
+    Array<{
+      type: string;
+      title: string;
+      slug: string;
+      image?: string;
+    }>
+  >([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Load destinations from API
   useEffect(() => {
@@ -93,6 +103,97 @@ export default function Header() {
     setIsMobileMenuOpen(false);
     setIsDestinationsOpen(false);
   };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    // Show suggestions if query has at least 2 characters
+    if (query.length >= 2) {
+      // This would typically be an API call to get suggestions
+      // For now, we'll use a mock implementation
+      const mockSuggestions = [
+        // Tours suggestions
+        {
+          type: "tour",
+          title: `Tour ${query} Phú Quốc`,
+          slug: `tours/detail/phu-quoc-${query
+            .toLowerCase()
+            .replace(/\s+/g, "-")}`,
+          image:
+            "https://res.cloudinary.com/de5rurcwt/image/upload/v1754570810/LuTrip/phu-quoc_zhihkc.jpg"
+        },
+        {
+          type: "tour",
+          title: `Tour Đà Lạt ${query}`,
+          slug: `tours/detail/da-lat-${query
+            .toLowerCase()
+            .replace(/\s+/g, "-")}`,
+          image:
+            "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567626/LuTrip/dulichsapa-1650268886-1480-1650277620_bcldcd.png"
+        },
+        // Destination suggestions
+        {
+          type: "destination",
+          title: `Điểm đến ${query}`,
+          slug: `destinations/${query.toLowerCase().replace(/\s+/g, "-")}`,
+          image:
+            "https://res.cloudinary.com/de5rurcwt/image/upload/v1754568367/LuTrip/hinh-nen-viet-nam-4k35_piebu1.jpg"
+        },
+        // Hotel suggestions
+        {
+          type: "hotel",
+          title: `Khách sạn ${query}`,
+          slug: `hotels/${query.toLowerCase().replace(/\s+/g, "-")}`
+        }
+      ];
+
+      setSearchSuggestions(mockSuggestions);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle search submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+      setShowSuggestions(false);
+
+      // Close mobile search if open
+      if (isSearchOpen) {
+        setIsSearchOpen(false);
+      }
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (slug: string) => {
+    router.push(`/${slug}`);
+    setSearchQuery("");
+    setShowSuggestions(false);
+
+    // Close mobile search if open
+    if (isSearchOpen) {
+      setIsSearchOpen(false);
+    }
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowSuggestions(false);
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
 
   return (
     <>
@@ -236,26 +337,91 @@ export default function Header() {
             <div className="hidden md:flex items-center space-x-4">
               {/* Search Bar */}
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm tour, khách sạn, vé máy bay..."
-                  className="w-80 pl-12 pr-4 py-3 text-slate-700 bg-white border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all duration-200 placeholder-gray-400"
-                />
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                  <svg
-                    className="w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <form onSubmit={handleSearchSubmit}>
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm tour, khách sạn, vé máy bay..."
+                    className="w-80 pl-12 pr-4 py-3 text-slate-700 bg-white border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all duration-200 placeholder-gray-400"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (searchQuery.length >= 2) {
+                        setShowSuggestions(true);
+                      }
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                  </button>
+                </form>
+
+                {/* Search Suggestions */}
+                {showSuggestions && searchSuggestions.length > 0 && (
+                  <div
+                    className="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-80 overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-3 border-b border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-800">
+                        Kết quả tìm kiếm
+                      </h3>
+                    </div>
+                    {searchSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="p-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                        onClick={() => handleSuggestionClick(suggestion.slug)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {suggestion.image && (
+                            <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                              <img
+                                src={suggestion.image}
+                                alt={suggestion.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-800">
+                              {suggestion.title}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {suggestion.type === "tour" && "🗺️ Tour du lịch"}
+                              {suggestion.type === "destination" &&
+                                "📍 Điểm đến"}
+                              {suggestion.type === "hotel" && "🏨 Khách sạn"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="p-2 border-t border-gray-100">
+                      <button
+                        onClick={handleSearchSubmit}
+                        className="w-full text-center py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors font-medium text-sm"
+                      >
+                        Xem tất cả kết quả cho "{searchQuery}"
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Auth Section */}
@@ -394,15 +560,26 @@ export default function Header() {
           {isSearchOpen && (
             <div className="md:hidden mt-4 pb-4 border-t border-gray-200 animate-slide-down">
               <div className="pt-4">
-                <div className="relative">
+                <form onSubmit={handleSearchSubmit} className="relative">
                   <input
                     type="text"
                     placeholder="Tìm kiếm..."
                     className="w-full pl-12 pr-4 py-3 text-slate-700 bg-white border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (searchQuery.length >= 2) {
+                        setShowSuggestions(true);
+                      }
+                    }}
                   />
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                  <button
+                    type="submit"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
+                  >
                     <svg
-                      className="w-5 h-5 text-gray-400"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -414,8 +591,55 @@ export default function Header() {
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                       />
                     </svg>
+                  </button>
+                </form>
+
+                {/* Mobile Search Suggestions */}
+                {showSuggestions && searchSuggestions.length > 0 && (
+                  <div
+                    className="mt-2 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-80 overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {searchSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
+                        onClick={() => handleSuggestionClick(suggestion.slug)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {suggestion.image && (
+                            <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                              <img
+                                src={suggestion.image}
+                                alt={suggestion.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-800">
+                              {suggestion.title}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {suggestion.type === "tour" && "🗺️ Tour du lịch"}
+                              {suggestion.type === "destination" &&
+                                "📍 Điểm đến"}
+                              {suggestion.type === "hotel" && "🏨 Khách sạn"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="p-3">
+                      <button
+                        onClick={handleSearchSubmit}
+                        className="w-full text-center py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors font-medium text-sm"
+                      >
+                        Xem tất cả kết quả
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

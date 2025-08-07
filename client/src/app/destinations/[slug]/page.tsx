@@ -315,36 +315,6 @@ export default function DestinationDetailPage() {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="container mx-auto px-4 pb-8">
-        <div
-          className={`bg-white rounded-2xl shadow-lg p-6 transition-all duration-1000 delay-400 ${
-            isVisible ? "animate-slide-up" : "opacity-0"
-          }`}
-        >
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link
-              href={`/tours/${destination.slug}`}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              🗺️ Xem tour du lịch
-            </Link>
-            <Link
-              href={`/hotels/${destination.slug}`}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
-            >
-              🏨 Tìm khách sạn
-            </Link>
-            <Link
-              href={`/flights/${destination.slug}`}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
-            >
-              ✈️ Đặt vé máy bay
-            </Link>
-          </div>
-        </div>
-      </div>
-
       {/* Suggestions Section */}
       <div className="container mx-auto px-4 pb-16">
         <div
