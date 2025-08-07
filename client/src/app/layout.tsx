@@ -1,34 +1,59 @@
-import type { Metadata } from "next";
+"use client";
+
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PageLoader } from "@/components/Loading";
+import { usePageLoading } from "@/hooks/usePageLoading";
 
 const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"]
+  subsets: ["latin"],
+  variable: "--font-inter"
 });
 
 const poppins = Poppins({
-  variable: "--font-poppins",
+  weight: ["300", "400", "500", "600", "700"],
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"]
+  variable: "--font-poppins"
 });
 
-export const metadata: Metadata = {
-  title: "LuTrip - Khám phá Việt Nam",
-  description:
-    "Đặt tour du lịch, vé máy bay, khách sạn và vé giải trí tại Việt Nam"
-};
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const { isLoading, progress } = usePageLoading();
+
+  return (
+    <>
+      <PageLoader
+        isLoading={isLoading}
+        type="fullscreen"
+        progress={progress}
+        showProgress={true}
+        message="Chào mừng bạn đến với LuTrip"
+      />
+      {children}
+    </>
+  );
+}
 
 export default function RootLayout({
   children
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="vi">
-      <body className={`${inter.variable} ${poppins.variable} antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+      <head>
+        <title>LuTrip - Khám phá Việt Nam</title>
+        <meta
+          name="description"
+          content="Đặt tour du lịch, vé máy bay, khách sạn và vé giải trí tại Việt Nam"
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body className={`${inter.variable} ${poppins.variable} font-sans`}>
+        <AuthProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </AuthProvider>
       </body>
     </html>
   );

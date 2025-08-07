@@ -112,20 +112,24 @@ export default function Home() {
                 href={service.href}
                 className={`group transition-all duration-700 delay-${
                   index * 100
-                } ${isVisible ? "animate-slide-up" : "opacity-0"}`}
+                } ${isVisible ? "animate-slide-up" : "opacity-0"} h-full`}
               >
                 <div
-                  className={`${service.bgColor} backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/20`}
+                  className={`${service.bgColor} backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/20 h-full flex flex-col`}
                 >
                   <div
-                    className={`w-16 h-16 bg-gradient-to-r ${service.gradient} rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:rotate-12 transition-transform duration-300`}
+                    className={`w-16 h-16 bg-gradient-to-r ${service.gradient} rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:rotate-12 transition-transform duration-300 flex-shrink-0`}
                   >
                     {service.icon}
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-800 mb-2">
-                    {service.title}
-                  </h3>
-                  <p className="text-slate-600">{service.description}</p>
+                  <div className="flex-1 flex flex-col">
+                    <h3 className="text-xl font-semibold text-slate-800 mb-2">
+                      {service.title}
+                    </h3>
+                    <p className="text-slate-600 flex-1">
+                      {service.description}
+                    </p>
+                  </div>
                 </div>
               </Link>
             ))}
