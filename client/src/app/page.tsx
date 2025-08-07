@@ -56,10 +56,11 @@ export default function Home() {
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat transform scale-110 transition-transform duration-[20s] ease-out"
+            className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-[20s] ease-out"
             style={{
-              backgroundImage: "url('/images/banner-main.jpg')",
-              filter: "brightness(0.3)"
+              backgroundImage:
+                "url('https://res.cloudinary.com/de5rurcwt/image/upload/v1754567963/LuTrip/anh-chup-man-hinh-2024-04-01-luc-12-crop-1711950811260_tulfat.png')",
+              filter: "brightness(0.7)"
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-purple-900/30 to-slate-900/40" />
@@ -138,14 +139,15 @@ export default function Home() {
       </section>
 
       {/* Popular Destinations Section */}
-      <section className="relative py-16 px-4 overflow-hidden">
+      <section className="relative py-25 min-h-[450px] px-4 overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <div
             className="w-full h-full bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: "url('/images/banner-main.jpg')",
-              filter: "brightness(0.4)"
+              backgroundImage:
+                "url('https://res.cloudinary.com/de5rurcwt/image/upload/v1754568367/LuTrip/hinh-nen-viet-nam-4k35_piebu1.jpg')",
+              filter: "brightness(1)"
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-blue-900/60" />
@@ -169,19 +171,22 @@ export default function Home() {
             {[
               {
                 name: "Hạ Long",
-                image: "/images/halong.jpg",
+                image:
+                  "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567624/LuTrip/anh-vinh-ha-long-59_qp6nt2.jpg",
                 description: "Vịnh Hạ Long - Di sản thế giới",
                 gradient: "from-blue-500 to-teal-500"
               },
               {
                 name: "Sapa",
-                image: "/images/sapa.jpg",
+                image:
+                  "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567626/LuTrip/dulichsapa-1650268886-1480-1650277620_bcldcd.png",
                 description: "Ruộng bậc thang tuyệt đẹp",
                 gradient: "from-green-500 to-emerald-500"
               },
               {
                 name: "Phú Quốc",
-                image: "/images/phuquoc.jpg",
+                image:
+                  "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567624/LuTrip/du-lich-phu-quoc-kinh-nghiem-va-thong-tin-huu-ich_eomet8.jpg",
                 description: "Đảo ngọc thiên đường",
                 gradient: "from-orange-500 to-pink-500"
               }
@@ -212,6 +217,35 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Xem thêm button */}
+          <div className="text-center mt-12">
+            <div
+              className={`transition-all duration-1000 delay-900 ${
+                isVisible ? "animate-slide-up" : "opacity-0"
+              }`}
+            >
+              <Link
+                href="/destinations"
+                className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white/30 hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/30 group"
+              >
+                <span>Xem thêm địa điểm</span>
+                <svg
+                  className="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
+                </svg>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
