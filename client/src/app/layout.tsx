@@ -42,7 +42,10 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className={`${inter.variable} ${poppins.variable} font-sans`}>
+      <body
+        suppressHydrationWarning
+        className={`${inter.variable} ${poppins.variable} font-sans`}
+      >
         <LoadingProvider>
           <AuthProvider>
             <LayoutContent>{children}</LayoutContent>
