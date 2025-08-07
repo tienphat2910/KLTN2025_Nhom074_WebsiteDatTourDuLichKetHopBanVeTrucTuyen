@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import ConfirmModal from "@/components/Modal/ConfirmModal";
 import SuccessModal from "@/components/Modal/SuccessModal";
+import { destinationService, Destination } from "@/services/destinationService";
 
 const navItems = [
   { href: "/tours", label: "Du Lịch" },
@@ -19,9 +20,38 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isDestinationsOpen, setIsDestinationsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [popularDestinations, setPopularDestinations] = useState<Destination[]>(
+    []
+  );
+  const [otherDestinations, setOtherDestinations] = useState<Destination[]>([]);
   const { user, logout, isLoading } = useAuth();
+
+  // Load destinations from API
+  useEffect(() => {
+    const loadDestinations = async () => {
+      try {
+        const response = await destinationService.getDestinations({
+          limit: 50
+        });
+        if (response.success) {
+          const allDestinations = response.data.destinations;
+          setDestinations(allDestinations);
+          setPopularDestinations(
+            allDestinations.filter((dest) => dest.popular)
+          );
+          setOtherDestinations(allDestinations.filter((dest) => !dest.popular));
+        }
+      } catch (error) {
+        console.error("Error loading destinations:", error);
+      }
+    };
+
+    loadDestinations();
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -29,6 +59,10 @@ export default function Header() {
 
   const toggleSearch = () => {
     setIsSearchOpen(!isSearchOpen);
+  };
+
+  const toggleDestinations = () => {
+    setIsDestinationsOpen(!isDestinationsOpen);
   };
 
   const handleLogout = () => {
@@ -61,6 +95,100 @@ export default function Header() {
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex space-x-8">
+              {/* Destinations Dropdown */}
+              <div className="relative group">
+                <button
+                  onClick={toggleDestinations}
+                  className="relative font-medium transition-all duration-300 px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1"
+                >
+                  <span>Địa Điểm</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-300 ${
+                      isDestinationsOpen ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {/* Destinations Dropdown Menu */}
+                {isDestinationsOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
+                    {/* Popular Destinations */}
+                    <div className="px-4 pb-3 border-b border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                        Điểm đến phổ biến
+                      </h3>
+                      <div className="grid grid-cols-3 gap-2">
+                        {popularDestinations.map((destination) => (
+                          <Link
+                            key={destination._id}
+                            href={`/destinations/${
+                              destination.slug || "loading"
+                            }`}
+                            className="block px-2 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
+                            onClick={() => setIsDestinationsOpen(false)}
+                          >
+                            <div className="font-medium text-xs">
+                              {destination.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {destination.region}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Other Destinations */}
+                    <div className="px-4 pt-3">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                        Điểm đến khác
+                      </h3>
+                      <div className="grid grid-cols-2 gap-1 max-h-32 overflow-y-auto">
+                        {otherDestinations.map((destination) => (
+                          <Link
+                            key={destination._id}
+                            href={`/destinations/${
+                              destination.slug || "loading"
+                            }`}
+                            className="block px-2 py-1.5 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
+                            onClick={() => setIsDestinationsOpen(false)}
+                          >
+                            <span className="font-medium">
+                              {destination.name}
+                            </span>
+                            <span className="ml-1 text-xs text-gray-500">
+                              • {destination.region}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* View All Link */}
+                    <div className="px-4 pt-3 border-t border-gray-100 mt-3">
+                      <Link
+                        href="/destinations"
+                        className="block w-full text-center py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors font-medium text-sm"
+                        onClick={() => setIsDestinationsOpen(false)}
+                      >
+                        Xem tất cả địa điểm
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Regular Nav Items */}
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -274,6 +402,107 @@ export default function Header() {
           {isMobileMenuOpen && (
             <div className="mobile-nav md:hidden mt-4 pb-4 border-t border-gray-200 animate-slide-down">
               <div className="flex flex-col space-y-2 pt-4">
+                {/* Mobile Destinations Section */}
+                <div className="mb-4">
+                  <button
+                    onClick={toggleDestinations}
+                    className="w-full flex items-center justify-between font-medium text-slate-700 hover:text-blue-600 px-4 py-3 rounded-xl transition-all duration-300"
+                  >
+                    <span>Địa Điểm</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-300 ${
+                        isDestinationsOpen ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Mobile Destinations Dropdown */}
+                  {isDestinationsOpen && (
+                    <div className="mt-2 ml-4 space-y-1">
+                      {/* Popular destinations */}
+                      <div className="mb-3">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
+                          Phổ biến
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          {popularDestinations.map((destination) => (
+                            <Link
+                              key={destination._id}
+                              href={`/destinations/${
+                                destination.slug || "loading"
+                              }`}
+                              className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              onClick={() => {
+                                setIsDestinationsOpen(false);
+                                setIsMobileMenuOpen(false);
+                              }}
+                            >
+                              <div className="font-medium">
+                                {destination.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {destination.region}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Other destinations */}
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
+                          Khác
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto">
+                          {otherDestinations.map((destination) => (
+                            <Link
+                              key={destination._id}
+                              href={`/destinations/${
+                                destination.slug || "loading"
+                              }`}
+                              className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              onClick={() => {
+                                setIsDestinationsOpen(false);
+                                setIsMobileMenuOpen(false);
+                              }}
+                            >
+                              <span className="font-medium">
+                                {destination.name}
+                              </span>
+                              <span className="ml-1 text-xs text-gray-500">
+                                • {destination.region}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* View all */}
+                      <Link
+                        href="/destinations"
+                        className="block mx-2 mt-3 py-2 text-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-medium text-sm"
+                        onClick={() => {
+                          setIsDestinationsOpen(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        Xem tất cả địa điểm
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                {/* Regular Nav Items */}
                 {navItems.map((item) => (
                   <Link
                     key={item.href}
@@ -349,6 +578,14 @@ export default function Header() {
             </div>
           )}
         </div>
+
+        {/* Click outside to close destinations dropdown */}
+        {isDestinationsOpen && (
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setIsDestinationsOpen(false)}
+          />
+        )}
       </header>
 
       {/* Logout Confirmation Modal */}
