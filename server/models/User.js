@@ -46,6 +46,26 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    verificationCode: {
+        type: String,
+        default: null
+    },
+    verificationCodeExpires: {
+        type: Date,
+        default: null
+    },
+    resetPasswordCode: {
+        type: String,
+        default: null
+    },
+    resetPasswordExpires: {
+        type: Date,
+        default: null
+    },
+    firebaseUid: {
+        type: String,
+        default: null
+    },
     lastLogin: {
         type: Date,
         default: null
@@ -77,6 +97,25 @@ userSchema.methods.toJSON = function () {
     const userObject = this.toObject();
     delete userObject.password;
     return userObject;
+};
+
+// Check if OTP is valid and not expired
+userSchema.methods.isOTPValid = function (otp, type = 'verification') {
+    const codeField = type === 'verification' ? 'verificationCode' : 'resetPasswordCode';
+    const expiresField = type === 'verification' ? 'verificationCodeExpires' : 'resetPasswordExpires';
+
+    return this[codeField] === otp && this[expiresField] > Date.now();
+};
+
+// Clear OTP fields
+userSchema.methods.clearOTP = function (type = 'verification') {
+    if (type === 'verification') {
+        this.verificationCode = null;
+        this.verificationCodeExpires = null;
+    } else {
+        this.resetPasswordCode = null;
+        this.resetPasswordExpires = null;
+    }
 };
 
 module.exports = mongoose.model('User', userSchema);
