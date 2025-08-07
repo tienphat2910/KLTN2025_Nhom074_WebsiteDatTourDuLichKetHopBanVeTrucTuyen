@@ -21,6 +21,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tours', require('./routes/tours'));
+app.use('/api/destinations', require('./routes/destinations'));
 
 // Kết nối MongoDB
 mongoose

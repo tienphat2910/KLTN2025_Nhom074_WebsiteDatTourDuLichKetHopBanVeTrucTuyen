@@ -298,6 +298,65 @@ const options = {
                         }
                     }
                 },
+                Destination: {
+                    type: 'object',
+                    required: ['_id', 'name', 'country', 'description', 'image'],
+                    properties: {
+                        _id: {
+                            type: 'string',
+                            description: 'Destination ID (e.g., D001)',
+                            example: 'D001'
+                        },
+                        name: {
+                            type: 'string',
+                            description: 'Destination name',
+                            example: 'TP. Hồ Chí Minh'
+                        },
+                        country: {
+                            type: 'string',
+                            description: 'Country name',
+                            default: 'Việt Nam',
+                            example: 'Việt Nam'
+                        },
+                        description: {
+                            type: 'string',
+                            description: 'Destination description',
+                            example: 'Là thành phố lớn nhất và sầm uất nhất Việt Nam...'
+                        },
+                        image: {
+                            type: 'string',
+                            description: 'Destination image URL',
+                            example: 'https://res.cloudinary.com/de5rurcwt/image/upload/v1754570813/LuTrip/night-vietnam-night-vietnam-wallpaper-preview_k9ipvw.jpg'
+                        },
+                        popular: {
+                            type: 'boolean',
+                            description: 'Whether destination is popular',
+                            default: false,
+                            example: true
+                        },
+                        slug: {
+                            type: 'string',
+                            description: 'URL-friendly slug',
+                            example: 'tp-ho-chi-minh'
+                        },
+                        region: {
+                            type: 'string',
+                            enum: ['Miền Bắc', 'Miền Trung', 'Miền Nam'],
+                            description: 'Vietnamese region',
+                            example: 'Miền Nam'
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation date'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update date'
+                        }
+                    }
+                },
                 Error: {
                     type: 'object',
                     properties: {
