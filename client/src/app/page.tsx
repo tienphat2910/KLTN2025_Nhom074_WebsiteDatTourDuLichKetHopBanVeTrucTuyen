@@ -74,12 +74,7 @@ export default function Home() {
       location: "Hà Nội",
       price: "2,800,000",
       rating: 4.7,
-      amenities: [
-        "Trung tâm thành phố",
-        "Sky bar",
-        "Spa",
-        "Meeting rooms"
-      ]
+      amenities: ["Trung tâm thành phố", "Sky bar", "Spa", "Meeting rooms"]
     }
   ];
   const popularEntertainments = [
@@ -105,11 +100,7 @@ export default function Home() {
       location: "TP. Hồ Chí Minh",
       price: "150,000",
       type: "Công viên",
-      highlights: [
-        "Trò chơi cảm giác mạnh",
-        "Biểu diễn",
-        "Khu vui chơi trẻ em"
-      ]
+      highlights: ["Trò chơi cảm giác mạnh", "Biểu diễn", "Khu vui chơi trẻ em"]
     }
   ];
 
@@ -150,14 +141,17 @@ export default function Home() {
     const loadPopularTours = async () => {
       try {
         setIsLoadingTours(true);
+
         const response = await tourService.getFeaturedTours(3);
+        console.log("Featured tours response:", response);
+
         if (response.success) {
           setPopularTours(response.data);
         } else {
-          console.error("Failed to load popular tours:", response.message);
+          console.error("Failed to load featured tours:", response.message);
         }
       } catch (error) {
-        console.error("Error loading popular tours:", error);
+        console.error("Error loading featured tours:", error);
       } finally {
         setIsLoadingTours(false);
       }
@@ -404,7 +398,11 @@ export default function Home() {
           {/* Loading state for tours */}
           {isLoadingTours ? (
             <div className="flex justify-center py-16">
-              <LoadingSpinner type="travel" size="lg" text="Đang tải tour phổ biến..." />
+              <LoadingSpinner
+                type="travel"
+                size="lg"
+                text="Đang tải tour phổ biến..."
+              />
             </div>
           ) : popularTours.length === 0 ? (
             <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-xl">
@@ -425,7 +423,8 @@ export default function Home() {
                       className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-110"
                       style={{
                         backgroundImage: `url('${
-                          (tour.images && tour.images[0]) || "/images/banner-tour.jpg"
+                          (tour.images && tour.images[0]) ||
+                          "/images/banner-tour.jpg"
                         }')`
                       }}
                     />
@@ -434,10 +433,14 @@ export default function Home() {
                     <div className="p-6 text-white">
                       <div className="flex items-center gap-2 mb-2">
                         {tour.isFeatured && (
-                          <span className="bg-yellow-400/90 text-black px-2 py-0.5 rounded text-xs font-semibold">Nổi bật</span>
+                          <span className="bg-yellow-400/90 text-black px-2 py-0.5 rounded text-xs font-semibold">
+                            Nổi bật
+                          </span>
                         )}
                         {tour.discount > 0 && (
-                          <span className="bg-red-500/90 text-white px-2 py-0.5 rounded text-xs font-semibold">- {tour.discount}%</span>
+                          <span className="bg-red-500/90 text-white px-2 py-0.5 rounded text-xs font-semibold">
+                            - {tour.discount}%
+                          </span>
                         )}
                       </div>
                       <h3 className="text-2xl font-bold mb-1 drop-shadow-lg line-clamp-1">
@@ -446,18 +449,47 @@ export default function Home() {
                       <div className="text-gray-200 text-sm mb-2 flex flex-wrap gap-3">
                         {tour.departureLocation?.name && (
                           <span className="inline-flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
                             </svg>
                             {tour.departureLocation.name}
                           </span>
                         )}
                         <span className="inline-flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
                           </svg>
-                          {tour.duration || tourService.formatDuration(tour.startDate, tour.endDate)}
+                          {tour.duration ||
+                            tourService.formatDuration(
+                              tour.startDate,
+                              tour.endDate
+                            )}
                         </span>
                       </div>
                       <div className="flex items-baseline gap-2">
@@ -468,7 +500,10 @@ export default function Home() {
                         )}
                         <span className="text-xl font-bold text-emerald-300">
                           {tourService.formatPrice(
-                            tourService.getDiscountedPrice(tour.price, tour.discount)
+                            tourService.getDiscountedPrice(
+                              tour.price,
+                              tour.discount
+                            )
                           )}
                         </span>
                       </div>
@@ -497,7 +532,12 @@ export default function Home() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
                 </svg>
               </Link>
             </div>
@@ -540,7 +580,9 @@ export default function Home() {
                 href="/entertainment"
                 className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
                   600 + index * 100
-                } ${isVisible ? "animate-slide-up" : "opacity-0"} group bg-white/10 backdrop-blur-sm border border-white/20`}
+                } ${
+                  isVisible ? "animate-slide-up" : "opacity-0"
+                } group bg-white/10 backdrop-blur-sm border border-white/20`}
               >
                 <div className="h-64 bg-gradient-to-br from-orange-400 to-red-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
@@ -554,15 +596,33 @@ export default function Home() {
                       </span>
                     </div>
                     <p className="text-gray-200 text-sm mb-3 flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
                       </svg>
                       {place.location}
                     </p>
                     <div className="mb-3 flex flex-wrap gap-2">
                       {place.highlights.slice(0, 3).map((h, i) => (
-                        <span key={i} className="text-xs bg-white/20 px-2 py-1 rounded-full">
+                        <span
+                          key={i}
+                          className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                        >
                           {h}
                         </span>
                       ))}
@@ -573,8 +633,18 @@ export default function Home() {
                       </span>
                       <span className="inline-flex items-center gap-1 text-white/90 text-sm">
                         Xem chi tiết
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 8l4 4m0 0l-4 4m4-4H3"
+                          />
                         </svg>
                       </span>
                     </div>
@@ -602,7 +672,12 @@ export default function Home() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
                 </svg>
               </Link>
             </div>
@@ -644,7 +719,9 @@ export default function Home() {
                 key={hotel.id}
                 className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
                   600 + index * 100
-                } ${isVisible ? "animate-slide-up" : "opacity-0"} group bg-white/10 backdrop-blur-sm border border-white/20`}
+                } ${
+                  isVisible ? "animate-slide-up" : "opacity-0"
+                } group bg-white/10 backdrop-blur-sm border border-white/20`}
               >
                 <div className="h-64 bg-gradient-to-br from-purple-400 to-pink-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
@@ -655,19 +732,39 @@ export default function Home() {
                       </h3>
                       <div className="flex items-center">
                         <span className="text-yellow-400">⭐</span>
-                        <span className="ml-1 font-semibold">{hotel.rating}</span>
+                        <span className="ml-1 font-semibold">
+                          {hotel.rating}
+                        </span>
                       </div>
                     </div>
                     <p className="text-gray-200 text-sm mb-3 flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
                       </svg>
                       {hotel.location}
                     </p>
                     <div className="flex flex-wrap gap-2 mb-3">
                       {hotel.amenities.slice(0, 4).map((amenity, i) => (
-                        <span key={i} className="text-xs bg-white/20 px-2 py-1 rounded-full">
+                        <span
+                          key={i}
+                          className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                        >
                           {amenity}
                         </span>
                       ))}
@@ -707,7 +804,12 @@ export default function Home() {
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
                 </svg>
               </Link>
             </div>

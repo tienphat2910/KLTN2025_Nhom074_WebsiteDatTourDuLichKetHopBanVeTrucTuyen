@@ -137,18 +137,27 @@ export const tourService = {
     limit?: number
   ): Promise<{ success: boolean; message: string; data: Tour[] }> => {
     try {
-      const queryParams = limit ? `?limit=${limit}` : "";
       const response = await fetch(
-        `${API_BASE_URL}/tours/featured${queryParams}`
+        `${API_BASE_URL}/tours/featured?limit=${limit}`
       );
       const result = await response.json();
+
+      if (!response.ok) {
+        console.error("API Error:", result);
+        return {
+          success: false,
+          data: [],
+          message: result.message || "Lỗi khi tải tour nổi bật"
+        };
+      }
+
       return result;
     } catch (error) {
-      console.error("Get featured tours error:", error);
+      console.error("Error fetching featured tours:", error);
       return {
         success: false,
-        message: "Lỗi kết nối server",
-        data: []
+        data: [],
+        message: "Lỗi khi tải tour nổi bật"
       };
     }
   },
