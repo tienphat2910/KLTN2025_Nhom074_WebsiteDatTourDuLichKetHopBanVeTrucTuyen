@@ -212,7 +212,7 @@ export default function DestinationsPage() {
                       {selectedDestination.name}
                     </h1>
                     <p className="text-white/90 text-sm mb-3 drop-shadow">
-                      {selectedDestination.description.slice(0, 120)}...
+                      {selectedDestination.description}
                     </p>
                     <div className="flex items-center space-x-4 text-white/80 text-sm">
                       <span>Thời lượng lý tưởng</span>

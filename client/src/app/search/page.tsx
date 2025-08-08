@@ -10,17 +10,6 @@ import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
 import { destinationService, Destination } from "@/services/destinationService";
 
-// Define hotel interface for consistent typing
-interface Hotel {
-  _id: string;
-  name: string;
-  location: string;
-  price: number;
-  images: string[];
-  rating?: number;
-  slug: string;
-}
-
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
@@ -30,17 +19,14 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<{
     tours: Tour[];
     destinations: Destination[];
-    hotels: Hotel[];
   }>({
     tours: [],
-    destinations: [],
-    hotels: []
+    destinations: []
   });
   const [activeTab, setActiveTab] = useState("all");
   const [sectionLoading, setSectionLoading] = useState({
     tours: true,
-    destinations: true,
-    hotels: true
+    destinations: true
   });
 
   useEffect(() => {
@@ -48,8 +34,7 @@ export default function SearchPage() {
       setIsLoading(true);
       setSectionLoading({
         tours: true,
-        destinations: true,
-        hotels: true
+        destinations: true
       });
 
       try {
@@ -83,45 +68,16 @@ export default function SearchPage() {
             : [];
         setSectionLoading((prev) => ({ ...prev, destinations: false }));
 
-        // For hotels, we'll still use mock data but with proper error handling
-        const mockHotels: Hotel[] = [
-          {
-            _id: "hotel1",
-            name: `Khách sạn ${query} Phú Quốc`,
-            location: "Phú Quốc",
-            price: 2500000,
-            images: [
-              "https://res.cloudinary.com/de5rurcwt/image/upload/v1754570810/LuTrip/phu-quoc_zhihkc.jpg"
-            ],
-            rating: 4.5,
-            slug: "khach-san-phu-quoc"
-          },
-          {
-            _id: "hotel2",
-            name: `Khách sạn ${query} Đà Lạt`,
-            location: "Đà Lạt",
-            price: 1800000,
-            images: [
-              "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567626/LuTrip/dulichsapa-1650268886-1480-1650277620_bcldcd.png"
-            ],
-            rating: 4.3,
-            slug: "khach-san-da-lat"
-          }
-        ];
-        setSectionLoading((prev) => ({ ...prev, hotels: false }));
-
         setSearchResults({
           tours,
-          destinations,
-          hotels: mockHotels
+          destinations
         });
       } catch (error) {
         console.error("Search error:", error);
         // Set all sections as loaded even in case of error
         setSectionLoading({
           tours: false,
-          destinations: false,
-          hotels: false
+          destinations: false
         });
       } finally {
         setIsLoading(false);
@@ -135,8 +91,7 @@ export default function SearchPage() {
       setIsLoading(false);
       setSectionLoading({
         tours: false,
-        destinations: false,
-        hotels: false
+        destinations: false
       });
       setIsVisible(true);
     }
@@ -144,25 +99,21 @@ export default function SearchPage() {
 
   // Calculate total results
   const totalResults =
-    searchResults.tours.length +
-    searchResults.destinations.length +
-    searchResults.hotels.length;
+    searchResults.tours.length + searchResults.destinations.length;
 
   // Filter results based on active tab
   const getFilteredResults = () => {
     if (activeTab === "all") {
       return {
         tours: searchResults.tours.slice(0, 10),
-        destinations: searchResults.destinations.slice(0, 10),
-        hotels: searchResults.hotels.slice(0, 10)
+        destinations: searchResults.destinations.slice(0, 10)
       };
     }
 
     return {
       tours: activeTab === "tours" ? searchResults.tours : [],
       destinations:
-        activeTab === "destinations" ? searchResults.destinations : [],
-      hotels: activeTab === "hotels" ? searchResults.hotels : []
+        activeTab === "destinations" ? searchResults.destinations : []
     };
   };
 
@@ -172,7 +123,7 @@ export default function SearchPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
         <LoadingSpinner
-          type="dots" // Change from 'search' to a valid type
+          type="dots"
           size="xl"
           text={`Đang tìm kiếm "${query}"...`}
         />
@@ -230,16 +181,6 @@ export default function SearchPage() {
               >
                 Điểm đến ({searchResults.destinations.length})
               </button>
-              <button
-                className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === "hotels"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-blue-600"
-                }`}
-                onClick={() => setActiveTab("hotels")}
-              >
-                Khách sạn ({searchResults.hotels.length})
-              </button>
             </div>
           </div>
         </div>
@@ -293,7 +234,7 @@ export default function SearchPage() {
                 {sectionLoading.tours ? (
                   <div className="py-8 text-center">
                     <LoadingSpinner
-                      type="dots" // Ensure we use a valid type
+                      type="dots"
                       size="md"
                       text="Đang tìm kiếm tours..."
                     />
@@ -392,7 +333,7 @@ export default function SearchPage() {
                 {sectionLoading.destinations ? (
                   <div className="py-8 text-center">
                     <LoadingSpinner
-                      type="dots" // Ensure we use a valid type
+                      type="dots"
                       size="md"
                       text="Đang tìm kiếm điểm đến..."
                     />
@@ -446,100 +387,6 @@ export default function SearchPage() {
                             {destination.description ||
                               "Đang cập nhật thông tin..."}
                           </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Hotels Section */}
-            {(activeTab === "all" || activeTab === "hotels") && (
-              <div className="mb-12">
-                {activeTab !== "hotels" && (
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-800">
-                      Khách sạn
-                    </h2>
-                    {searchResults.hotels.length >
-                      filteredResults.hotels.length && (
-                      <button
-                        onClick={() => setActiveTab("hotels")}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                      >
-                        Xem tất cả ({searchResults.hotels.length})
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Loading state for hotels section */}
-                {sectionLoading.hotels ? (
-                  <div className="py-8 text-center">
-                    <LoadingSpinner
-                      type="dots" // Ensure we use a valid type
-                      size="md"
-                      text="Đang tìm kiếm khách sạn..."
-                    />
-                  </div>
-                ) : filteredResults.hotels.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <p className="text-gray-500">
-                      Không tìm thấy khách sạn nào phù hợp
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredResults.hotels.map((hotel) => (
-                      <Link
-                        key={hotel._id}
-                        href={`/hotels/${hotel.slug}`}
-                        className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 flex flex-col h-full"
-                      >
-                        <div className="relative h-48">
-                          <div className="w-full h-full bg-gray-200">
-                            {hotel.images && hotel.images[0] ? (
-                              <Image
-                                src={hotel.images[0]}
-                                alt={hotel.name}
-                                fill
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                className="object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                <span className="text-gray-400">No image</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="p-4 flex-1 flex flex-col">
-                          <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                            {hotel.name}
-                          </h3>
-                          <div className="text-sm text-gray-600 mb-2">
-                            📍 {hotel.location || "Đang cập nhật"}
-                          </div>
-                          {hotel.rating && (
-                            <div className="flex items-center mb-2">
-                              <span className="text-yellow-500">⭐</span>
-                              <span className="ml-1 text-sm text-gray-600">
-                                {hotel.rating}
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="mt-auto pt-4">
-                            <div className="font-bold text-purple-600">
-                              {tourService.formatPrice(hotel.price)}
-                              <span className="text-sm text-gray-500 font-normal ml-1">
-                                /đêm
-                              </span>
-                            </div>
-                          </div>
                         </div>
                       </Link>
                     ))}
