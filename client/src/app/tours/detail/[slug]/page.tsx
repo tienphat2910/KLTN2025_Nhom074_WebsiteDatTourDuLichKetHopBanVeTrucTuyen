@@ -533,11 +533,15 @@ export default function TourDetailPage() {
       <Header />
 
       {/* Breadcrumb */}
-      <div className="pt-24 pb-4">
+      <div className="pt-24 pb-2 md:pb-4">
         <div className="container mx-auto px-4">
-          <nav className="text-sm text-gray-600">
+          <nav className="text-xs md:text-sm text-gray-600 overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-blue-600">
               Trang chủ
+            </Link>
+            <span className="mx-2">›</span>
+            <Link href="/destinations" className="hover:text-blue-600">
+              VIỆT NAM
             </Link>
             <span className="mx-2">›</span>
             <Link href="/tours" className="hover:text-blue-600">
@@ -549,17 +553,18 @@ export default function TourDetailPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-16">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
+      <div className="container mx-auto px-4 pb-12 md:pb-16">
+        {/* Use flex-col on mobile and grid on larger screens */}
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Main Content - Full width on mobile */}
           <div className="lg:col-span-2">
             {/* Hero Gallery */}
             <div
-              className={`bg-white rounded-2xl shadow-lg overflow-hidden mb-8 transition-all duration-1000 ${
+              className={`bg-white rounded-xl md:rounded-2xl shadow-lg overflow-hidden mb-6 md:mb-8 transition-all duration-1000 ${
                 isVisible ? "animate-fade-in" : "opacity-0"
               }`}
             >
-              <div className="relative h-64 md:h-80 lg:h-96">
+              <div className="relative h-56 sm:h-64 md:h-80 lg:h-96">
                 <div
                   className="w-full h-full bg-cover bg-center cursor-pointer"
                   style={{
@@ -665,15 +670,15 @@ export default function TourDetailPage() {
                 </div>
               </div>
 
-              {/* Thumbnail strip */}
+              {/* Thumbnail strip - horizontally scrollable on mobile */}
               {tour.images.length > 1 && (
-                <div className="p-4 border-t border-gray-200">
-                  <div className="flex space-x-2 overflow-x-auto">
+                <div className="p-3 md:p-4 border-t border-gray-200">
+                  <div className="flex space-x-2 overflow-x-auto pb-2 md:pb-0 snap-x">
                     {tour.images.slice(0, 8).map((image, index) => (
                       <button
                         key={index}
                         onClick={() => setSelectedImageIndex(index)}
-                        className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-colors ${
+                        className={`flex-shrink-0 w-14 h-10 md:w-16 md:h-12 rounded-lg overflow-hidden border-2 transition-colors snap-start ${
                           index === selectedImageIndex
                             ? "border-blue-500"
                             : "border-gray-200"
@@ -697,16 +702,16 @@ export default function TourDetailPage() {
 
             {/* Tour Info */}
             <div
-              className={`bg-white rounded-2xl shadow-lg p-6 mb-8 transition-all duration-1000 delay-300 ${
+              className={`bg-white rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 mb-6 md:mb-8 transition-all duration-1000 delay-300 ${
                 isVisible ? "animate-slide-up" : "opacity-0"
               }`}
             >
-              <div className="flex items-start justify-between mb-6">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4 md:mb-6">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-3 md:mb-4">
                     {tour.title}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
                     <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
                       <svg
                         className="w-4 h-4 mr-1 text-blue-600"
@@ -767,7 +772,7 @@ export default function TourDetailPage() {
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right mt-3 md:mt-0">
                   {tour.rating && tour.rating > 0 && (
                     <div className="flex items-center mb-2">
                       <span className="text-yellow-500 text-lg">⭐</span>
@@ -787,7 +792,7 @@ export default function TourDetailPage() {
 
               {/* Description */}
               <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-2 md:mb-3">
                   Mô tả tour
                 </h3>
                 {/* Show warning if the title doesn't match the departure location */}
@@ -821,10 +826,10 @@ export default function TourDetailPage() {
 
               {/* Availability */}
               <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-2 md:mb-3">
                   Tình trạng chỗ
                 </h3>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex items-center space-x-4">
                     <span className="text-green-600 font-medium">
                       Còn {tour.availableSeats} chỗ trống
@@ -833,7 +838,7 @@ export default function TourDetailPage() {
                       / {tour.seats} chỗ tối đa
                     </span>
                   </div>
-                  <div className="w-48">
+                  <div className="w-full sm:w-48">
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
                         className="bg-green-500 h-3 rounded-full transition-all duration-300"
@@ -856,59 +861,6 @@ export default function TourDetailPage() {
               <h3 className="text-xl font-semibold text-gray-800 mb-6">
                 Lịch trình tour
               </h3>
-
-              {/* Debug info - Enhanced */}
-              {process.env.NODE_ENV === "development" && (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                  <details>
-                    <summary className="cursor-pointer font-medium text-yellow-800">
-                      🔍 Debug Itinerary ({itineraryDays.length} days found)
-                    </summary>
-                    <div className="mt-2 space-y-2">
-                      <div>
-                        <strong>Tour ID:</strong> {tour?._id}
-                      </div>
-                      <div>
-                        <strong>Tour Title:</strong> {tour?.title}
-                      </div>
-                      <div>
-                        <strong>Has itinerary field:</strong>{" "}
-                        {tour?.hasOwnProperty("itinerary") ? "Yes" : "No"}
-                      </div>
-                      <div>
-                        <strong>Itinerary type:</strong>{" "}
-                        {typeof tour?.itinerary}
-                      </div>
-                      <div>
-                        <strong>Itinerary is null:</strong>{" "}
-                        {String(tour?.itinerary === null)}
-                      </div>
-                      <div>
-                        <strong>Itinerary is undefined:</strong>{" "}
-                        {String(tour?.itinerary === undefined)}
-                      </div>
-                      <div>
-                        <strong>Raw tour object keys:</strong>
-                        <pre className="mt-1 text-xs overflow-auto bg-white p-2 rounded border">
-                          {tour ? Object.keys(tour).join(", ") : "No tour"}
-                        </pre>
-                      </div>
-                      <div>
-                        <strong>Raw itinerary:</strong>
-                        <pre className="mt-1 text-xs overflow-auto bg-white p-2 rounded border">
-                          {JSON.stringify(tour?.itinerary, null, 2)}
-                        </pre>
-                      </div>
-                      <div>
-                        <strong>Processed days:</strong>
-                        <pre className="mt-1 text-xs overflow-auto bg-white p-2 rounded border">
-                          {JSON.stringify(itineraryDays, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                  </details>
-                </div>
-              )}
 
               {itineraryDays.length > 0 ? (
                 <div className="space-y-8">
@@ -1142,10 +1094,10 @@ export default function TourDetailPage() {
             </div>
           </div>
 
-          {/* Booking Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Booking Sidebar - Displayed below content on mobile, in sidebar on desktop */}
+          <div className="lg:col-span-1 mt-6 lg:mt-0">
             <div
-              className={`bg-white rounded-2xl shadow-lg p-6 sticky top-24 transition-all duration-1000 delay-700 ${
+              className={`bg-white rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 sticky top-24 transition-all duration-1000 delay-700 ${
                 isVisible ? "animate-slide-up" : "opacity-0"
               }`}
             >
@@ -1153,11 +1105,11 @@ export default function TourDetailPage() {
               <div className="mb-6">
                 <div className="flex items-baseline space-x-2 mb-2">
                   {tour.discount > 0 && (
-                    <span className="text-lg text-gray-500 line-through">
+                    <span className="text-base md:text-lg text-gray-500 line-through">
                       {tourService.formatPrice(tour.price)}
                     </span>
                   )}
-                  <span className="text-3xl font-bold text-green-600">
+                  <span className="text-2xl md:text-3xl font-bold text-green-600">
                     {tourService.formatPrice(
                       tourService.getDiscountedPrice(tour.price, tour.discount)
                     )}
@@ -1171,17 +1123,17 @@ export default function TourDetailPage() {
                 )}
               </div>
 
-              {/* Participant Selection */}
-              <div className="mb-6">
+              {/* Participant Selection - Mobile friendly touchable area */}
+              <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <h4 className="font-semibold text-gray-800 mb-4">
                   Chọn số lượng khách
                 </h4>
 
                 {/* Adults */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="font-medium">Người lớn</span>
-                    <p className="text-sm text-gray-500">
+                    <span className="font-medium text-gray-700">Người lớn</span>
+                    <p className="text-sm text-gray-600">
                       {tourService.formatPrice(
                         tourService.getDiscountedPrice(
                           tour.pricingByAge.adult,
@@ -1190,7 +1142,7 @@ export default function TourDetailPage() {
                       )}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <button
                       onClick={() =>
                         updateParticipants(
@@ -1199,11 +1151,11 @@ export default function TourDetailPage() {
                         )
                       }
                       disabled={selectedParticipants.adult <= 1}
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      className="w-10 h-10 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-100 transition-colors"
                     >
-                      -
+                      <span className="text-lg">-</span>
                     </button>
-                    <span className="w-8 text-center font-medium">
+                    <span className="w-8 text-center font-medium bg-white rounded-md px-2 py-1 border border-blue-200 text-blue-700">
                       {selectedParticipants.adult}
                     </span>
                     <button
@@ -1213,18 +1165,18 @@ export default function TourDetailPage() {
                           selectedParticipants.adult + 1
                         )
                       }
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                      className="w-10 h-10 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors"
                     >
-                      +
+                      <span className="text-lg">+</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Children */}
-                <div className="flex items-center justify-between mb-3">
+                {/* Children - using bigger touch targets */}
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="font-medium">Trẻ em</span>
-                    <p className="text-sm text-gray-500">
+                    <span className="font-medium text-gray-700">Trẻ em</span>
+                    <p className="text-sm text-gray-600">
                       {tourService.formatPrice(
                         tourService.getDiscountedPrice(
                           tour.pricingByAge.child,
@@ -1233,7 +1185,7 @@ export default function TourDetailPage() {
                       )}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <button
                       onClick={() =>
                         updateParticipants(
@@ -1242,11 +1194,11 @@ export default function TourDetailPage() {
                         )
                       }
                       disabled={selectedParticipants.child <= 0}
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      className="w-10 h-10 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-100 transition-colors"
                     >
-                      -
+                      <span className="text-lg">-</span>
                     </button>
-                    <span className="w-8 text-center font-medium">
+                    <span className="w-8 text-center font-medium bg-white rounded-md px-2 py-1 border border-blue-200 text-blue-700">
                       {selectedParticipants.child}
                     </span>
                     <button
@@ -1256,9 +1208,9 @@ export default function TourDetailPage() {
                           selectedParticipants.child + 1
                         )
                       }
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                      className="w-10 h-10 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors"
                     >
-                      +
+                      <span className="text-lg">+</span>
                     </button>
                   </div>
                 </div>
@@ -1266,8 +1218,8 @@ export default function TourDetailPage() {
                 {/* Infants */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-medium">Em bé</span>
-                    <p className="text-sm text-gray-500">
+                    <span className="font-medium text-gray-700">Em bé</span>
+                    <p className="text-sm text-gray-600">
                       {tourService.formatPrice(
                         tourService.getDiscountedPrice(
                           tour.pricingByAge.infant,
@@ -1276,7 +1228,7 @@ export default function TourDetailPage() {
                       )}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <button
                       onClick={() =>
                         updateParticipants(
@@ -1285,11 +1237,11 @@ export default function TourDetailPage() {
                         )
                       }
                       disabled={selectedParticipants.infant <= 0}
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      className="w-10 h-10 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-100 transition-colors"
                     >
-                      -
+                      <span className="text-lg">-</span>
                     </button>
-                    <span className="w-8 text-center font-medium">
+                    <span className="w-8 text-center font-medium bg-white rounded-md px-2 py-1 border border-blue-200 text-blue-700">
                       {selectedParticipants.infant}
                     </span>
                     <button
@@ -1299,9 +1251,9 @@ export default function TourDetailPage() {
                           selectedParticipants.infant + 1
                         )
                       }
-                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                      className="w-10 h-10 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors"
                     >
-                      +
+                      <span className="text-lg">+</span>
                     </button>
                   </div>
                 </div>
@@ -1313,7 +1265,7 @@ export default function TourDetailPage() {
                   <span className="font-semibold text-gray-800">
                     Tổng cộng:
                   </span>
-                  <span className="text-2xl font-bold text-green-600">
+                  <span className="text-xl md:text-2xl font-bold text-green-600">
                     {tourService.formatPrice(calculateTotalPrice())}
                   </span>
                 </div>
@@ -1325,10 +1277,10 @@ export default function TourDetailPage() {
                 </p>
               </div>
 
-              {/* Booking Button */}
+              {/* Booking Button - Larger on mobile for easy tapping */}
               <button
                 disabled={tour.availableSeats === 0}
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-4 md:py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-base"
               >
                 {tour.availableSeats === 0 ? "Hết chỗ" : "Đặt Tour Ngay"}
               </button>
@@ -1353,7 +1305,9 @@ export default function TourDetailPage() {
                         d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                       />
                     </svg>
-                    Hotline: 1900 1808
+                    <a href="tel:081820319" className="hover:text-blue-600">
+                      Hotline: 081 820 319
+                    </a>
                   </div>
                   <div className="flex items-center">
                     <svg
@@ -1369,7 +1323,12 @@ export default function TourDetailPage() {
                         d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                       />
                     </svg>
-                    Email: info@lutrip.com
+                    <a
+                      href="mailto:info@lutrip.com"
+                      className="hover:text-blue-600"
+                    >
+                      Email: info@lutrip.com
+                    </a>
                   </div>
                 </div>
               </div>
@@ -1378,15 +1337,16 @@ export default function TourDetailPage() {
         </div>
       </div>
 
-      {/* Photo Gallery Modal */}
+      {/* Photo Gallery Modal - Better optimized for mobile */}
       {showGallery && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
           <button
             onClick={closeGallery}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 p-2"
+            aria-label="Close gallery"
           >
             <svg
-              className="w-8 h-8"
+              className="w-6 h-6 md:w-8 md:h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1404,10 +1364,11 @@ export default function TourDetailPage() {
             <>
               <button
                 onClick={prevImage}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10"
+                className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10 p-2"
+                aria-label="Previous image"
               >
                 <svg
-                  className="w-8 h-8"
+                  className="w-6 h-6 md:w-8 md:h-8"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1422,10 +1383,11 @@ export default function TourDetailPage() {
               </button>
               <button
                 onClick={nextImage}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10"
+                className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10 p-2"
+                aria-label="Next image"
               >
                 <svg
-                  className="w-8 h-8"
+                  className="w-6 h-6 md:w-8 md:h-8"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1441,7 +1403,7 @@ export default function TourDetailPage() {
             </>
           )}
 
-          <div className="max-w-4xl max-h-[80vh] mx-4">
+          <div className="max-w-full max-h-[80vh] mx-2 md:mx-4">
             <img
               src={tour.images[selectedImageIndex]}
               alt={`${tour.title} - Ảnh ${selectedImageIndex + 1}`}
@@ -1454,24 +1416,26 @@ export default function TourDetailPage() {
           </div>
 
           {tour.images.length > 1 && (
-            <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-2 max-w-sm overflow-x-auto">
-              {tour.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImageIndex(index)}
-                  className={`w-16 h-12 rounded-md overflow-hidden border-2 flex-shrink-0 ${
-                    index === selectedImageIndex
-                      ? "border-white"
-                      : "border-transparent"
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt={`Thumbnail ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
+            <div className="absolute bottom-12 md:bottom-16 left-0 right-0 flex justify-center overflow-x-auto py-2">
+              <div className="flex space-x-2 px-4 max-w-full">
+                {tour.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`w-12 h-9 md:w-16 md:h-12 rounded-md overflow-hidden border-2 flex-shrink-0 ${
+                      index === selectedImageIndex
+                        ? "border-white"
+                        : "border-transparent"
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
