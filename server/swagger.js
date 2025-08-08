@@ -322,51 +322,121 @@ const options = {
                 },
                 Hotel: {
                     type: 'object',
-                    required: ['name', 'location', 'pricePerNight'],
+                    required: ['name', 'destinationId'],
                     properties: {
-                        id: {
+                        _id: {
                             type: 'string',
                             description: 'Hotel ID'
                         },
                         name: {
                             type: 'string',
-                            description: 'Hotel name'
+                            description: 'Hotel name',
+                            example: 'Wyndham Garden Grandworld Phú Quốc'
                         },
-                        location: {
+                        destinationId: {
                             type: 'string',
-                            description: 'Hotel location'
-                        },
-                        pricePerNight: {
-                            type: 'number',
-                            description: 'Price per night in VND'
-                        },
-                        rating: {
-                            type: 'number',
-                            minimum: 0,
-                            maximum: 5,
-                            description: 'Hotel rating'
-                        },
-                        amenities: {
-                            type: 'array',
-                            items: {
-                                type: 'string'
-                            },
-                            description: 'Hotel amenities'
-                        },
-                        images: {
-                            type: 'array',
-                            items: {
-                                type: 'string'
-                            },
-                            description: 'Hotel images URLs'
+                            description: 'Destination ID',
+                            example: 'D004'
                         },
                         description: {
                             type: 'string',
                             description: 'Hotel description'
                         },
-                        availableRooms: {
+                        rating: {
                             type: 'number',
-                            description: 'Number of available rooms'
+                            minimum: 0,
+                            maximum: 5,
+                            description: 'Hotel rating',
+                            example: 4.5
+                        },
+                        rooms: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    type: {
+                                        type: 'string',
+                                        description: 'Room type',
+                                        example: 'Superior Twin'
+                                    },
+                                    size: {
+                                        type: 'string',
+                                        description: 'Room size',
+                                        example: '29 m²'
+                                    },
+                                    price: {
+                                        type: 'number',
+                                        description: 'Room price in VND',
+                                        example: 1450000
+                                    },
+                                    priceWithBreakfast: {
+                                        type: 'number',
+                                        description: 'Room price with breakfast in VND',
+                                        example: 1850000
+                                    },
+                                    quantity: {
+                                        type: 'number',
+                                        description: 'Number of available rooms',
+                                        example: 20
+                                    },
+                                    amenities: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'string'
+                                        },
+                                        description: 'Room amenities',
+                                        example: ['2 giường đơn', 'Tối đa 2 người lớn + 1 trẻ em', 'Điều hòa']
+                                    },
+                                    images: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'string'
+                                        },
+                                        description: 'Room images URLs'
+                                    }
+                                },
+                                required: ['type', 'price', 'quantity']
+                            },
+                            description: 'Hotel rooms'
+                        },
+                        gallery: {
+                            type: 'array',
+                            items: {
+                                type: 'string'
+                            },
+                            description: 'Hotel gallery images URLs'
+                        },
+                        contactInfo: {
+                            type: 'object',
+                            properties: {
+                                phone: {
+                                    type: 'string',
+                                    description: 'Hotel phone number',
+                                    example: '+84 297 388 6888'
+                                },
+                                email: {
+                                    type: 'string',
+                                    format: 'email',
+                                    description: 'Hotel email address',
+                                    example: 'info@wyndhamgrandworldphuquoc.com'
+                                },
+                                address: {
+                                    type: 'string',
+                                    description: 'Hotel address',
+                                    example: 'Khu du lịch Bãi Dài, xã Gành Dầu, TP. Phú Quốc, tỉnh Kiên Giang'
+                                }
+                            },
+                            description: 'Hotel contact information'
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation date'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update date'
                         }
                     }
                 },
