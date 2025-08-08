@@ -248,10 +248,7 @@ export default function DestinationDetailPage() {
                 {destination.name}
               </h1>
               <p className="text-white/90 text-sm md:text-base mb-4 drop-shadow leading-relaxed max-w-2xl">
-                {destination.description.slice(0, 150)}...
-                <button className="text-blue-200 hover:text-white ml-2 underline font-medium">
-                  Xem thêm
-                </button>
+                {destination.description}
               </p>
 
               {/* Info badges */}

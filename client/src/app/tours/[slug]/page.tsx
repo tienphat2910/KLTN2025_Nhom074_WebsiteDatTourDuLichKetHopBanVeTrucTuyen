@@ -322,7 +322,7 @@ export default function ToursByDestinationPage() {
             </h1>
             <p className="text-xl text-white/90 mb-4 drop-shadow-lg">
               {destination.description
-                ? destination.description.slice(0, 120) + "..."
+                ? destination.description
                 : "Khám phá vẻ đẹp tuyệt vời"}
             </p>
             <div className="flex justify-center items-center space-x-4 text-white/80 text-sm">
