@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { destinationService, Destination } from "@/services/destinationService";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
+import { hotelService, Hotel } from "@/services/hotelService";
 
 const services = [
   {
@@ -51,6 +52,8 @@ export default function Home() {
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(true);
   const [popularTours, setPopularTours] = useState<Tour[]>([]);
   const [isLoadingTours, setIsLoadingTours] = useState(true);
+  const [topRatedHotels, setTopRatedHotels] = useState<Hotel[]>([]);
+  const [isLoadingHotels, setIsLoadingHotels] = useState(true);
   const famousHotels = [
     {
       id: 1,
@@ -158,6 +161,36 @@ export default function Home() {
     };
 
     loadPopularTours();
+  }, []);
+
+  // Load top rated hotels from the database
+  useEffect(() => {
+    const loadTopRatedHotels = async () => {
+      try {
+        setIsLoadingHotels(true);
+        const response = await hotelService.getHotels({
+          limit: 3
+        });
+
+        if (response.success && response.data) {
+          // Sort hotels by rating (highest first) and take top 3
+          const sortedHotels = response.data
+            .filter((hotel) => hotel.rating && hotel.rating > 0)
+            .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+            .slice(0, 3);
+
+          setTopRatedHotels(sortedHotels);
+        } else {
+          console.error("Failed to load hotels:", response.message);
+        }
+      } catch (error) {
+        console.error("Error loading hotels:", error);
+      } finally {
+        setIsLoadingHotels(false);
+      }
+    };
+
+    loadTopRatedHotels();
   }, []);
 
   return (
@@ -692,7 +725,8 @@ export default function Home() {
           <div
             className="w-full h-full bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: "url('/images/banner-hotel.jpg')",
+              backgroundImage:
+                "url('https://res.cloudinary.com/de5rurcwt/image/upload/v1754677970/LuTrip/KHACH-SAN_el2sxk.jpg')",
               filter: "brightness(0.9)"
             }}
           />
@@ -706,85 +740,144 @@ export default function Home() {
             }`}
           >
             <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">
-              Khách Sạn Nổi Tiếng
+              Khách Sạn Được Đánh Giá Cao
             </h2>
             <p className="text-white/90 text-lg drop-shadow">
               Điểm lưu trú được yêu thích trên khắp Việt Nam
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {famousHotels.map((hotel, index) => (
-              <div
-                key={hotel.id}
-                className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                  600 + index * 100
-                } ${
-                  isVisible ? "animate-slide-up" : "opacity-0"
-                } group bg-white/10 backdrop-blur-sm border border-white/20`}
-              >
-                <div className="h-64 bg-gradient-to-br from-purple-400 to-pink-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
-                  <div className="p-6 text-white w-full">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-2xl font-bold drop-shadow-lg line-clamp-1">
-                        {hotel.name}
-                      </h3>
-                      <div className="flex items-center">
-                        <span className="text-yellow-400">⭐</span>
-                        <span className="ml-1 font-semibold">
-                          {hotel.rating}
-                        </span>
+          {/* Loading state for hotels */}
+          {isLoadingHotels ? (
+            <div className="flex justify-center py-16">
+              <LoadingSpinner
+                type="dots"
+                size="lg"
+                text="Đang tải khách sạn được đánh giá cao..."
+              />
+            </div>
+          ) : topRatedHotels.length === 0 ? (
+            <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-xl">
+              <p className="text-white text-lg">
+                Không tìm thấy khách sạn được đánh giá cao
+              </p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-4">
+              {topRatedHotels.map((hotel, index) => (
+                <div
+                  key={hotel._id}
+                  className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
+                    600 + index * 100
+                  } ${
+                    isVisible ? "animate-slide-up" : "opacity-0"
+                  } group bg-white/10 backdrop-blur-sm border border-white/20`}
+                >
+                  <div className="h-70 relative overflow-hidden">
+                    {hotel.gallery && hotel.gallery[0] ? (
+                      <div
+                        className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-110"
+                        style={{
+                          backgroundImage: `url('${hotel.gallery[0]}')`
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-500" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  </div>
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
+                    <div className="p-6 text-white w-full">
+                      <div className="flex items-start justify-between mb-2 gap-3">
+                        <h3 className="text-lg sm:text-xl font-bold drop-shadow-lg leading-tight flex-1">
+                          {hotel.name}
+                        </h3>
+                        <div className="flex items-center bg-black/30 px-2 py-1 rounded-full flex-shrink-0">
+                          <span className="text-yellow-400">⭐</span>
+                          <span className="ml-1 font-semibold text-sm">
+                            {hotel.rating?.toFixed(1) || "N/A"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-gray-200 text-sm mb-3 flex items-center gap-1">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      {hotel.location}
-                    </p>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {hotel.amenities.slice(0, 4).map((amenity, i) => (
-                        <span
-                          key={i}
-                          className="text-xs bg-white/20 px-2 py-1 rounded-full"
+
+                      <p className="text-gray-200 text-sm mb-3 flex items-center gap-1 line-clamp-1">
+                        <svg
+                          className="w-4 h-4 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          {amenity}
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        <span className="truncate">
+                          {hotel.contactInfo?.address || "Địa chỉ không có sẵn"}
                         </span>
-                      ))}
-                    </div>
-                    <div className="flex items-baseline gap-2 justify-between">
-                      <span className="text-xl font-bold text-pink-200">
-                        {hotel.price}đ
-                      </span>
-                      <Link
-                        href="/hotels"
-                        className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/30 transition-all duration-300 border border-white/30"
-                      >
-                        Xem chi tiết
-                      </Link>
+                      </p>
+                      <div className="flex items-start justify-between mb-2 gap-3">
+                        <p className="text-gray-200 text-sm mb-3 leading-tight items-center flex-1 line-clamp-3">
+                          {hotel.description}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {hotel.rooms && hotel.rooms.length > 0 && (
+                          <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
+                            {hotel.rooms.length} loại phòng
+                          </span>
+                        )}
+                        {hotel.rooms &&
+                          hotel.rooms[0]?.amenities
+                            ?.slice(0, 2)
+                            .map((amenity, i) => (
+                              <span
+                                key={i}
+                                className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                              >
+                                {amenity}
+                              </span>
+                            ))}
+                      </div>
+
+                      <div className="flex items-end justify-between gap-2">
+                        <div className="flex-1">
+                          {hotel.rooms && hotel.rooms[0] && (
+                            <>
+                              <div className="text-lg sm:text-xl font-bold text-pink-200">
+                                <span className="text-xs text-gray-300">
+                                  từ{" "}
+                                </span>
+                                {hotelService.formatPrice(hotel.rooms[0].price)}{" "}
+                                đ
+                              </div>
+                              <div className="text-xs text-gray-300">/đêm</div>
+                            </>
+                          )}
+                        </div>
+                        <Link
+                          href="/hotels"
+                          className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white px-3 py-2 rounded-full text-sm font-semibold hover:bg-white/30 transition-all duration-300 border border-white/30 flex-shrink-0"
+                        >
+                          <span className="hidden sm:inline">Xem chi tiết</span>
+                          <span className="sm:hidden">Xem</span>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Xem thêm button */}
           <div className="text-center mt-12">

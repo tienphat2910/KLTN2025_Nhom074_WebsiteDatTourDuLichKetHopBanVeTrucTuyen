@@ -30,24 +30,27 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 export interface Tour {
   _id: string;
   title: string;
-  description: string;
+  description?: string;
   destinationId: string;
   departureLocation: {
     name: string;
+    code?: string;
+    fullName?: string;
+    region?: string;
   };
-  itinerary: ItineraryDay[] | ItineraryObject | any; // Support multiple formats
+  itinerary: any;
   startDate: string;
   endDate: string;
   price: number;
   discount: number;
-  pricingByAge: {
+  pricingByAge?: {
     adult: number;
     child: number;
     infant: number;
   };
   seats: number;
   availableSeats: number;
-  images: string[];
+  images?: string[];
   isFeatured: boolean;
   rating?: number;
   reviewCount?: number;

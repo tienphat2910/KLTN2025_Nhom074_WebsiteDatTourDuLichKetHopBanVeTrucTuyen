@@ -145,6 +145,23 @@ const TourCard = ({
   );
 };
 
+// Add sort options interface
+interface SortOption {
+  value: string;
+  label: string;
+}
+
+const sortOptions: SortOption[] = [
+  { value: "default", label: "Mặc định" },
+  { value: "featured", label: "Nổi bật" },
+  { value: "price-asc", label: "Giá: Thấp → Cao" },
+  { value: "price-desc", label: "Giá: Cao → Thấp" },
+  { value: "name-asc", label: "Tên: A → Z" },
+  { value: "name-desc", label: "Tên: Z → A" },
+  { value: "rating", label: "Đánh giá cao nhất" },
+  { value: "newest", label: "Mới nhất" }
+];
+
 export default function ToursByDestinationPage() {
   const params = useParams();
   const slug = params.slug as string;
@@ -155,6 +172,7 @@ export default function ToursByDestinationPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [sortBy, setSortBy] = useState<string>("default");
 
   // Use intersection observer for better scroll performance
   const [observer, setObserver] = useState<IntersectionObserver | null>(null);
@@ -228,6 +246,79 @@ export default function ToursByDestinationPage() {
     setCurrentPage(page);
     setIsVisible(false); // Reset visibility for animation
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Sort tours based on selected option
+  const sortedTours = useMemo(() => {
+    if (!tours || tours.length === 0) return [];
+
+    const toursCopy = [...tours];
+
+    switch (sortBy) {
+      case "featured":
+        return toursCopy.sort((a, b) => {
+          if (a.isFeatured && !b.isFeatured) return -1;
+          if (!a.isFeatured && b.isFeatured) return 1;
+          return 0;
+        });
+
+      case "price-asc":
+        return toursCopy.sort((a, b) => {
+          const priceA = tourService.getDiscountedPrice(a.price, a.discount);
+          const priceB = tourService.getDiscountedPrice(b.price, b.discount);
+          return priceA - priceB;
+        });
+
+      case "price-desc":
+        return toursCopy.sort((a, b) => {
+          const priceA = tourService.getDiscountedPrice(a.price, a.discount);
+          const priceB = tourService.getDiscountedPrice(b.price, b.discount);
+          return priceB - priceA;
+        });
+
+      case "name-asc":
+        return toursCopy.sort((a, b) =>
+          a.title.localeCompare(b.title, "vi", { sensitivity: "base" })
+        );
+
+      case "name-desc":
+        return toursCopy.sort((a, b) =>
+          b.title.localeCompare(a.title, "vi", { sensitivity: "base" })
+        );
+
+      case "rating":
+        return toursCopy.sort((a, b) => {
+          const ratingA = a.rating || 0;
+          const ratingB = b.rating || 0;
+          return ratingB - ratingA;
+        });
+
+      case "newest":
+        return toursCopy.sort(
+          (a, b) =>
+            new Date(b.createdAt || "").getTime() -
+            new Date(a.createdAt || "").getTime()
+        );
+
+      default:
+        return toursCopy.sort((a, b) => {
+          // Default sort: featured first, then by creation date
+          if (a.isFeatured && !b.isFeatured) return -1;
+          if (!a.isFeatured && b.isFeatured) return 1;
+          return (
+            new Date(b.createdAt || "").getTime() -
+            new Date(a.createdAt || "").getTime()
+          );
+        });
+    }
+  }, [tours, sortBy]);
+
+  // Handle sort change
+  const handleSortChange = useCallback((value: string) => {
+    setSortBy(value);
+    setCurrentPage(1); // Reset to first page when sorting
+    setIsVisible(false); // Reset visibility for animation
+    setTimeout(() => setIsVisible(true), 100);
   }, []);
 
   // If loading show spinner
@@ -342,8 +433,107 @@ export default function ToursByDestinationPage() {
         <div className="container mx-auto">
           {tours.length > 0 ? (
             <>
+              {/* Sort Controls */}
+              <div
+                className={`mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
+                  isVisible
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-4"
+                } transition-all duration-500`}
+              >
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    {sortedTours.length} tour tìm thấy
+                  </h2>
+                  {destination.region && (
+                    <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
+                      {destination.region}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label
+                    htmlFor="sort-select"
+                    className="text-sm font-medium text-gray-700 whitespace-nowrap"
+                  >
+                    Sắp xếp theo:
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="sort-select"
+                      value={sortBy}
+                      onChange={(e) => handleSortChange(e.target.value)}
+                      className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 hover:border-gray-300 shadow-sm min-w-[180px]"
+                    >
+                      {sortOptions.map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                          className="py-1"
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sort indicator */}
+              {sortBy !== "default" && (
+                <div
+                  className={`mb-6 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 ${
+                    isVisible
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 translate-y-4"
+                  } transition-all duration-500 delay-100`}
+                >
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+                      />
+                    </svg>
+                    <span className="text-sm font-medium">
+                      Đã sắp xếp theo:{" "}
+                      {sortOptions.find((opt) => opt.value === sortBy)?.label}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleSortChange("default")}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                  >
+                    Xóa bộ lọc
+                  </button>
+                </div>
+              )}
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {tours.map((tour, index) => (
+                {sortedTours.map((tour, index) => (
                   <div
                     key={tour._id}
                     id={`tour-${tour._id}`}
