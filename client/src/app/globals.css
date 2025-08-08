@@ -813,3 +813,56 @@ button {
     opacity: 0;
   }
 }
+
+/* Custom select dropdown styling */
+.custom-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+/* Remove default select arrow in different browsers */
+select::-ms-expand {
+  display: none;
+}
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Custom option styling */
+select option {
+  background-color: white;
+  color: #374151;
+  padding: 8px 12px;
+}
+
+select option:checked {
+  background-color: #10b981;
+  color: white;
+}
+
+select option:hover {
+  background-color: #f3f4f6;
+}
+
+/* Sort dropdown specific styling */
+.sort-select {
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.sort-select:focus {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+.sort-select:hover {
+  border-color: #d1d5db !important;
+}
