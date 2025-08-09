@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour, ItineraryDay } from "@/services/tourService";
+import BookingModal from "@/components/TourBooking/BookingModal";
 
 export default function TourDetailPage() {
   const params = useParams();
@@ -22,6 +23,7 @@ export default function TourDetailPage() {
     child: 0,
     infant: 0
   });
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Collapsible policy sections (default closed)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -323,7 +325,8 @@ export default function TourDetailPage() {
       try {
         setIsLoadingRelated(true);
         // Ensure we always pass the raw destinationId string (handle populated object just in case)
-        const destinationId = (tour as any)?.destinationId?._id || tour.destinationId;
+        const destinationId =
+          (tour as any)?.destinationId?._id || tour.destinationId;
         const res = await tourService.getTours({
           destination: destinationId,
           limit: 6
@@ -342,6 +345,7 @@ export default function TourDetailPage() {
   }, [tour?.destinationId, tour?._id]);
 
   const openGallery = (index: number = 0) => {
+    if (!tour || !tour.images || tour.images.length === 0) return;
     setSelectedImageIndex(index);
     setShowGallery(true);
     document.body.style.overflow = "hidden";
@@ -353,15 +357,15 @@ export default function TourDetailPage() {
   };
 
   const nextImage = () => {
-    if (tour) {
-      setSelectedImageIndex((prev) => (prev + 1) % tour.images.length);
+    if (tour?.images?.length) {
+      setSelectedImageIndex((prev) => (prev + 1) % tour.images!.length);
     }
   };
 
   const prevImage = () => {
-    if (tour) {
+    if (tour?.images?.length) {
       setSelectedImageIndex(
-        (prev) => (prev - 1 + tour.images.length) % tour.images.length
+        (prev) => (prev - 1 + tour.images!.length) % tour.images!.length
       );
     }
   };
@@ -370,16 +374,22 @@ export default function TourDetailPage() {
     if (!tour) return 0;
 
     const discountedPrice = tourService.getDiscountedPrice(
-      tour.price,
-      tour.discount
+      tour.price || 0,
+      tour.discount || 0
     );
     const adultTotal = selectedParticipants.adult * discountedPrice;
     const childTotal =
       selectedParticipants.child *
-      tourService.getDiscountedPrice(tour.pricingByAge.child, tour.discount);
+      tourService.getDiscountedPrice(
+        tour.pricingByAge?.child || 0,
+        tour.discount || 0
+      );
     const infantTotal =
       selectedParticipants.infant *
-      tourService.getDiscountedPrice(tour.pricingByAge.infant, tour.discount);
+      tourService.getDiscountedPrice(
+        tour.pricingByAge?.infant || 0,
+        tour.discount || 0
+      );
 
     return adultTotal + childTotal + infantTotal;
   };
@@ -392,6 +402,10 @@ export default function TourDetailPage() {
       ...prev,
       [type]: Math.max(0, value)
     }));
+  };
+
+  const handleBookTour = () => {
+    setShowBookingModal(true);
   };
 
   if (isLoading) {
@@ -582,7 +596,9 @@ export default function TourDetailPage() {
               Tours
             </Link>
             <span className="mx-2">›</span>
-            <span className="text-gray-800 font-medium">{tour.title}</span>
+            <span className="text-gray-800 font-medium">
+              {tour?.title || "Loading..."}
+            </span>
           </nav>
         </div>
       </div>
@@ -603,7 +619,9 @@ export default function TourDetailPage() {
                   className="w-full h-full bg-cover bg-center cursor-pointer"
                   style={{
                     backgroundImage: `url('${
-                      tour.images[selectedImageIndex] || tour.images[0]
+                      (tour?.images && tour.images[selectedImageIndex]) ||
+                      (tour?.images && tour.images[0]) ||
+                      "/images/banner-tour.jpg"
                     }')`
                   }}
                   onClick={() => openGallery(selectedImageIndex)}
@@ -629,18 +647,18 @@ export default function TourDetailPage() {
                     />
                   </svg>
                   <span className="text-sm font-medium">
-                    Xem ảnh ({tour.images.length})
+                    Xem ảnh ({tour?.images?.length || 0})
                   </span>
                 </button>
 
                 {/* Navigation arrows */}
-                {tour.images.length > 1 && (
+                {tour?.images && tour.images.length > 1 && (
                   <>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedImageIndex((prev) =>
-                          prev === 0 ? tour.images.length - 1 : prev - 1
+                          prev === 0 ? (tour.images?.length || 1) - 1 : prev - 1
                         );
                       }}
                       className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
@@ -663,7 +681,7 @@ export default function TourDetailPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedImageIndex(
-                          (prev) => (prev + 1) % tour.images.length
+                          (prev) => (prev + 1) % (tour.images?.length || 1)
                         );
                       }}
                       className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
@@ -687,7 +705,7 @@ export default function TourDetailPage() {
 
                 {/* Image indicators */}
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                  {tour.images.map((_, index) => (
+                  {tour?.images?.map((_, index) => (
                     <button
                       key={index}
                       onClick={(e) => {
@@ -705,7 +723,7 @@ export default function TourDetailPage() {
               </div>
 
               {/* Thumbnail strip - horizontally scrollable on mobile */}
-              {tour.images.length > 1 && (
+              {tour?.images && tour.images.length > 1 && (
                 <div className="p-3 md:p-4 border-t border-gray-200">
                   <div className="flex space-x-2 overflow-x-auto pb-2 md:pb-0 snap-x">
                     {tour.images.slice(0, 8).map((image, index) => (
@@ -743,7 +761,7 @@ export default function TourDetailPage() {
               <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4 md:mb-6">
                 <div>
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-3 md:mb-4">
-                    {tour.title}
+                    {tour?.title || "Đang tải..."}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
                     <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
@@ -768,7 +786,7 @@ export default function TourDetailPage() {
                       </svg>
                       <span className="font-medium">Khởi hành từ:</span>
                       <span className="ml-1 text-blue-700">
-                        {tour.departureLocation.name}
+                        {tour?.departureLocation?.name || "Đang cập nhật"}
                       </span>
                     </div>
                     <div className="flex items-center">
@@ -785,7 +803,9 @@ export default function TourDetailPage() {
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span>Thời gian: {tour.duration}</span>
+                      <span>
+                        Thời gian: {tour?.duration || "Đang cập nhật"}
+                      </span>
                     </div>
                     <div className="flex items-center">
                       <svg
@@ -801,13 +821,19 @@ export default function TourDetailPage() {
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      {new Date(tour.startDate).toLocaleDateString("vi-VN")} -{" "}
-                      {new Date(tour.endDate).toLocaleDateString("vi-VN")}
+                      {tour?.startDate && tour?.endDate ? (
+                        <>
+                          {new Date(tour.startDate).toLocaleDateString("vi-VN")}{" "}
+                          - {new Date(tour.endDate).toLocaleDateString("vi-VN")}
+                        </>
+                      ) : (
+                        "Ngày khởi hành: Đang cập nhật"
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="text-right mt-3 md:mt-0">
-                  {tour.rating && tour.rating > 0 && (
+                  {tour?.rating && tour.rating > 0 && (
                     <div className="flex items-center mb-2">
                       <span className="text-yellow-500 text-lg">⭐</span>
                       <span className="ml-1 font-semibold">{tour.rating}</span>
@@ -816,7 +842,7 @@ export default function TourDetailPage() {
                       </span>
                     </div>
                   )}
-                  {tour.isFeatured && (
+                  {tour?.isFeatured && (
                     <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
                       ⭐ Tour nổi bật
                     </span>
@@ -830,8 +856,8 @@ export default function TourDetailPage() {
                   Mô tả tour
                 </h3>
                 {/* Show warning if the title doesn't match the departure location */}
-                {tour.title &&
-                  tour.departureLocation &&
+                {tour?.title &&
+                  tour?.departureLocation &&
                   !checkTitleContainsDeparture(
                     tour.title,
                     tour.departureLocation.name
@@ -854,7 +880,7 @@ export default function TourDetailPage() {
                     </div>
                   )}
                 <p className="text-gray-600 leading-relaxed">
-                  {tour.description}
+                  {tour?.description || "Mô tả tour đang được cập nhật..."}
                 </p>
               </div>
 
@@ -866,10 +892,10 @@ export default function TourDetailPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex items-center space-x-4">
                     <span className="text-green-600 font-medium">
-                      Còn {tour.availableSeats} chỗ trống
+                      Còn {tour?.availableSeats || 0} chỗ trống
                     </span>
                     <span className="text-gray-500">
-                      / {tour.seats} chỗ tối đa
+                      / {tour?.seats || 0} chỗ tối đa
                     </span>
                   </div>
                   <div className="w-full sm:w-48">
@@ -877,7 +903,11 @@ export default function TourDetailPage() {
                       <div
                         className="bg-green-500 h-3 rounded-full transition-all duration-300"
                         style={{
-                          width: `${(tour.availableSeats / tour.seats) * 100}%`
+                          width: `${
+                            tour?.seats
+                              ? ((tour.availableSeats || 0) / tour.seats) * 100
+                              : 0
+                          }%`
                         }}
                       />
                     </div>
@@ -1128,8 +1158,8 @@ export default function TourDetailPage() {
             </div>
           </div>
 
-          {/* Booking Sidebar - Displayed below content on mobile, in sidebar on desktop */}
-          <div className="lg:col-span-1 mt-6 lg:mt-0">
+          {/* Booking Sidebar - Move back to the right side */}
+          <div className="lg:col-span-1">
             <div
               className={`bg-white rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 sticky top-24 transition-all duration-1000 delay-700 ${
                 isVisible ? "animate-slide-up" : "opacity-0"
@@ -1138,19 +1168,22 @@ export default function TourDetailPage() {
               {/* Price Display */}
               <div className="mb-6">
                 <div className="flex items-baseline space-x-2 mb-2">
-                  {tour.discount > 0 && (
+                  {tour?.discount && tour.discount > 0 && (
                     <span className="text-base md:text-lg text-gray-500 line-through">
-                      {tourService.formatPrice(tour.price)}
+                      {tourService.formatPrice(tour.price || 0)}
                     </span>
                   )}
                   <span className="text-2xl md:text-3xl font-bold text-green-600">
                     {tourService.formatPrice(
-                      tourService.getDiscountedPrice(tour.price, tour.discount)
+                      tourService.getDiscountedPrice(
+                        tour?.price || 0,
+                        tour?.discount || 0
+                      )
                     )}
                   </span>
                 </div>
                 <p className="text-gray-500 text-sm">Giá/người lớn</p>
-                {tour.discount > 0 && (
+                {tour?.discount && tour.discount > 0 && (
                   <span className="inline-block mt-2 bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
                     Giảm {tour.discount}%
                   </span>
@@ -1170,8 +1203,8 @@ export default function TourDetailPage() {
                     <p className="text-sm text-gray-600">
                       {tourService.formatPrice(
                         tourService.getDiscountedPrice(
-                          tour.pricingByAge.adult,
-                          tour.discount
+                          tour?.pricingByAge?.adult || tour?.price || 0,
+                          tour?.discount || 0
                         )
                       )}
                     </p>
@@ -1213,8 +1246,8 @@ export default function TourDetailPage() {
                     <p className="text-sm text-gray-600">
                       {tourService.formatPrice(
                         tourService.getDiscountedPrice(
-                          tour.pricingByAge.child,
-                          tour.discount
+                          tour?.pricingByAge?.child || 0,
+                          tour?.discount || 0
                         )
                       )}
                     </p>
@@ -1256,8 +1289,8 @@ export default function TourDetailPage() {
                     <p className="text-sm text-gray-600">
                       {tourService.formatPrice(
                         tourService.getDiscountedPrice(
-                          tour.pricingByAge.infant,
-                          tour.discount
+                          tour?.pricingByAge?.infant || 0,
+                          tour?.discount || 0
                         )
                       )}
                     </p>
@@ -1313,10 +1346,13 @@ export default function TourDetailPage() {
 
               {/* Booking Button - Larger on mobile for easy tapping */}
               <button
-                disabled={tour.availableSeats === 0}
+                onClick={handleBookTour}
+                disabled={(tour?.availableSeats || 0) === 0}
                 className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-4 md:py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-base"
               >
-                {tour.availableSeats === 0 ? "Hết chỗ" : "Đặt Tour Ngay"}
+                {(tour?.availableSeats || 0) === 0
+                  ? "Hết chỗ"
+                  : "Đặt Tour Ngay"}
               </button>
 
               {/* Contact Info */}
@@ -1420,8 +1456,8 @@ export default function TourDetailPage() {
             {openSections.exclude && (
               <ul className="list-disc pl-6 space-y-1 text-gray-700">
                 <li>
-                  Chi phí tham quan - ăn uống ngoài chương trình, giặt ủi, điện thoại
-                  và các chi phí cá nhân.
+                  Chi phí tham quan - ăn uống ngoài chương trình, giặt ủi, điện
+                  thoại và các chi phí cá nhân.
                 </li>
               </ul>
             )}
@@ -1447,16 +1483,16 @@ export default function TourDetailPage() {
                   ngủ.
                 </li>
                 <li>
-                  Trẻ em từ 2 đến dưới 6 tuổi: tiêu chuẩn gồm vé máy bay. Gia đình
-                  tự lo cho bé ăn ngủ và phí tham quan (nếu có).
+                  Trẻ em từ 2 đến dưới 6 tuổi: tiêu chuẩn gồm vé máy bay. Gia
+                  đình tự lo cho bé ăn ngủ và phí tham quan (nếu có).
                 </li>
                 <li>
-                  Hai người lớn chỉ được kèm một trẻ em dưới 6 tuổi. Từ trẻ thứ 2
-                  trở lên, mỗi em phải đóng bằng giá trẻ em từ 6-11 tuổi.
+                  Hai người lớn chỉ được kèm một trẻ em dưới 6 tuổi. Từ trẻ thứ
+                  2 trở lên, mỗi em phải đóng bằng giá trẻ em từ 6-11 tuổi.
                 </li>
                 <li>
-                  Trẻ em từ 6 - 11 tuổi: tiêu chuẩn gồm vé máy bay, ăn uống và tham
-                  quan theo chương trình, ngủ chung giường với phụ huynh.
+                  Trẻ em từ 6 - 11 tuổi: tiêu chuẩn gồm vé máy bay, ăn uống và
+                  tham quan theo chương trình, ngủ chung giường với phụ huynh.
                 </li>
                 <li>
                   Trẻ em trên 11 tuổi: áp dụng giá và các tiêu chuẩn dịch vụ như
@@ -1482,67 +1518,77 @@ export default function TourDetailPage() {
             {openSections.cancellation && (
               <div className="space-y-3 text-gray-700">
                 <div>
-                  <p className="font-medium mb-2">Lưu ý về chuyển hoặc hủy tour</p>
+                  <p className="font-medium mb-2">
+                    Lưu ý về chuyển hoặc hủy tour
+                  </p>
                   <ul className="list-disc pl-6 space-y-1">
                     <li>
-                      Quy định vé máy bay: Chương trình hợp tác với hãng hàng không
-                      Vietnam Airlines nên có một số lưu ý:
-                    </li>
-                    <li>Giá vé máy bay không bao gồm suất ăn/uống trên máy bay</li>
-                    <li>
-                      Không được hoàn hoặc hủy vé máy bay. Nếu hủy, vui lòng chịu
-                      phạt 100% chi phí vé máy bay
+                      Quy định vé máy bay: Chương trình hợp tác với hãng hàng
+                      không Vietnam Airlines nên có một số lưu ý:
                     </li>
                     <li>
-                      Khi đăng ký vé máy bay, quý khách cung cấp họ và tên, ngày tháng
-                      năm sinh (đúng từng ký tự ghi trong hộ chiếu hoặc CMND/CCCD)
+                      Giá vé máy bay không bao gồm suất ăn/uống trên máy bay
                     </li>
                     <li>
-                      Không được thay đổi thông tin đặt chỗ: họ tên hành khách, chuyến
-                      bay, ngày bay, chặng bay, tách đoàn, gia hạn vé
-                    </li>
-                    <li>Số lượng khách tối thiểu để tổ chức tour: 10 khách/đoàn</li>
-                    <li>
-                      Du khách được miễn cước 1 kiện (23 kg) hành lý ký gởi và 1 kiện
-                      (10 kg) hành lý xách tay
+                      Không được hoàn hoặc hủy vé máy bay. Nếu hủy, vui lòng
+                      chịu phạt 100% chi phí vé máy bay
                     </li>
                     <li>
-                      Trường hợp hủy tour do sự cố khách quan như thiên tai, dịch bệnh
-                      hoặc do máy bay hoãn - hủy chuyến, Lutrip sẽ không chịu trách
-                      nhiệm bồi thường thêm bất kỳ chi phí nào khác ngoài việc hoàn
-                      trả chi phí những dịch vụ chưa được sử dụng của tour đó (ngoại
-                      trừ chi phí vé máy bay)
+                      Khi đăng ký vé máy bay, quý khách cung cấp họ và tên, ngày
+                      tháng năm sinh (đúng từng ký tự ghi trong hộ chiếu hoặc
+                      CMND/CCCD)
+                    </li>
+                    <li>
+                      Không được thay đổi thông tin đặt chỗ: họ tên hành khách,
+                      chuyến bay, ngày bay, chặng bay, tách đoàn, gia hạn vé
+                    </li>
+                    <li>
+                      Số lượng khách tối thiểu để tổ chức tour: 10 khách/đoàn
+                    </li>
+                    <li>
+                      Du khách được miễn cước 1 kiện (23 kg) hành lý ký gởi và 1
+                      kiện (10 kg) hành lý xách tay
+                    </li>
+                    <li>
+                      Trường hợp hủy tour do sự cố khách quan như thiên tai,
+                      dịch bệnh hoặc do máy bay hoãn - hủy chuyến, Lutrip sẽ
+                      không chịu trách nhiệm bồi thường thêm bất kỳ chi phí nào
+                      khác ngoài việc hoàn trả chi phí những dịch vụ chưa được
+                      sử dụng của tour đó (ngoại trừ chi phí vé máy bay)
                     </li>
                   </ul>
                 </div>
                 <div>
                   <p className="font-medium mb-2">
-                    Trường hợp hủy vé landtour, quý khách vui lòng thanh toán các khoản
-                    sau:
+                    Trường hợp hủy vé landtour, quý khách vui lòng thanh toán
+                    các khoản sau:
                   </p>
                   <ul className="list-disc pl-6 space-y-1">
                     <li>
-                      Chuyển đổi tour sang ngày khác và báo trước ngày khởi hành trước
-                      30 ngày (trừ thứ 7, chủ nhật, lễ, tết) sẽ không chịu phí (không
-                      áp dụng tour KS 4-5 sao). Nếu trễ hơn sẽ căn cứ theo quy định
-                      hủy phạt phía dưới và chỉ được chuyển ngày khởi hành tour 1 lần.
+                      Chuyển đổi tour sang ngày khác và báo trước ngày khởi hành
+                      trước 30 ngày (trừ thứ 7, chủ nhật, lễ, tết) sẽ không chịu
+                      phí (không áp dụng tour KS 4-5 sao). Nếu trễ hơn sẽ căn cứ
+                      theo quy định hủy phạt phía dưới và chỉ được chuyển ngày
+                      khởi hành tour 1 lần.
                     </li>
                     <li>
-                      Hủy vé trước ngày khởi hành từ 15 ngày trở lên (trừ thứ 7, chủ
-                      nhật, lễ, tết), chịu phạt 50% tiền tour hoặc 100% tiền cọc.
+                      Hủy vé trước ngày khởi hành từ 15 ngày trở lên (trừ thứ 7,
+                      chủ nhật, lễ, tết), chịu phạt 50% tiền tour hoặc 100% tiền
+                      cọc.
                     </li>
                     <li>
-                      Hủy vé trước ngày khởi hành từ 8 - 14 ngày (trừ thứ 7, chủ nhật,
-                      lễ, tết), chịu phạt 80% tiền tour hoặc 100% tiền cọc.
+                      Hủy vé trước ngày khởi hành từ 8 - 14 ngày (trừ thứ 7, chủ
+                      nhật, lễ, tết), chịu phạt 80% tiền tour hoặc 100% tiền
+                      cọc.
                     </li>
                     <li>
-                      Hủy vé trong vòng 7 ngày hoặc ngay ngày khởi hành, chịu phạt 100%
-                      tiền tour.
+                      Hủy vé trong vòng 7 ngày hoặc ngay ngày khởi hành, chịu
+                      phạt 100% tiền tour.
                     </li>
                     <li>
-                      Sau khi hủy tour, du khách vui lòng đến nhận tiền trong vòng 15
-                      ngày kể từ ngày kết thúc tour. Chúng tôi chỉ thanh toán trong
-                      khoảng thời gian nói trên.
+                      Sau khi hủy tour, du khách vui lòng đến nhận tiền trong
+                      vòng 15 ngày kể từ ngày kết thúc tour. Chúng tôi chỉ thanh
+                      toán trong khoảng thời gian nói trên.
                     </li>
                   </ul>
                 </div>
@@ -1566,19 +1612,20 @@ export default function TourDetailPage() {
             {openSections.insurance && (
               <div className="space-y-2 text-gray-700">
                 <p>
-                  Công ty TNHH Một Thành Viên Dịch vụ Lữ hành Lutrip thực hiện chương
-                  trình TẶNG MIỄN PHÍ BẢO HIỂM DU LỊCH NỘI ĐỊA dành cho tất cả du khách
-                  tham gia tour trọn gói trên tất cả các tuyến du lịch nội địa, khởi
-                  hành trên toàn quốc, với mức bảo hiểm tối đa lên đến
-                  150.000.000 VNĐ/khách/vụ.
+                  Công ty TNHH Một Thành Viên Dịch vụ Lữ hành Lutrip thực hiện
+                  chương trình TẶNG MIỄN PHÍ BẢO HIỂM DU LỊCH NỘI ĐỊA dành cho
+                  tất cả du khách tham gia tour trọn gói trên tất cả các tuyến
+                  du lịch nội địa, khởi hành trên toàn quốc, với mức bảo hiểm
+                  tối đa lên đến 150.000.000 VNĐ/khách/vụ.
                 </p>
                 <p>
-                  Toàn bộ phí bảo hiểm được tặng miễn phí cho khách hàng của Lutrip với
-                  chương trình, giá và chất lượng dịch vụ tour không đổi.
+                  Toàn bộ phí bảo hiểm được tặng miễn phí cho khách hàng của
+                  Lutrip với chương trình, giá và chất lượng dịch vụ tour không
+                  đổi.
                 </p>
                 <p>
-                  Thông tin chi tiết, vui lòng liên hệ các văn phòng thuộc Hệ thống
-                  Lutrip trên toàn quốc.
+                  Thông tin chi tiết, vui lòng liên hệ các văn phòng thuộc Hệ
+                  thống Lutrip trên toàn quốc.
                 </p>
               </div>
             )}
@@ -1602,29 +1649,34 @@ export default function TourDetailPage() {
                 <p className="font-medium">Giấy tờ tùy thân</p>
                 <ul className="list-disc pl-6 space-y-1">
                   <li>
-                    Du khách mang theo giấy tờ tùy thân còn thời hạn sử dụng: CMND /
-                    CCCD hoặc Hộ chiếu. Đối với du khách là Việt kiều, Quốc tế nhập
-                    cảnh Việt Nam bằng visa rời, vui lòng mang theo visa khi đăng ký và
-                    khi đi tour.
+                    Du khách mang theo giấy tờ tùy thân còn thời hạn sử dụng:
+                    CMND / CCCD hoặc Hộ chiếu. Đối với du khách là Việt kiều,
+                    Quốc tế nhập cảnh Việt Nam bằng visa rời, vui lòng mang theo
+                    visa khi đăng ký và khi đi tour.
                   </li>
                   <li>
-                    Khách lớn tuổi (từ 70 tuổi trở lên), khách tàn tật tham gia tour,
-                    phải có thân nhân đi kèm và cam kết đảm bảo đủ sức khỏe.
+                    Khách lớn tuổi (từ 70 tuổi trở lên), khách tàn tật tham gia
+                    tour, phải có thân nhân đi kèm và cam kết đảm bảo đủ sức
+                    khỏe.
                   </li>
                   <li>
-                    Trẻ em dưới 14 tuổi khi đi tour phải mang theo giấy khai sinh hoặc
-                    hộ chiếu. Trẻ em từ 14 tuổi trở lên phải mang theo CMND/CCCD.
+                    Trẻ em dưới 14 tuổi khi đi tour phải mang theo giấy khai
+                    sinh hoặc hộ chiếu. Trẻ em từ 14 tuổi trở lên phải mang theo
+                    CMND/CCCD.
                   </li>
                   <li>Tất cả giấy tờ tùy thân mang theo đều phải bản chính.</li>
                   <li>
-                    Du khách mang theo hành lý gọn nhẹ và tự bảo quản hành lý, tiền
-                    bạc, tư trang trong suốt thời gian đi du lịch.
+                    Du khách mang theo hành lý gọn nhẹ và tự bảo quản hành lý,
+                    tiền bạc, tư trang trong suốt thời gian đi du lịch.
                   </li>
                   <li>
-                    Khách Việt Nam ở cùng phòng với khách Quốc tế hoặc Việt kiều yêu cầu
-                    phải có giấy hôn thú.
+                    Khách Việt Nam ở cùng phòng với khách Quốc tế hoặc Việt kiều
+                    yêu cầu phải có giấy hôn thú.
                   </li>
-                  <li>Quý khách có mặt tại sân bay trước 2 tiếng so với giờ khởi hành.</li>
+                  <li>
+                    Quý khách có mặt tại sân bay trước 2 tiếng so với giờ khởi
+                    hành.
+                  </li>
                 </ul>
               </div>
             )}
@@ -1645,7 +1697,10 @@ export default function TourDetailPage() {
             </button>
             {openSections.contact && (
               <div className="space-y-1 text-gray-700">
-                <p>Công ty TNHH LuTrip - Địa chỉ: 12 Nguyễn Văn Bảo, phường Hạnh Thông, Thành phố Hồ Chí Minh </p>
+                <p>
+                  Công ty TNHH LuTrip - Địa chỉ: 12 Nguyễn Văn Bảo, phường Hạnh
+                  Thông, Thành phố Hồ Chí Minh{" "}
+                </p>
                 <p>Đường dây nóng: 0818220319 </p>
               </div>
             )}
@@ -1673,11 +1728,17 @@ export default function TourDetailPage() {
                 <div className="h-40 relative">
                   <div
                     className="w-full h-full bg-gray-200 bg-cover bg-center"
-                    style={{ backgroundImage: `url('${(t.images && t.images[0]) || "/images/banner-tour.jpg"}')` }}
+                    style={{
+                      backgroundImage: `url('${
+                        (t.images && t.images[0]) || "/images/banner-tour.jpg"
+                      }')`
+                    }}
                   />
                 </div>
                 <div className="p-4">
-                  <h4 className="font-semibold text-gray-800 line-clamp-2 mb-1">{t.title}</h4>
+                  <h4 className="font-semibold text-gray-800 line-clamp-2 mb-1">
+                    {t.title}
+                  </h4>
                   <div className="text-sm text-gray-600 mb-2">
                     📍 {t.departureLocation?.name || "Khởi hành"}
                   </div>
@@ -1694,7 +1755,7 @@ export default function TourDetailPage() {
       </div>
 
       {/* Photo Gallery Modal - Better optimized for mobile */}
-      {showGallery && (
+      {showGallery && tour?.images && tour.images.length > 0 && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
           <button
             onClick={closeGallery}
@@ -1795,6 +1856,17 @@ export default function TourDetailPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Booking Modal */}
+      {tour && (
+        <BookingModal
+          tour={tour}
+          isOpen={showBookingModal}
+          onClose={() => setShowBookingModal(false)}
+          participants={selectedParticipants}
+          totalPrice={calculateTotalPrice()}
+        />
       )}
 
       <Footer />
