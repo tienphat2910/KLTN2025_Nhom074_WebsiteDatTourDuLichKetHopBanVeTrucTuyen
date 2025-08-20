@@ -16,7 +16,7 @@ const services = [
     icon: "🏔️",
     href: "/tours",
     gradient: "from-blue-500 to-purple-600",
-    bgColor: "bg-blue-50/80"
+    bgColor: "bg-white"
   },
   {
     title: "Vé Máy Bay",
@@ -24,15 +24,7 @@ const services = [
     icon: "✈️",
     href: "/flights",
     gradient: "from-green-500 to-blue-500",
-    bgColor: "bg-green-50/80"
-  },
-  {
-    title: "Khách Sạn",
-    description: "Tìm kiếm và đặt phòng khách sạn",
-    icon: "🏨",
-    href: "/hotels",
-    gradient: "from-purple-500 to-pink-500",
-    bgColor: "bg-purple-50/80"
+    bgColor: "bg-[#87CEFA]/20"
   },
   {
     title: "Vé Giải Trí",
@@ -56,6 +48,7 @@ export default function Home() {
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(true);
   const [popularTours, setPopularTours] = useState<Tour[]>([]);
   const [isLoadingTours, setIsLoadingTours] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
   const popularEntertainments = [
     {
       id: 1,
@@ -139,11 +132,25 @@ export default function Home() {
     loadPopularTours();
   }, []);
 
+  // Refs for sections (khai báo trước useEffect để không bị undefined)
+  const servicesRef = useRef<HTMLElement>(null);
+  const destinationsRef = useRef<HTMLElement>(null);
+  const toursRef = useRef<HTMLElement>(null);
+  const entertainmentRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   // Intersection Observer for scroll animations
   useEffect(() => {
+    setVisibleSections(new Set()); // Reset hiệu ứng khi reload
+
+    if (!hasMounted) return; // Chỉ chạy sau khi đã mount
+
     const observerOptions = {
-      threshold: 0.2, // Trigger when 20% of the element is visible
-      rootMargin: "-50px 0px -50px 0px" // Add some margin for better UX
+      threshold: 0.2,
+      rootMargin: "-50px 0px -50px 0px"
     };
 
     const observer = new IntersectionObserver((entries) => {
@@ -179,17 +186,11 @@ export default function Home() {
         }
       });
     };
-  }, []);
+  }, [hasMounted]);
 
   // Helper function to check if section is visible
   const isSectionVisible = (sectionId: string) =>
     visibleSections.has(sectionId);
-
-  // Refs for sections
-  const servicesRef = useRef<HTMLElement>(null);
-  const destinationsRef = useRef<HTMLElement>(null);
-  const toursRef = useRef<HTMLElement>(null);
-  const entertainmentRef = useRef<HTMLElement>(null);
 
   // Don't wait for auth on home page - render immediately
   if (isAuthLoading) {
@@ -230,7 +231,7 @@ export default function Home() {
             </h1>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto drop-shadow-lg">
               Trải nghiệm những chuyến du lịch tuyệt vời với dịch vụ đặt tour,
-              vé máy bay, khách sạn và vé giải trí
+              vé máy bay và vé giải trí
             </p>
             <Link href="/destinations">
               <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:shadow-2xl transform hover:scale-105 transition-all duration-300 shadow-xl">
@@ -266,38 +267,40 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {services.map((service, index) => (
-              <Link
-                key={service.title}
-                href={service.href}
-                className={`group transition-all duration-700 delay-${
-                  300 + index * 100
-                } ${
-                  isSectionVisible("services")
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 translate-y-10"
-                } h-full`}
-              >
-                <div
-                  className={`${service.bgColor} backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/20 h-full flex flex-col`}
+          <div className="flex justify-center">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 w-fit">
+              {services.map((service, index) => (
+                <Link
+                  key={service.title}
+                  href={service.href}
+                  className={`group transition-all duration-700 delay-${
+                    300 + index * 100
+                  } ${
+                    isSectionVisible("services")
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 translate-y-10"
+                  } h-full`}
                 >
                   <div
-                    className={`w-16 h-16 bg-gradient-to-r ${service.gradient} rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:rotate-12 transition-transform duration-300 flex-shrink-0`}
+                    className={`${service.bgColor} backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/20 h-full flex flex-col`}
                   >
-                    {service.icon}
+                    <div
+                      className={`w-16 h-16 bg-gradient-to-r ${service.gradient} rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:rotate-12 transition-transform duration-300 flex-shrink-0`}
+                    >
+                      {service.icon}
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                      <h3 className="text-xl font-semibold text-slate-800 mb-2">
+                        {service.title}
+                      </h3>
+                      <p className="text-slate-600 flex-1">
+                        {service.description}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 flex flex-col">
-                    <h3 className="text-xl font-semibold text-slate-800 mb-2">
-                      {service.title}
-                    </h3>
-                    <p className="text-slate-600 flex-1">
-                      {service.description}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>

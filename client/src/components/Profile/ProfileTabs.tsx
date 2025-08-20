@@ -97,19 +97,22 @@ export default function ProfileTabs({
   return (
     <div className="bg-white rounded-xl shadow-lg mb-6">
       <div className="border-b border-gray-200">
-        <nav className="flex overflow-x-auto">
+        <nav
+          className="flex overflow-x-auto scrollbar-hide"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors min-w-[80px] sm:min-w-[120px] ${
                 activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
+                  ? "border-blue-500 text-blue-600 bg-blue-50 sm:bg-transparent"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               {tab.icon}
-              {tab.label}
+              <span className="hidden xs:inline sm:inline">{tab.label}</span>
             </button>
           ))}
         </nav>
