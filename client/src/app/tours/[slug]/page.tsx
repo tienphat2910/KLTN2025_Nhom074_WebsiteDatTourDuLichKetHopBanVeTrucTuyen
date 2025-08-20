@@ -7,7 +7,7 @@ import React, {
   useCallback,
   Fragment
 } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
@@ -172,6 +172,7 @@ const sortOptions: SortOption[] = [
 export default function ToursByDestinationPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const searchParams = useSearchParams();
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [destination, setDestination] = useState<Destination | null>(null);
@@ -182,8 +183,10 @@ export default function ToursByDestinationPage() {
   const [sortBy, setSortBy] = useState<string>("default");
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<string>(slug);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>(""); // dùng cho API
+  const [endDate, setEndDate] = useState<string>(""); // dùng cho API
+  const [searchStartDate, setSearchStartDate] = useState<string>(""); // dùng cho input
+  const [searchEndDate, setSearchEndDate] = useState<string>(""); // dùng cho input
   const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
 
   // Use intersection observer for better scroll performance
@@ -216,10 +219,22 @@ export default function ToursByDestinationPage() {
     };
   }, []);
 
+  // Khi mount, lấy ngày từ query để truyền vào API, đồng thời set cho input
+  useEffect(() => {
+    if (searchParams) {
+      const start = searchParams.get("start") || "";
+      const end = searchParams.get("end") || "";
+      setStartDate(start);
+      setEndDate(end);
+      setSearchStartDate(start);
+      setSearchEndDate(end);
+    }
+  }, [searchParams]);
+
   // Load tours data
   const loadToursAndDestination = useCallback(async () => {
     try {
-      setIsLoading(true);
+      setIsLoading(true); // Luôn set loading khi gọi API
 
       // Load destination info first
       const destResponse = await destinationService.getDestinationBySlug(slug);
@@ -227,12 +242,14 @@ export default function ToursByDestinationPage() {
       if (destResponse.success) {
         setDestination(destResponse.data);
 
-        // Load tours for this destination using destinationId
+        // Sửa dòng này: ép kiểu object truyền vào cho phép các trường động
         const toursResponse = await tourService.getTours({
           destination: destResponse.data._id,
           page: currentPage,
-          limit: 9
-        });
+          limit: 9,
+          ...(startDate ? { start: startDate } : {}),
+          ...(endDate ? { end: endDate } : {})
+        } as any); // ép kiểu any để tránh lỗi TS
 
         if (toursResponse.success) {
           setTours(toursResponse.data.tours);
@@ -245,7 +262,7 @@ export default function ToursByDestinationPage() {
       setIsLoading(false);
       setTimeout(() => setIsVisible(true), 100);
     }
-  }, [slug, currentPage]);
+  }, [slug, currentPage, startDate, endDate]);
 
   useEffect(() => {
     if (slug) {
@@ -347,16 +364,15 @@ export default function ToursByDestinationPage() {
       toast.error("Vui lòng chọn địa điểm trước khi tìm kiếm!");
       return;
     }
-    if (selectedDestination) {
-      let url = `/tours/${selectedDestination}`;
-      if (startDate && endDate) {
-        url += `?start=${startDate}&end=${endDate}`;
-      }
-      window.location.href = url;
-    }
+    let url = `/tours/${selectedDestination}`;
+    const params: string[] = [];
+    if (searchStartDate) params.push(`start=${searchStartDate}`);
+    if (searchEndDate) params.push(`end=${searchEndDate}`);
+    if (params.length > 0) url += `?${params.join("&")}`;
+    window.location.href = url;
   };
 
-  // If loading show spinner
+  // If loading show spinner (chỉ lần đầu)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100 flex items-center justify-center">
@@ -508,8 +524,8 @@ export default function ToursByDestinationPage() {
                   <input
                     type="date"
                     className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    value={searchStartDate}
+                    onChange={(e) => setSearchStartDate(e.target.value)}
                   />
                   <span className="px-1 text-gray-600 flex items-center">
                     -
@@ -517,8 +533,8 @@ export default function ToursByDestinationPage() {
                   <input
                     type="date"
                     className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    value={searchEndDate}
+                    onChange={(e) => setSearchEndDate(e.target.value)}
                   />
                 </div>
               </div>

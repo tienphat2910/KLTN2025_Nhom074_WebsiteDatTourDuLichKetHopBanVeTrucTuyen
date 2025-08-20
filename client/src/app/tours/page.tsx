@@ -68,14 +68,13 @@ export default function Tours() {
       toast.error("Vui lòng chọn địa điểm trước khi tìm kiếm!");
       return;
     }
-    // Redirect to tours by destination (slug) with date params
-    if (selectedDestination) {
-      let url = `/tours/${selectedDestination}`;
-      if (startDate && endDate) {
-        url += `?start=${startDate}&end=${endDate}`;
-      }
-      window.location.href = url;
-    }
+    // Chuẩn hóa truyền ngày search
+    let url = `/tours/${selectedDestination}`;
+    const params: string[] = [];
+    if (startDate) params.push(`start=${startDate}`);
+    if (endDate) params.push(`end=${endDate}`);
+    if (params.length > 0) url += `?${params.join("&")}`;
+    window.location.href = url;
   };
 
   if (isLoading) {
