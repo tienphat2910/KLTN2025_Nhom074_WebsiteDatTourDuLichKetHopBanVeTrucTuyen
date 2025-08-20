@@ -125,14 +125,6 @@ export default function Footer() {
             >
               <li>
                 <a
-                  href="/hotels"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Khách sạn
-                </a>
-              </li>
-              <li>
-                <a
                   href="/flights"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
