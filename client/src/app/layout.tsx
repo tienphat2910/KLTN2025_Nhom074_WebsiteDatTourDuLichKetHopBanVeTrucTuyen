@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import PageTransition from "@/components/Loading/PageTransition";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -51,6 +52,7 @@ export default function RootLayout({
             <LayoutContent>{children}</LayoutContent>
           </AuthProvider>
         </LoadingProvider>
+        <Toaster position="top-right" richColors closeButton duration={3000} />
       </body>
     </html>
   );

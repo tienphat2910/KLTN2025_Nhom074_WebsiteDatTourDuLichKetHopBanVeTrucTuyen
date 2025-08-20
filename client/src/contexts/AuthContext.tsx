@@ -8,6 +8,7 @@ import React, {
   ReactNode
 } from "react";
 import { useLoading } from "./LoadingContext";
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -64,6 +65,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     localStorage.removeItem("lutrip_token");
     localStorage.removeItem("lutrip_user");
+    toast.success("Đăng xuất thành công!", {
+      description: "Hẹn gặp lại bạn!",
+      duration: 2000
+    });
   };
 
   return (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { authService } from "@/services/authService";
 import { useLoading } from "@/contexts/LoadingContext";
 import { LoadingSpinner } from "@/components/Loading";
@@ -59,6 +60,10 @@ export default function Register() {
         setSuccess(result.message);
         setEmailSent(true);
         setUserEmail(formData.email);
+        toast.success("Đăng ký thành công!", {
+          description: "Vui lòng kiểm tra email để xác thực tài khoản.",
+          duration: 4000
+        });
       } else {
         setError(result.message);
       }
@@ -80,6 +85,10 @@ export default function Register() {
       );
       if (result.success) {
         setSuccess("Email xác thực đã được gửi lại!");
+        toast.success("Email đã được gửi lại!", {
+          description: "Vui lòng kiểm tra hộp thư của bạn.",
+          duration: 3000
+        });
       } else {
         setError(result.message);
       }
@@ -159,26 +168,19 @@ export default function Register() {
           isVisible ? "auth-fade-in" : "opacity-0"
         }`}
       >
-        {/* Glass Card - Strong Blur Effect */}
-        <div
-          className="bg-black/15 border border-white/20 rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden auth-glow"
-          style={{
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            background: "rgba(0, 0, 0, 0.15)"
-          }}
-        >
+        {/* White Card - Solid Background */}
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8 relative z-10">
             <Link href="/" className="inline-block mb-4 sm:mb-6">
-              <span className="text-2xl sm:text-3xl font-bold text-white">
+              <span className="text-2xl sm:text-3xl font-bold text-gray-800">
                 🌎 LuTrip
               </span>
             </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
               {emailSent ? "Kiểm Tra Email" : "Đăng Ký"}
             </h1>
-            <p className="text-white/70 text-sm sm:text-base">
+            <p className="text-gray-600 text-sm sm:text-base">
               {emailSent
                 ? "Chúng tôi đã gửi email xác thực đến địa chỉ của bạn"
                 : "Tạo tài khoản mới để bắt đầu"}
@@ -187,12 +189,12 @@ export default function Register() {
 
           {/* Error/Success Messages */}
           {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
             </div>
           )}
           {success && (
-            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200 text-sm">
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
               {success}
             </div>
           )}
@@ -217,17 +219,17 @@ export default function Register() {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
                   Email đã được gửi!
                 </h3>
-                <p className="text-white/70 text-sm mb-2">
+                <p className="text-gray-600 text-sm mb-2">
                   Chúng tôi đã gửi email xác thực đến:
                 </p>
-                <p className="text-white font-medium">{userEmail}</p>
+                <p className="text-gray-800 font-medium">{userEmail}</p>
               </div>
 
-              <div className="bg-white/10 border border-white/20 rounded-lg p-4">
-                <p className="text-white/80 text-sm mb-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 text-sm mb-3">
                   📧 Vui lòng kiểm tra hộp thư (cả thư mục spam) và nhấp vào
                   liên kết xác thực để kích hoạt tài khoản.
                 </p>
@@ -237,14 +239,14 @@ export default function Register() {
                 <button
                   onClick={handleResendEmail}
                   disabled={isLoading}
-                  className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover text-sm sm:text-base disabled:opacity-50"
+                  className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-700 font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 text-sm sm:text-base disabled:opacity-50"
                 >
                   {isLoading ? "Đang gửi..." : "Gửi lại email"}
                 </button>
 
                 <Link
                   href="/login"
-                  className="block w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover shadow-lg text-sm sm:text-base text-center"
+                  className="block w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg text-sm sm:text-base text-center"
                 >
                   Đi đến đăng nhập
                 </Link>
@@ -256,16 +258,16 @@ export default function Register() {
               {/* Progress Bar */}
               <div className="mb-4 sm:mb-6 relative z-10">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-white/70 text-xs sm:text-sm">
+                  <span className="text-gray-600 text-xs sm:text-sm">
                     Bước {currentStep + 1}/2
                   </span>
-                  <span className="text-white/70 text-xs sm:text-sm">
+                  <span className="text-gray-600 text-xs sm:text-sm">
                     {Math.round(((currentStep + 1) / 2) * 100)}%
                   </span>
                 </div>
-                <div className="w-full bg-white/20 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-purple-400 to-pink-400 h-2 rounded-full auth-transition"
+                    className="bg-gradient-to-r from-purple-400 to-pink-400 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${((currentStep + 1) / 2) * 100}%` }}
                   ></div>
                 </div>
@@ -279,7 +281,7 @@ export default function Register() {
               >
                 <div className="overflow-hidden">
                   <div
-                    className="flex auth-transition"
+                    className="flex transition-transform duration-300"
                     style={{ transform: `translateX(-${currentStep * 100}%)` }}
                   >
                     {/* Step 1: Personal Info */}
@@ -292,7 +294,7 @@ export default function Register() {
                           onChange={handleChange}
                           placeholder="Họ và tên"
                           required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:border-purple-400 focus:bg-white/20 auth-input text-sm sm:text-base"
+                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
                         />
                       </div>
 
@@ -304,14 +306,14 @@ export default function Register() {
                           onChange={handleChange}
                           placeholder="Email"
                           required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:border-purple-400 focus:bg-white/20 auth-input text-sm sm:text-base"
+                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
                         />
                       </div>
 
                       <button
                         type="button"
                         onClick={nextStep}
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover shadow-lg text-sm sm:text-base"
+                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg text-sm sm:text-base"
                       >
                         Tiếp theo
                       </button>
@@ -327,7 +329,7 @@ export default function Register() {
                           onChange={handleChange}
                           placeholder="Mật khẩu"
                           required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:border-purple-400 focus:bg-white/20 auth-input text-sm sm:text-base"
+                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
                         />
                       </div>
 
@@ -339,7 +341,7 @@ export default function Register() {
                           onChange={handleChange}
                           placeholder="Xác nhận mật khẩu"
                           required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:border-purple-400 focus:bg-white/20 auth-input text-sm sm:text-base"
+                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
                         />
                       </div>
 
@@ -347,14 +349,14 @@ export default function Register() {
                         <button
                           type="button"
                           onClick={prevStep}
-                          className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover text-sm sm:text-base"
+                          className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-700 font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 text-sm sm:text-base"
                         >
                           Quay lại
                         </button>
                         <button
                           type="submit"
                           disabled={isLoading}
-                          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover shadow-lg text-sm sm:text-base disabled:opacity-50"
+                          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg text-sm sm:text-base disabled:opacity-50"
                         >
                           {isLoading ? "Đang đăng ký..." : "Đăng Ký"}
                         </button>
@@ -368,17 +370,17 @@ export default function Register() {
 
           {/* Divider */}
           <div className="my-4 sm:my-6 flex items-center relative z-10">
-            <div className="flex-1 border-t border-white/20"></div>
-            <span className="px-3 sm:px-4 text-white/60 text-xs sm:text-sm">
+            <div className="flex-1 border-t border-gray-200"></div>
+            <span className="px-3 sm:px-4 text-gray-500 text-xs sm:text-sm">
               hoặc
             </span>
-            <div className="flex-1 border-t border-white/20"></div>
+            <div className="flex-1 border-t border-gray-200"></div>
           </div>
 
           {/* Social Register */}
           {!emailSent && (
             <div className="space-y-2 sm:space-y-3 relative z-10">
-              <button className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover flex items-center justify-center space-x-2 text-sm sm:text-base">
+              <button className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-700 font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 text-sm sm:text-base">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
@@ -400,7 +402,7 @@ export default function Register() {
                 <span className="hidden sm:inline">Đăng ký với Google</span>
                 <span className="sm:hidden">Google</span>
               </button>
-              <button className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg auth-button-hover flex items-center justify-center space-x-2 text-sm sm:text-base">
+              <button className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-700 font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 text-sm sm:text-base">
                 <svg
                   className="w-5 h-5"
                   fill="currentColor"
@@ -416,11 +418,11 @@ export default function Register() {
 
           {/* Login Link */}
           <div className="mt-4 sm:mt-6 text-center relative z-10">
-            <p className="text-white/70 text-xs sm:text-sm">
+            <p className="text-gray-600 text-xs sm:text-sm">
               Đã có tài khoản?{" "}
               <Link
                 href="/login"
-                className="text-purple-300 hover:text-purple-200 font-medium transition-colors"
+                className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
               >
                 Đăng nhập ngay
               </Link>
