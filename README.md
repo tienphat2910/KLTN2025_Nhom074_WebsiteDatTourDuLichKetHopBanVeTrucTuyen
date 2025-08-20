@@ -57,7 +57,6 @@ Hoặc (nếu dùng nodemon để tự động reload khi code thay đổi):
 ```bash
 npm run dev
 ```
-Server chạy tại: [http://localhost:5000](http://localhost:5000)
 
 ---
 
