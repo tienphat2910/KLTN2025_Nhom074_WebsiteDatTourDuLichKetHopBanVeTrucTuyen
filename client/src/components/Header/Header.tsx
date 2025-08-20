@@ -13,11 +13,8 @@ import { LoadingSpinner } from "@/components/Loading";
 
 const navItems = [
   { href: "/flights", label: "Vé Máy Bay" },
-  { href: "/hotels", label: "Khách Sạn" },
   { href: "/entertainment", label: "Giải Trí" }
 ];
-
-
 
 export default function Header() {
   const pathname = usePathname();
@@ -158,12 +155,6 @@ export default function Header() {
           slug: `destinations/${query.toLowerCase().replace(/\s+/g, "-")}`,
           image:
             "https://res.cloudinary.com/de5rurcwt/image/upload/v1754568367/LuTrip/hinh-nen-viet-nam-4k35_piebu1.jpg"
-        },
-        // Hotel suggestions
-        {
-          type: "hotel",
-          title: `Khách sạn ${query}`,
-          slug: `hotels/${query.toLowerCase().replace(/\s+/g, "-")}`
         }
       ];
 
@@ -223,23 +214,23 @@ export default function Header() {
           </div>
         )}
 
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-3 lg:py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link
               href="/"
-              className="text-2xl font-bold text-slate-800 hover:text-blue-600 transition-colors"
+              className="text-xl sm:text-2xl font-bold text-slate-800 hover:text-blue-600 transition-colors flex-shrink-0"
             >
               🌎 LuTrip
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex space-x-8">
+            {/* Desktop Navigation - Hidden on tablet, shown on large desktop */}
+            <nav className="hidden xl:flex space-x-4 2xl:space-x-8">
               {/* Destinations Dropdown */}
               <div className="relative group">
                 <button
                   onClick={toggleDestinations}
-                  className="relative font-medium transition-all duration-300 px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1"
+                  className="relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1 text-sm 2xl:text-base"
                 >
                   <span>Địa Điểm</span>
                   <svg
@@ -261,13 +252,13 @@ export default function Header() {
 
                 {/* Destinations Dropdown Menu */}
                 {isDestinationsOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
+                  <div className="absolute top-full left-0 mt-2 w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
                     {/* Popular Destinations */}
                     <div className="px-4 pb-3 border-b border-gray-100">
                       <h3 className="text-sm font-semibold text-gray-800 mb-3">
                         Điểm đến phổ biến
                       </h3>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
                         {popularDestinations.map((destination) => (
                           <Link
                             key={destination._id}
@@ -332,7 +323,7 @@ export default function Header() {
               <div className="relative group">
                 <button
                   onClick={toggleTours}
-                  className="relative font-medium transition-all duration-300 px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1"
+                  className="relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1 text-sm 2xl:text-base"
                 >
                   <span>Du Lịch</span>
                   <svg
@@ -354,7 +345,7 @@ export default function Header() {
 
                 {/* Tours Dropdown Menu */}
                 {isToursOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
+                  <div className="absolute top-full left-0 mt-2 w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
                     {/* Popular Destinations with Tours */}
                     <div className="px-4 pb-3 border-b border-gray-100">
                       <h3 className="text-sm font-semibold text-gray-800 mb-3">
@@ -392,9 +383,7 @@ export default function Header() {
                             className="block px-2 py-1.5 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
                             onClick={() => setIsToursOpen(false)}
                           >
-                            <div className="font-medium">
-                              {tour.title}
-                            </div>
+                            <div className="font-medium">{tour.title}</div>
                             <div className="text-xs text-gray-500">
                               {tour.duration} • {tour.price?.toLocaleString()}đ
                             </div>
@@ -422,7 +411,7 @@ export default function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative font-medium transition-all duration-300 px-4 py-2 rounded-lg group ${
+                  className={`relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg group text-sm 2xl:text-base ${
                     pathname === item.href
                       ? "text-blue-600 font-semibold bg-blue-50"
                       : "text-slate-700 hover:text-blue-600 hover:bg-blue-50/50"
@@ -440,15 +429,15 @@ export default function Header() {
               ))}
             </nav>
 
-            {/* Desktop Search and Auth */}
-            <div className="hidden md:flex items-center space-x-4">
-              {/* Search Bar */}
+            {/* Desktop Search and Auth - Responsive sizing */}
+            <div className="hidden lg:flex items-center space-x-2 xl:space-x-4">
+              {/* Search Bar with responsive width */}
               <div className="relative">
                 <form onSubmit={handleSearchSubmit}>
                   <input
                     type="text"
-                    placeholder="Tìm kiếm tour, khách sạn, vé máy bay..."
-                    className="w-80 pl-12 pr-4 py-3 text-slate-700 bg-white border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all duration-200 placeholder-gray-400"
+                    placeholder="Tìm kiếm tour, vé máy bay..."
+                    className="w-48 lg:w-56 xl:w-72 2xl:w-80 pl-10 xl:pl-12 pr-4 py-2 xl:py-3 text-sm xl:text-base text-slate-700 bg-white border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all duration-200 placeholder-gray-400"
                     value={searchQuery}
                     onChange={handleSearchChange}
                     onClick={(e) => {
@@ -460,10 +449,10 @@ export default function Header() {
                   />
                   <button
                     type="submit"
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
+                    className="absolute left-3 xl:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4 xl:w-5 xl:h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -513,7 +502,6 @@ export default function Header() {
                               {suggestion.type === "tour" && "🗺️ Tour du lịch"}
                               {suggestion.type === "destination" &&
                                 "📍 Điểm đến"}
-                              {suggestion.type === "hotel" && "🏨 Khách sạn"}
                             </div>
                           </div>
                         </div>
@@ -531,25 +519,30 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Auth Section */}
+              {/* Auth Section with responsive sizing */}
               {isAuthLoading ? (
-                <div className="flex items-center space-x-3 bg-gray-100 rounded-full px-4 py-2">
+                <div className="flex items-center space-x-2 xl:space-x-3 bg-gray-100 rounded-full px-3 xl:px-4 py-2">
                   <LoadingSpinner type="dots" size="sm" showText={false} />
-                  <span className="text-sm text-gray-500">Đang tải...</span>
+                  <span className="text-sm text-gray-500 hidden xl:inline">
+                    Đang tải...
+                  </span>
                 </div>
               ) : user ? (
                 <div className="relative">
                   {/* User dropdown button */}
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-2 text-slate-700 hover:text-blue-600 font-medium transition-colors px-3 py-2 rounded-full hover:bg-blue-50 cursor-pointer"
+                    className="flex items-center space-x-1 xl:space-x-2 text-slate-700 hover:text-blue-600 font-medium transition-colors px-2 xl:px-3 py-2 rounded-full hover:bg-blue-50 cursor-pointer text-sm xl:text-base"
                   >
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                    <div className="w-7 h-7 xl:w-8 xl:h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs xl:text-sm font-semibold">
                       {user.fullName.charAt(0).toUpperCase()}
                     </div>
-                    <span>{user.fullName}</span>
+                    <span className="hidden xl:inline whitespace-nowrap text-ellipsis">
+                      {user.fullName}
+                    </span>
+
                     <svg
-                      className="w-4 h-4"
+                      className="w-3 h-3 xl:w-4 xl:h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -591,16 +584,16 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 xl:space-x-3">
                   <Link
                     href="/login"
-                    className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-5 py-2.5 rounded-full hover:bg-blue-50 border border-transparent hover:border-blue-200"
+                    className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-3 xl:px-5 py-2 xl:py-2.5 rounded-full hover:bg-blue-50 border border-transparent hover:border-blue-200 text-sm xl:text-base"
                   >
                     Đăng nhập
                   </Link>
                   <Link
                     href="/register"
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-5 py-2.5 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg"
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-3 xl:px-5 py-2 xl:py-2.5 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg text-sm xl:text-base"
                   >
                     Đăng ký
                   </Link>
@@ -608,8 +601,8 @@ export default function Header() {
               )}
             </div>
 
-            {/* Mobile Controls */}
-            <div className="md:hidden flex items-center space-x-2">
+            {/* Mobile Controls - Show on tablet and smaller */}
+            <div className="xl:hidden flex items-center space-x-2">
               {/* Mobile Search Button */}
               <button
                 onClick={toggleSearch}
@@ -665,7 +658,7 @@ export default function Header() {
 
           {/* Mobile Search */}
           {isSearchOpen && (
-            <div className="md:hidden mt-4 pb-4 border-t border-gray-200 animate-slide-down">
+            <div className="xl:hidden mt-4 pb-4 border-t border-gray-200 animate-slide-down">
               <div className="pt-4">
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <input
@@ -731,7 +724,6 @@ export default function Header() {
                               {suggestion.type === "tour" && "🗺️ Tour du lịch"}
                               {suggestion.type === "destination" &&
                                 "📍 Điểm đến"}
-                              {suggestion.type === "hotel" && "🏨 Khách sạn"}
                             </div>
                           </div>
                         </div>
@@ -753,7 +745,7 @@ export default function Header() {
 
           {/* Mobile Navigation Menu */}
           {isMobileMenuOpen && (
-            <div className="mobile-nav md:hidden mt-4 pb-4 border-t border-gray-200 animate-slide-down">
+            <div className="mobile-nav xl:hidden mt-4 pb-4 border-t border-gray-200 animate-slide-down">
               <div className="flex flex-col space-y-2 pt-4">
                 {/* Mobile Destinations Section */}
                 <div className="mb-4">
@@ -888,24 +880,26 @@ export default function Header() {
                           Tour theo địa điểm
                         </div>
                         <div className="grid grid-cols-2 gap-1">
-                          {popularDestinations.slice(0, 6).map((destination) => (
-                            <Link
-                              key={destination._id}
-                              href={`/tours/${destination.slug}`}
-                              className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              onClick={() => {
-                                setIsToursOpen(false);
-                                setIsMobileMenuOpen(false);
-                              }}
-                            >
-                              <div className="font-medium">
-                                {destination.name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {destination.region}
-                              </div>
-                            </Link>
-                          ))}
+                          {popularDestinations
+                            .slice(0, 6)
+                            .map((destination) => (
+                              <Link
+                                key={destination._id}
+                                href={`/tours/${destination.slug}`}
+                                className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                onClick={() => {
+                                  setIsToursOpen(false);
+                                  setIsMobileMenuOpen(false);
+                                }}
+                              >
+                                <div className="font-medium">
+                                  {destination.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {destination.region}
+                                </div>
+                              </Link>
+                            ))}
                         </div>
                       </div>
 
@@ -925,11 +919,10 @@ export default function Header() {
                                 setIsMobileMenuOpen(false);
                               }}
                             >
-                              <div className="font-medium">
-                                {tour.title}
-                              </div>
+                              <div className="font-medium">{tour.title}</div>
                               <div className="text-xs text-gray-500">
-                                {tour.duration} • {tour.price?.toLocaleString()}đ
+                                {tour.duration} • {tour.price?.toLocaleString()}
+                                đ
                               </div>
                             </Link>
                           ))}
@@ -1053,5 +1046,3 @@ export default function Header() {
     </>
   );
 }
-
-
