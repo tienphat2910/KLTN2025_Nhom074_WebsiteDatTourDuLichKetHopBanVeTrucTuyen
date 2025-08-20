@@ -1,7 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams } from "next/navigation";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  Fragment
+} from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
@@ -9,6 +15,7 @@ import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
 import { destinationService, Destination } from "@/services/destinationService";
+import { toast } from "sonner";
 
 // Define props interface for TourCard component
 interface TourCardProps {
@@ -165,6 +172,7 @@ const sortOptions: SortOption[] = [
 export default function ToursByDestinationPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const searchParams = useSearchParams();
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [destination, setDestination] = useState<Destination | null>(null);
@@ -173,6 +181,13 @@ export default function ToursByDestinationPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState<string>("default");
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [selectedDestination, setSelectedDestination] = useState<string>(slug);
+  const [startDate, setStartDate] = useState<string>(""); // dùng cho API
+  const [endDate, setEndDate] = useState<string>(""); // dùng cho API
+  const [searchStartDate, setSearchStartDate] = useState<string>(""); // dùng cho input
+  const [searchEndDate, setSearchEndDate] = useState<string>(""); // dùng cho input
+  const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
 
   // Use intersection observer for better scroll performance
   const [observer, setObserver] = useState<IntersectionObserver | null>(null);
@@ -204,10 +219,22 @@ export default function ToursByDestinationPage() {
     };
   }, []);
 
+  // Khi mount, lấy ngày từ query để truyền vào API, đồng thời set cho input
+  useEffect(() => {
+    if (searchParams) {
+      const start = searchParams.get("start") || "";
+      const end = searchParams.get("end") || "";
+      setStartDate(start);
+      setEndDate(end);
+      setSearchStartDate(start);
+      setSearchEndDate(end);
+    }
+  }, [searchParams]);
+
   // Load tours data
   const loadToursAndDestination = useCallback(async () => {
     try {
-      setIsLoading(true);
+      setIsLoading(true); // Luôn set loading khi gọi API
 
       // Load destination info first
       const destResponse = await destinationService.getDestinationBySlug(slug);
@@ -215,12 +242,14 @@ export default function ToursByDestinationPage() {
       if (destResponse.success) {
         setDestination(destResponse.data);
 
-        // Load tours for this destination using destinationId
+        // Sửa dòng này: ép kiểu object truyền vào cho phép các trường động
         const toursResponse = await tourService.getTours({
           destination: destResponse.data._id,
           page: currentPage,
-          limit: 9
-        });
+          limit: 9,
+          ...(startDate ? { start: startDate } : {}),
+          ...(endDate ? { end: endDate } : {})
+        } as any); // ép kiểu any để tránh lỗi TS
 
         if (toursResponse.success) {
           setTours(toursResponse.data.tours);
@@ -233,13 +262,20 @@ export default function ToursByDestinationPage() {
       setIsLoading(false);
       setTimeout(() => setIsVisible(true), 100);
     }
-  }, [slug, currentPage]);
+  }, [slug, currentPage, startDate, endDate]);
 
   useEffect(() => {
     if (slug) {
       loadToursAndDestination();
     }
   }, [loadToursAndDestination]);
+
+  // Load destinations for search
+  useEffect(() => {
+    destinationService.getDestinations({ limit: 100 }).then((res) => {
+      if (res.success) setDestinations(res.data.destinations);
+    });
+  }, []);
 
   // Handle pagination without full page reload
   const handlePageChange = useCallback((page: number) => {
@@ -321,7 +357,22 @@ export default function ToursByDestinationPage() {
     setTimeout(() => setIsVisible(true), 100);
   }, []);
 
-  // If loading show spinner
+  // Handle search
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDestination) {
+      toast.error("Vui lòng chọn địa điểm trước khi tìm kiếm!");
+      return;
+    }
+    let url = `/tours/${selectedDestination}`;
+    const params: string[] = [];
+    if (searchStartDate) params.push(`start=${searchStartDate}`);
+    if (searchEndDate) params.push(`end=${searchEndDate}`);
+    if (params.length > 0) url += `?${params.join("&")}`;
+    window.location.href = url;
+  };
+
+  // If loading show spinner (chỉ lần đầu)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100 flex items-center justify-center">
@@ -358,7 +409,6 @@ export default function ToursByDestinationPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
       <Header />
-
       {/* Breadcrumb */}
       <div className="pt-24 pb-4">
         <div className="container mx-auto px-4">
@@ -383,7 +433,7 @@ export default function ToursByDestinationPage() {
       </div>
 
       {/* Hero Section with optimized background */}
-      <section className="relative py-16 px-4 overflow-hidden">
+      <section className="relative py-16 px-4 overflow-visible flex flex-col items-center">
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-gray-800">
             <Image
@@ -399,7 +449,7 @@ export default function ToursByDestinationPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/50 via-teal-900/40 to-blue-900/50" />
         </div>
 
-        <div className="container mx-auto relative z-10">
+        <div className="container mx-auto relative z-10 overflow-visible">
           <div
             className={`text-center ${
               isVisible ? "opacity-100" : "opacity-0"
@@ -416,7 +466,7 @@ export default function ToursByDestinationPage() {
                 ? destination.description
                 : "Khám phá vẻ đẹp tuyệt vời"}
             </p>
-            <div className="flex justify-center items-center space-x-4 text-white/80 text-sm">
+            <div className="flex justify-center items-center space-x-4 text-white/80 text-sm mb-6">
               <span className="bg-white/20 px-3 py-1 rounded-full">
                 {destination.region}
               </span>
@@ -424,6 +474,94 @@ export default function ToursByDestinationPage() {
                 {tours.length} tour có sẵn
               </span>
             </div>
+            {/* Search Component */}
+            <form
+              onSubmit={handleSearch}
+              className="mx-auto flex flex-col md:flex-row items-end justify-center gap-6 bg-white rounded-3xl shadow-lg px-4 md:px-8 py-6 w-full max-w-4xl z-50 overflow-visible"
+              style={{ fontFamily: "inherit" }}
+            >
+              {/* Địa điểm */}
+              <div className="flex flex-col flex-1 items-start w-full">
+                <label className="font-bold text-gray-800 mb-1 text-sm">
+                  Bạn muốn đi đâu <span className="text-red-500">(*)</span>
+                </label>
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    className="w-full border border-gray-400 rounded-lg px-4 py-3 text-base font-semibold text-gray-800 bg-white text-left"
+                    onClick={() => setShowDestinationDropdown((v) => !v)}
+                  >
+                    {selectedDestination
+                      ? destinations.find((d) => d.slug === selectedDestination)
+                          ?.name
+                      : "Chọn địa điểm"}
+                  </button>
+                  {showDestinationDropdown && (
+                    <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-lg border border-gray-200 z-50 max-h-60 overflow-y-auto">
+                      {destinations.map((d) => (
+                        <button
+                          key={d._id}
+                          type="button"
+                          className="block w-full text-left px-4 py-3 text-gray-800 hover:bg-blue-50 text-base font-semibold"
+                          onClick={() => {
+                            setSelectedDestination(d.slug);
+                            setShowDestinationDropdown(false);
+                          }}
+                        >
+                          {d.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Ngày khởi hành */}
+              <div className="flex flex-col flex-1 items-start w-full">
+                <label className="font-semibold text-gray-800 mb-1 text-sm">
+                  Ngày khởi hành
+                </label>
+                <div className="flex gap-2 w-full">
+                  <input
+                    type="date"
+                    className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
+                    value={searchStartDate}
+                    onChange={(e) => setSearchStartDate(e.target.value)}
+                  />
+                  <span className="px-1 text-gray-600 flex items-center">
+                    -
+                  </span>
+                  <input
+                    type="date"
+                    className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
+                    value={searchEndDate}
+                    onChange={(e) => setSearchEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              {/* Nút tìm kiếm */}
+              <div className="self-stretch flex items-center mt-5 w-full md:w-auto">
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 bg-[#1664F6] text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-all text-base whitespace-nowrap w-full md:w-auto justify-center"
+                  style={{ minWidth: 140 }}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  Tìm kiếm
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </section>

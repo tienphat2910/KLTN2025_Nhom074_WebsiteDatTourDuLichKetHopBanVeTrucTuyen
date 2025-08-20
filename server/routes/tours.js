@@ -99,6 +99,22 @@ router.get('/', async (req, res) => {
             if (req.query.maxPrice) filter.price.$lte = parseFloat(req.query.maxPrice);
         }
 
+        // Lọc theo ngày khởi hành/kết thúc
+        const start = req.query.start ? new Date(req.query.start) : null;
+        const end = req.query.end ? new Date(req.query.end) : null;
+
+        if (start && !isNaN(start.getTime()) && end && !isNaN(end.getTime())) {
+            // Nếu cả hai ngày đều hợp lệ và start <= end
+            if (start <= end) {
+                filter.startDate = { $gte: start };
+                filter.endDate = { $lte: end };
+            }
+        } else if (start && !isNaN(start.getTime())) {
+            filter.startDate = { $gte: start };
+        } else if (end && !isNaN(end.getTime())) {
+            filter.endDate = { $lte: end };
+        }
+
         // Use $or condition to include tours where isActive is true OR undefined/null
         const enhancedFilter = {
             ...filter,

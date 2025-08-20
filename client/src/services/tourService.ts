@@ -95,6 +95,8 @@ export const tourService = {
     featured?: boolean;
     departure?: string;
     title?: string; // Add title for search capability
+    start?: string; // thêm start
+    end?: string; // thêm end
   }): Promise<ToursResponse> => {
     try {
       const queryParams = new URLSearchParams();
@@ -112,6 +114,8 @@ export const tourService = {
         queryParams.append("featured", params.featured.toString());
       if (params?.departure) queryParams.append("departure", params.departure);
       if (params?.title) queryParams.append("title", params.title); // Add support for title search
+      if (params?.start) queryParams.append("start", params.start);
+      if (params?.end) queryParams.append("end", params.end);
 
       const response = await fetch(`${API_BASE_URL}/tours?${queryParams}`);
       const result = await response.json();

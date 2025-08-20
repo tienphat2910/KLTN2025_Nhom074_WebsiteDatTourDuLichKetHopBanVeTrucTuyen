@@ -534,8 +534,16 @@ export default function Header() {
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center space-x-1 xl:space-x-2 text-slate-700 hover:text-blue-600 font-medium transition-colors px-2 xl:px-3 py-2 rounded-full hover:bg-blue-50 cursor-pointer text-sm xl:text-base"
                   >
-                    <div className="w-7 h-7 xl:w-8 xl:h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs xl:text-sm font-semibold">
-                      {user.fullName.charAt(0).toUpperCase()}
+                    <div className="w-7 h-7 xl:w-8 xl:h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs xl:text-sm font-semibold overflow-hidden">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.fullName}
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      ) : (
+                        user.fullName.charAt(0).toUpperCase()
+                      )}
                     </div>
                     <span className="hidden xl:inline whitespace-nowrap text-ellipsis">
                       {user.fullName}
@@ -964,58 +972,64 @@ export default function Header() {
                 ))}
 
                 {/* Mobile Auth Section */}
-                <div className="flex flex-col space-y-3 pt-3 border-t border-gray-200">
-                  {user ? (
-                    <>
-                      <div className="flex items-center space-x-3 px-4 py-2">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                          {user.fullName.charAt(0).toUpperCase()}
+                {user ? (
+                  <>
+                    <div className="flex items-center space-x-3 px-4 py-2">
+                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
+                        {user.avatar ? (
+                          <img
+                            src={user.avatar}
+                            alt={user.fullName}
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                        ) : (
+                          user.fullName.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-800">
+                          {user.fullName}
                         </div>
-                        <div>
-                          <div className="font-medium text-gray-800">
-                            {user.fullName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {user.email}
-                          </div>
+                        <div className="text-sm text-gray-500">
+                          {user.email}
                         </div>
                       </div>
-                      <Link
-                        href="/profile"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
-                      >
-                        Thông tin cá nhân
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          handleLogout();
-                        }}
-                        className="text-red-600 hover:text-red-700 font-medium transition-colors px-4 py-3 rounded-full hover:bg-red-50 border border-red-200 text-center cursor-pointer"
-                      >
-                        Đăng xuất
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        href="/login"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
-                      >
-                        Đăng nhập
-                      </Link>
-                      <Link
-                        href="/register"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-4 py-3 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-center shadow-md"
-                      >
-                        Đăng ký
-                      </Link>
-                    </>
-                  )}
-                </div>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
+                    >
+                      Thông tin cá nhân
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="text-red-600 hover:text-red-700 font-medium transition-colors px-4 py-3 rounded-full hover:bg-red-50 border border-red-200 text-center cursor-pointer"
+                    >
+                      Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
+                    >
+                      Đăng nhập
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-4 py-3 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-center shadow-md"
+                    >
+                      Đăng ký
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           )}
