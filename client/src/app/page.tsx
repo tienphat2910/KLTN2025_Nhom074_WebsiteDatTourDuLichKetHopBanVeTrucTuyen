@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { destinationService, Destination } from "@/services/destinationService";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
-import { hotelService, Hotel } from "@/services/hotelService";
 
 const services = [
   {
@@ -46,40 +45,15 @@ const services = [
 
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(
+    new Set()
+  );
   const [popularDestinations, setPopularDestinations] = useState<Destination[]>(
     []
   );
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(true);
   const [popularTours, setPopularTours] = useState<Tour[]>([]);
   const [isLoadingTours, setIsLoadingTours] = useState(true);
-  const [topRatedHotels, setTopRatedHotels] = useState<Hotel[]>([]);
-  const [isLoadingHotels, setIsLoadingHotels] = useState(true);
-  const famousHotels = [
-    {
-      id: 1,
-      name: "Vinpearl Resort Phú Quốc",
-      location: "Phú Quốc, Kiên Giang",
-      price: "2,500,000",
-      rating: 4.8,
-      amenities: ["Bể bơi", "Spa", "Nhà hàng", "WiFi miễn phí"]
-    },
-    {
-      id: 2,
-      name: "InterContinental Danang",
-      location: "Đà Nẵng",
-      price: "3,200,000",
-      rating: 4.9,
-      amenities: ["Bãi biển riêng", "Golf", "Spa", "Phòng gym"]
-    },
-    {
-      id: 3,
-      name: "Lotte Hotel Hanoi",
-      location: "Hà Nội",
-      price: "2,800,000",
-      rating: 4.7,
-      amenities: ["Trung tâm thành phố", "Sky bar", "Spa", "Meeting rooms"]
-    }
-  ];
   const popularEntertainments = [
     {
       id: 1,
@@ -163,35 +137,57 @@ export default function Home() {
     loadPopularTours();
   }, []);
 
-  // Load top rated hotels from the database
+  // Intersection Observer for scroll animations
   useEffect(() => {
-    const loadTopRatedHotels = async () => {
-      try {
-        setIsLoadingHotels(true);
-        const response = await hotelService.getHotels({
-          limit: 3
-        });
-
-        if (response.success && response.data) {
-          // Sort hotels by rating (highest first) and take top 3
-          const sortedHotels = response.data
-            .filter((hotel) => hotel.rating && hotel.rating > 0)
-            .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-            .slice(0, 3);
-
-          setTopRatedHotels(sortedHotels);
-        } else {
-          console.error("Failed to load hotels:", response.message);
-        }
-      } catch (error) {
-        console.error("Error loading hotels:", error);
-      } finally {
-        setIsLoadingHotels(false);
-      }
+    const observerOptions = {
+      threshold: 0.2, // Trigger when 20% of the element is visible
+      rootMargin: "-50px 0px -50px 0px" // Add some margin for better UX
     };
 
-    loadTopRatedHotels();
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const sectionId = entry.target.getAttribute("data-section");
+          if (sectionId) {
+            setVisibleSections((prev) => new Set([...prev, sectionId]));
+          }
+        }
+      });
+    }, observerOptions);
+
+    // Observe all sections
+    const sections = [
+      { ref: servicesRef, id: "services" },
+      { ref: destinationsRef, id: "destinations" },
+      { ref: toursRef, id: "tours" },
+      { ref: entertainmentRef, id: "entertainment" }
+    ];
+
+    sections.forEach(({ ref, id }) => {
+      if (ref.current) {
+        ref.current.setAttribute("data-section", id);
+        observer.observe(ref.current);
+      }
+    });
+
+    return () => {
+      sections.forEach(({ ref }) => {
+        if (ref.current) {
+          observer.unobserve(ref.current);
+        }
+      });
+    };
   }, []);
+
+  // Helper function to check if section is visible
+  const isSectionVisible = (sectionId: string) =>
+    visibleSections.has(sectionId);
+
+  // Refs for sections
+  const servicesRef = useRef<HTMLElement>(null);
+  const destinationsRef = useRef<HTMLElement>(null);
+  const toursRef = useRef<HTMLElement>(null);
+  const entertainmentRef = useRef<HTMLElement>(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">
@@ -239,11 +235,20 @@ export default function Home() {
       </section>
 
       {/* Services Section */}
-      <section className="py-16 px-4 relative">
+      <section
+        ref={servicesRef}
+        className={`py-16 px-4 relative transition-all duration-1000 ${
+          isSectionVisible("services")
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         <div className="container mx-auto">
           <div
-            className={`text-center mb-16 transition-all duration-1000 delay-300 ${
-              isVisible ? "animate-slide-up" : "opacity-0"
+            className={`text-center mb-16 transition-all duration-1000 delay-200 ${
+              isSectionVisible("services")
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-10"
             }`}
           >
             <h2 className="text-4xl font-bold text-slate-800 mb-4">
@@ -260,8 +265,12 @@ export default function Home() {
                 key={service.title}
                 href={service.href}
                 className={`group transition-all duration-700 delay-${
-                  index * 100
-                } ${isVisible ? "animate-slide-up" : "opacity-0"} h-full`}
+                  300 + index * 100
+                } ${
+                  isSectionVisible("services")
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-10"
+                } h-full`}
               >
                 <div
                   className={`${service.bgColor} backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/20 h-full flex flex-col`}
@@ -287,7 +296,14 @@ export default function Home() {
       </section>
 
       {/* Popular Destinations Section */}
-      <section className="relative py-25 min-h-[450px] px-4 overflow-hidden">
+      <section
+        ref={destinationsRef}
+        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 ${
+          isSectionVisible("destinations")
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <div
@@ -303,8 +319,10 @@ export default function Home() {
 
         <div className="container mx-auto relative z-10">
           <div
-            className={`text-center mb-16 transition-all duration-1000 delay-500 ${
-              isVisible ? "animate-slide-up" : "opacity-0"
+            className={`text-center mb-16 transition-all duration-1000 delay-200 ${
+              isSectionVisible("destinations")
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-10"
             }`}
           >
             <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">
@@ -337,8 +355,12 @@ export default function Home() {
                   key={destination._id}
                   href={`/destinations/${destination.slug}`}
                   className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                    600 + index * 100
-                  } ${isVisible ? "animate-slide-up" : "opacity-0"} group`}
+                    400 + index * 100
+                  } ${
+                    isSectionVisible("destinations")
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 translate-y-10"
+                  } group`}
                 >
                   <div className="h-64 relative overflow-hidden">
                     <div
@@ -372,8 +394,10 @@ export default function Home() {
           {/* Xem thêm button */}
           <div className="text-center mt-12">
             <div
-              className={`transition-all duration-1000 delay-900 ${
-                isVisible ? "animate-slide-up" : "opacity-0"
+              className={`transition-all duration-1000 delay-700 ${
+                isSectionVisible("destinations")
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
               }`}
             >
               <Link
@@ -401,7 +425,14 @@ export default function Home() {
       </section>
 
       {/* Popular Tours Section */}
-      <section className="relative py-25 min-h-[450px] px-4 overflow-hidden">
+      <section
+        ref={toursRef}
+        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 ${
+          isSectionVisible("tours")
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <div
@@ -416,8 +447,10 @@ export default function Home() {
 
         <div className="container mx-auto relative z-10">
           <div
-            className={`text-center mb-16 transition-all duration-1000 delay-500 ${
-              isVisible ? "animate-slide-up" : "opacity-0"
+            className={`text-center mb-16 transition-all duration-1000 delay-200 ${
+              isSectionVisible("tours")
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-10"
             }`}
           >
             <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">
@@ -448,8 +481,12 @@ export default function Home() {
                   key={tour._id}
                   href={`/tours/detail/${tour.slug}`}
                   className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                    600 + index * 100
-                  } ${isVisible ? "animate-slide-up" : "opacity-0"} group`}
+                    400 + index * 100
+                  } ${
+                    isSectionVisible("tours")
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 translate-y-10"
+                  } group`}
                 >
                   <div className="h-64 relative overflow-hidden">
                     <div
@@ -550,8 +587,10 @@ export default function Home() {
           {/* Xem thêm button */}
           <div className="text-center mt-12">
             <div
-              className={`transition-all duration-1000 delay-900 ${
-                isVisible ? "animate-slide-up" : "opacity-0"
+              className={`transition-all duration-1000 delay-700 ${
+                isSectionVisible("tours")
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
               }`}
             >
               <Link
@@ -579,7 +618,14 @@ export default function Home() {
       </section>
 
       {/* Popular Entertainment Section */}
-      <section className="relative py-25 min-h-[450px] px-4 overflow-hidden">
+      <section
+        ref={entertainmentRef}
+        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 ${
+          isSectionVisible("entertainment")
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         {/* Background */}
         <div className="absolute inset-0 z-0">
           <div
@@ -594,8 +640,10 @@ export default function Home() {
 
         <div className="container mx-auto relative z-10">
           <div
-            className={`text-center mb-16 transition-all duration-1000 delay-500 ${
-              isVisible ? "animate-slide-up" : "opacity-0"
+            className={`text-center mb-16 transition-all duration-1000 delay-200 ${
+              isSectionVisible("entertainment")
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-10"
             }`}
           >
             <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">
@@ -612,9 +660,11 @@ export default function Home() {
                 key={place.id}
                 href="/entertainment"
                 className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                  600 + index * 100
+                  400 + index * 100
                 } ${
-                  isVisible ? "animate-slide-up" : "opacity-0"
+                  isSectionVisible("entertainment")
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-10"
                 } group bg-white/10 backdrop-blur-sm border border-white/20`}
               >
                 <div className="h-64 bg-gradient-to-br from-orange-400 to-red-500" />
@@ -690,8 +740,10 @@ export default function Home() {
           {/* Xem thêm button */}
           <div className="text-center mt-12">
             <div
-              className={`transition-all duration-1000 delay-900 ${
-                isVisible ? "animate-slide-up" : "opacity-0"
+              className={`transition-all duration-1000 delay-700 ${
+                isSectionVisible("entertainment")
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
               }`}
             >
               <Link
@@ -699,198 +751,6 @@ export default function Home() {
                 className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white/30 hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/30 group"
               >
                 <span>Xem thêm địa điểm vui chơi</span>
-                <svg
-                  className="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 8l4 4m0 0l-4 4m4-4H3"
-                  />
-                </svg>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Famous Hotels Section */}
-      <section className="relative py-25 min-h-[450px] px-4 overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage:
-                "url('https://res.cloudinary.com/de5rurcwt/image/upload/v1754677970/LuTrip/KHACH-SAN_el2sxk.jpg')",
-              filter: "brightness(0.9)"
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-purple-900/60" />
-        </div>
-
-        <div className="container mx-auto relative z-10">
-          <div
-            className={`text-center mb-16 transition-all duration-1000 delay-500 ${
-              isVisible ? "animate-slide-up" : "opacity-0"
-            }`}
-          >
-            <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">
-              Khách Sạn Được Đánh Giá Cao
-            </h2>
-            <p className="text-white/90 text-lg drop-shadow">
-              Điểm lưu trú được yêu thích trên khắp Việt Nam
-            </p>
-          </div>
-
-          {/* Loading state for hotels */}
-          {isLoadingHotels ? (
-            <div className="flex justify-center py-16">
-              <LoadingSpinner
-                type="dots"
-                size="lg"
-                text="Đang tải khách sạn được đánh giá cao..."
-              />
-            </div>
-          ) : topRatedHotels.length === 0 ? (
-            <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-xl">
-              <p className="text-white text-lg">
-                Không tìm thấy khách sạn được đánh giá cao
-              </p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-3 gap-4">
-              {topRatedHotels.map((hotel, index) => (
-                <div
-                  key={hotel._id}
-                  className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                    600 + index * 100
-                  } ${
-                    isVisible ? "animate-slide-up" : "opacity-0"
-                  } group bg-white/10 backdrop-blur-sm border border-white/20`}
-                >
-                  <div className="h-70 relative overflow-hidden">
-                    {hotel.gallery && hotel.gallery[0] ? (
-                      <div
-                        className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-110"
-                        style={{
-                          backgroundImage: `url('${hotel.gallery[0]}')`
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-500" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  </div>
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
-                    <div className="p-6 text-white w-full">
-                      <div className="flex items-start justify-between mb-2 gap-3">
-                        <h3 className="text-lg sm:text-xl font-bold drop-shadow-lg leading-tight flex-1">
-                          {hotel.name}
-                        </h3>
-                        <div className="flex items-center bg-black/30 px-2 py-1 rounded-full flex-shrink-0">
-                          <span className="text-yellow-400">⭐</span>
-                          <span className="ml-1 font-semibold text-sm">
-                            {hotel.rating?.toFixed(1) || "N/A"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-gray-200 text-sm mb-3 flex items-center gap-1 line-clamp-1">
-                        <svg
-                          className="w-4 h-4 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
-                        <span className="truncate">
-                          {hotel.contactInfo?.address || "Địa chỉ không có sẵn"}
-                        </span>
-                      </p>
-                      <div className="flex items-start justify-between mb-2 gap-3">
-                        <p className="text-gray-200 text-sm mb-3 leading-tight items-center flex-1 line-clamp-3">
-                          {hotel.description}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {hotel.rooms && hotel.rooms.length > 0 && (
-                          <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                            {hotel.rooms.length} loại phòng
-                          </span>
-                        )}
-                        {hotel.rooms &&
-                          hotel.rooms[0]?.amenities
-                            ?.slice(0, 2)
-                            .map((amenity, i) => (
-                              <span
-                                key={i}
-                                className="text-xs bg-white/20 px-2 py-1 rounded-full"
-                              >
-                                {amenity}
-                              </span>
-                            ))}
-                      </div>
-
-                      <div className="flex items-end justify-between gap-2">
-                        <div className="flex-1">
-                          {hotel.rooms && hotel.rooms[0] && (
-                            <>
-                              <div className="text-lg sm:text-xl font-bold text-pink-200">
-                                <span className="text-xs text-gray-300">
-                                  từ{" "}
-                                </span>
-                                {hotelService.formatPrice(hotel.rooms[0].price)}{" "}
-                                đ
-                              </div>
-                              <div className="text-xs text-gray-300">/đêm</div>
-                            </>
-                          )}
-                        </div>
-                        <Link
-                          href="/hotels"
-                          className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white px-3 py-2 rounded-full text-sm font-semibold hover:bg-white/30 transition-all duration-300 border border-white/30 flex-shrink-0"
-                        >
-                          <span className="hidden sm:inline">Xem chi tiết</span>
-                          <span className="sm:hidden">Xem</span>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Xem thêm button */}
-          <div className="text-center mt-12">
-            <div
-              className={`transition-all duration-1000 delay-900 ${
-                isVisible ? "animate-slide-up" : "opacity-0"
-              }`}
-            >
-              <Link
-                href="/hotels"
-                className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white/30 hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/30 group"
-              >
-                <span>Xem thêm khách sạn</span>
                 <svg
                   className="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300"
                   fill="none"
