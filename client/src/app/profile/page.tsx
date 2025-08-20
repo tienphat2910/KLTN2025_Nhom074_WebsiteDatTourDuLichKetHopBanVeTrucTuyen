@@ -22,7 +22,7 @@ interface ProfileUser {
 }
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, login } = useAuth();
+  const { user, isAuthenticated, login, isAuthLoading } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,13 +30,28 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<ProfileUser | null>(null);
 
   useEffect(() => {
+    console.log("Profile useEffect:", {
+      isAuthLoading,
+      isAuthenticated,
+      hasUser: !!user
+    });
+
+    // Wait for auth to finish loading
+    if (isAuthLoading) {
+      console.log("Auth still loading...");
+      return;
+    }
+
+    // Only redirect if auth is done loading AND user is not authenticated
     if (!isAuthenticated) {
+      console.log("Not authenticated, redirecting to login");
       router.push("/login");
       return;
     }
 
+    // Set user data
     if (user) {
-      // Convert AuthContext User to ProfileUser
+      console.log("Setting profile data for user:", user.email);
       const profileUser: ProfileUser = {
         _id: user._id || user.id || "",
         fullName: user.fullName,
@@ -48,15 +63,55 @@ export default function ProfilePage() {
       };
       setUserData(profileUser);
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthLoading, isAuthenticated, user, router]);
+
+  // Show loading only while auth is being checked
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang kiểm tra đăng nhập...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang chuyển hướng...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading if user data hasn't been set yet
+  if (!userData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải thông tin người dùng...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSaveProfile = async (formData: Partial<ProfileUser>) => {
     setIsLoading(true);
     try {
+      // Show loading toast
+      const toastId = toast.loading("Đang cập nhật thông tin...");
+
       const result = await authService.updateProfile(formData);
 
+      toast.dismiss(toastId);
+
       if (result.success && result.data) {
-        // Access user data correctly from result.data.user
         const updatedUser = result.data.user || result.data;
 
         const updatedProfileUser: ProfileUser = {
@@ -75,7 +130,7 @@ export default function ProfilePage() {
 
         setUserData(updatedProfileUser);
 
-        // Update AuthContext with new data - ensure required fields are present
+        // Update AuthContext with new data
         if (user && (updatedUser.email || userData?.email)) {
           const authUser = {
             ...user,
@@ -89,30 +144,51 @@ export default function ProfilePage() {
         }
 
         setIsEditing(false);
-        toast.success("Cập nhật thông tin thành công!");
+        toast.success("Cập nhật thông tin thành công!", {
+          description: "Thông tin cá nhân đã được cập nhật"
+        });
       } else {
-        toast.error(result.message || "Có lỗi xảy ra khi cập nhật thông tin");
+        // Check if it's an API not implemented error
+        if (
+          result.message?.includes("API endpoint chưa được triển khai") ||
+          result.message?.includes("chưa tồn tại")
+        ) {
+          toast.error("Tính năng chưa sẵn sàng", {
+            description:
+              "API cập nhật thông tin đang được phát triển. Vui lòng thử lại sau."
+          });
+        } else {
+          toast.error(result.message || "Có lỗi xảy ra khi cập nhật thông tin");
+        }
       }
     } catch (error) {
-      toast.error("Có lỗi xảy ra, vui lòng thử lại");
+      console.error("Update profile error:", error);
+      toast.error("Có lỗi xảy ra", {
+        description: "Vui lòng kiểm tra kết nối mạng và thử lại"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAvatarChange = async (file: File) => {
-    setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append("avatar", file);
 
+      // Show immediate feedback
+      const toastId = toast.loading("Đang tải ảnh lên...", {
+        description: "Vui lòng đợi trong giây lát"
+      });
+
       const result = await authService.uploadAvatar(formData);
 
+      toast.dismiss(toastId);
+
       if (result.success && result.data) {
-        // The API response structure is { user: any, token: string }
-        // So avatar should be in result.data.user.avatar
-        const updatedUser = result.data.user;
-        const avatarUrl = updatedUser?.avatar;
+        // Handle different response structures
+        const updatedUser = result.data.user || result.data;
+        const avatarUrl = updatedUser?.avatar || result.data.avatar;
 
         if (avatarUrl) {
           setUserData((prev) => (prev ? { ...prev, avatar: avatarUrl } : null));
@@ -125,33 +201,51 @@ export default function ProfilePage() {
             login(updatedAuthUser, localStorage.getItem("lutrip_token") || "");
           }
 
-          toast.success("Cập nhật ảnh đại diện thành công!");
+          toast.success("Cập nhật ảnh đại diện thành công!", {
+            description: "Ảnh đại diện của bạn đã được cập nhật"
+          });
         } else {
-          toast.error("Không thể cập nhật ảnh đại diện");
+          toast.error("Không thể cập nhật ảnh đại diện", {
+            description: "Vui lòng thử lại sau"
+          });
         }
       } else {
-        toast.error(result.message || "Có lỗi xảy ra khi tải ảnh lên");
+        // Check if it's an API not implemented error
+        if (
+          result.message?.includes("API upload avatar chưa được triển khai") ||
+          result.message?.includes("chưa tồn tại")
+        ) {
+          toast.error("Tính năng chưa sẵn sàng", {
+            description:
+              "API upload ảnh đang được phát triển. Vui lòng thử lại sau."
+          });
+        } else {
+          toast.error(result.message || "Có lỗi xảy ra khi tải ảnh lên", {
+            description: "Vui lòng kiểm tra file và thử lại"
+          });
+        }
       }
     } catch (error) {
       console.error("Avatar upload error:", error);
-      toast.error("Có lỗi xảy ra, vui lòng thử lại");
-    } finally {
-      setIsLoading(false);
+      toast.error("Có lỗi xảy ra", {
+        description: "Vui lòng kiểm tra kết nối mạng và thử lại"
+      });
     }
   };
 
-  if (!userData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải thông tin...</p>
-        </div>
-      </div>
-    );
-  }
-
   const renderTabContent = () => {
+    // Ensure userData exists before rendering
+    if (!userData) {
+      return (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Đang tải thông tin...</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case "info":
         return isEditing ? (
@@ -322,7 +416,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pt-24">
         <ProfileHeader
           user={userData}
           onAvatarChange={handleAvatarChange}

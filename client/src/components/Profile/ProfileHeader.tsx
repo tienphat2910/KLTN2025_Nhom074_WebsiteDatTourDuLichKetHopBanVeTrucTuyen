@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface User {
   _id: string;
@@ -24,12 +25,34 @@ export default function ProfileHeader({
   isEditing
 }: ProfileHeaderProps) {
   const [dragOver, setDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const validateAndUploadFile = (file: File) => {
+    // Client-side validation
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+    if (file.size > maxSize) {
+      toast.error("Kích thước file không được vượt quá 5MB");
+      return;
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Chỉ chấp nhận file ảnh định dạng JPG, PNG, WEBP");
+      return;
+    }
+
+    setIsUploading(true);
+    onAvatarChange(file);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onAvatarChange(file);
+      validateAndUploadFile(file);
     }
+    // Reset input value to allow selecting the same file again
+    e.target.value = "";
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -37,12 +60,21 @@ export default function ProfileHeader({
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      onAvatarChange(file);
+      validateAndUploadFile(file);
+    } else {
+      toast.error("Vui lòng chọn file ảnh hợp lệ");
     }
   };
 
+  // Reset uploading state when not editing
+  useEffect(() => {
+    if (!isEditing) {
+      setIsUploading(false);
+    }
+  }, [isEditing]);
+
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <div className="bg-white rounded-xl shadow-lg p-6 mb-6 mt-4">
       <div className="flex flex-col md:flex-row items-center gap-6">
         {/* Avatar */}
         <div className="relative">
@@ -51,19 +83,30 @@ export default function ProfileHeader({
               isEditing
                 ? "cursor-pointer hover:border-blue-300 transition-colors"
                 : ""
-            } ${dragOver ? "border-blue-400 bg-blue-50" : ""}`}
+            } ${dragOver ? "border-blue-400 bg-blue-50" : ""} ${
+              isUploading ? "opacity-75" : ""
+            }`}
             onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
+              if (isEditing) {
+                e.preventDefault();
+                setDragOver(true);
+              }
             }}
             onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
+            onDrop={isEditing ? handleDrop : undefined}
           >
             {user.avatar ? (
               <img
                 src={user.avatar}
                 alt={user.fullName}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to default avatar if image fails to load
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.parentElement?.classList.add(
+                    "fallback-avatar"
+                  );
+                }}
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
@@ -72,37 +115,52 @@ export default function ProfileHeader({
                 </span>
               </div>
             )}
-            {isEditing && (
+
+            {/* Upload Progress Indicator */}
+            {isUploading && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              </div>
+            )}
+
+            {/* Edit Overlay */}
+            {isEditing && !isUploading && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <svg
-                  className="w-8 h-8 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
+                <div className="text-center text-white">
+                  <svg
+                    className="w-8 h-8 mx-auto mb-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span className="text-xs">Chọn ảnh</span>
+                </div>
               </div>
             )}
           </div>
+
+          {/* Upload Button */}
           {isEditing && (
             <>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
                 onChange={handleFileChange}
                 className="absolute inset-0 opacity-0 cursor-pointer"
+                disabled={isUploading}
               />
               <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full p-2 cursor-pointer hover:bg-blue-600 transition-colors">
                 <svg
@@ -166,6 +224,16 @@ export default function ProfileHeader({
           </div>
         </div>
       </div>
+
+      {/* Upload Instructions */}
+      {isEditing && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            💡 <strong>Hướng dẫn:</strong> Nhấp vào ảnh hoặc kéo thả file ảnh để
+            cập nhật avatar. Chấp nhận định dạng JPG, PNG, WEBP và tối đa 5MB.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

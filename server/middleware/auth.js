@@ -12,22 +12,32 @@ const auth = async (req, res, next) => {
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId);
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findById(decoded.id);
 
-        if (!user) {
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token không hợp lệ, người dùng không tồn tại'
+                });
+            }
+
+            req.user = user;
+            next();
+        } catch (jwtError) {
+            console.error('JWT verification error:', jwtError.message);
+
             return res.status(401).json({
                 success: false,
-                message: 'Token không hợp lệ'
+                message: 'Token không hợp lệ hoặc đã hết hạn'
             });
         }
-
-        req.user = user;
-        next();
     } catch (error) {
-        res.status(401).json({
+        console.error('Auth middleware error:', error);
+        res.status(500).json({
             success: false,
-            message: 'Token không hợp lệ'
+            message: 'Lỗi server trong quá trình xác thực'
         });
     }
 };

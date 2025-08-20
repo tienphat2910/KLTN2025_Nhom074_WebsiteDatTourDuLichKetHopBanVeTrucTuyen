@@ -37,6 +37,28 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    dateOfBirth: {
+        type: Date,
+        default: null,
+        validate: {
+            validator: function (v) {
+                return !v || v <= new Date();
+            },
+            message: 'Ngày sinh không thể là ngày trong tương lai'
+        }
+    },
+    address: {
+        type: String,
+        trim: true,
+        default: null,
+        maxlength: [200, 'Địa chỉ không được quá 200 ký tự']
+    },
+    bio: {
+        type: String,
+        trim: true,
+        default: null,
+        maxlength: [500, 'Giới thiệu không được quá 500 ký tự']
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],
