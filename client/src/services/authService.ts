@@ -18,9 +18,22 @@ export interface AuthResponse {
   message: string;
   code?: string;
   data?: {
-    user: any;
-    token: string;
+    user?: {
+      _id?: string;
+      fullName?: string;
+      email?: string;
+      avatar?: string;
+      phone?: string;
+      role?: string;
+      isVerified?: boolean;
+      createdAt?: string;
+      updatedAt?: string;
+      [key: string]: any;
+    };
+    token?: string;
     email?: string;
+    avatar?: string; // For avatar upload response
+    [key: string]: any; // Allow additional properties
   };
 }
 
@@ -109,6 +122,67 @@ export const authService = {
       return result;
     } catch (error) {
       console.error("Get profile error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Update user profile
+  updateProfile: async (data: any): Promise<AuthResponse> => {
+    try {
+      const token = localStorage.getItem("lutrip_token");
+      if (!token) {
+        return {
+          success: false,
+          message: "Không tìm thấy token xác thực"
+        };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Update profile error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Upload avatar
+  uploadAvatar: async (formData: FormData): Promise<AuthResponse> => {
+    try {
+      const token = localStorage.getItem("lutrip_token");
+      if (!token) {
+        return {
+          success: false,
+          message: "Không tìm thấy token xác thực"
+        };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Upload avatar error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server"

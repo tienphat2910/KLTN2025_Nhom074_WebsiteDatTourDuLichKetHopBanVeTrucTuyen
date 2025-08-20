@@ -11,16 +11,26 @@ import { useLoading } from "./LoadingContext";
 import { toast } from "sonner";
 
 interface User {
-  id: string;
+  _id?: string;
+  id?: string;
   email: string;
   fullName: string;
   avatar?: string;
-  role: string;
-  isVerified: boolean;
+  phone?: string;
+  role?: string;
+  isVerified?: boolean;
+  firebaseUid?: string;
+  lastLogin?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  dateOfBirth?: string;
+  address?: string;
+  bio?: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  isAuthenticated: boolean;
   login: (userData: User, token: string) => void;
   logout: () => void;
   isAuthLoading: boolean;
@@ -32,6 +42,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const { startLoading, stopLoading } = useLoading();
+
+  // Computed property for authentication status
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     // Check if user is already logged in (from localStorage)
@@ -53,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     checkLoggedIn();
-  }, []);
+  }, [startLoading, stopLoading]);
 
   const login = (userData: User, userToken: string) => {
     setUser(userData);
@@ -72,7 +85,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated, isAuthLoading, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

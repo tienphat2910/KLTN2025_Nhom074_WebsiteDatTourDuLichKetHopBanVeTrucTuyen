@@ -46,17 +46,47 @@ export default function Login() {
         password: formData.password
       });
 
-      if (result.success && result.data) {
-        login(result.data.user, result.data.token);
+      if (
+        result.success &&
+        result.data &&
+        result.data.user &&
+        result.data.token &&
+        result.data.user.email &&
+        result.data.user.fullName
+      ) {
+        // Ensure required fields are present and properly typed
+        const userData = {
+          _id: result.data.user._id,
+          id: result.data.user._id,
+          email: result.data.user.email,
+          fullName: result.data.user.fullName,
+          avatar: result.data.user.avatar,
+          phone: result.data.user.phone,
+          role: result.data.user.role,
+          isVerified: result.data.user.isVerified,
+          firebaseUid: result.data.user.firebaseUid,
+          lastLogin: result.data.user.lastLogin,
+          createdAt: result.data.user.createdAt,
+          updatedAt: result.data.user.updatedAt,
+          dateOfBirth: result.data.user.dateOfBirth,
+          address: result.data.user.address,
+          bio: result.data.user.bio
+        };
+
+        login(userData, result.data.token);
         toast.success("Đăng nhập thành công!", {
           description: `Chào mừng ${result.data.user.fullName} trở lại!`,
           duration: 3000
         });
         router.push("/");
       } else {
-        setError(result.message);
+        setError(
+          result.message ||
+            "Đăng nhập không thành công - Thiếu thông tin bắt buộc"
+        );
       }
     } catch (error) {
+      console.error("Login error:", error);
       setError("Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsLoading(false);
