@@ -74,14 +74,7 @@ export default function Footer() {
                   Trợ giúp
                 </a>
               </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Tuyển dụng
-                </a>
-              </li>
+
               <li>
                 <a
                   href="#"
@@ -136,23 +129,7 @@ export default function Footer() {
                   href="/tours"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
-                  Vé xe khách
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/tours"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Đưa đón sân bay
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/entertainment"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Cho thuê xe
+                  Tour du lịch
                 </a>
               </li>
               <li>
@@ -161,30 +138,6 @@ export default function Footer() {
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Hoạt động & Vui chơi
-                </a>
-              </li>
-              <li className="hidden md:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Du thuyền
-                </a>
-              </li>
-              <li className="hidden md:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Biệt thự
-                </a>
-              </li>
-              <li className="hidden md:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Căn hộ
                 </a>
               </li>
             </ul>
@@ -225,23 +178,7 @@ export default function Footer() {
                   href="#"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
-                  LuTrip Affiliate
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  LuTrip Blog
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Chính Sách Quyền Riêng
+                  Chính Sách Quyền Riêng Tư
                 </a>
               </li>
               <li>
@@ -250,54 +187,6 @@ export default function Footer() {
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Điều khoản & Điều kiện
-                </a>
-              </li>
-              <li className="hidden lg:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Đăng ký nơi nghỉ của bạn
-                </a>
-              </li>
-              <li className="hidden lg:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Đăng ký doanh nghiệp hoạt động du lịch của bạn
-                </a>
-              </li>
-              <li className="hidden lg:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Khu vực báo chí
-                </a>
-              </li>
-              <li className="hidden lg:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Quy chế hoạt động
-                </a>
-              </li>
-              <li className="hidden lg:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  Vulnerability Disclosure Program
-                </a>
-              </li>
-              <li className="hidden lg:block">
-                <a
-                  href="#"
-                  className="text-slate-300 hover:text-white transition-colors text-sm"
-                >
-                  APAC Travel Insights
                 </a>
               </li>
             </ul>

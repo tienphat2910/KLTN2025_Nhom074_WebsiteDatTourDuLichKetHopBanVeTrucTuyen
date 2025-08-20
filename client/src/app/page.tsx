@@ -269,13 +269,11 @@ export default function Home() {
 
           <div className="flex justify-center">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 w-fit">
-              {services.map((service, index) => (
+              {services.map((service) => (
                 <Link
                   key={service.title}
                   href={service.href}
-                  className={`group transition-all duration-700 delay-${
-                    300 + index * 100
-                  } ${
+                  className={`group transition-all duration-700 ${
                     isSectionVisible("services")
                       ? "opacity-100 translate-y-0"
                       : "opacity-0 translate-y-10"
@@ -360,13 +358,11 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-8">
-              {popularDestinations.map((destination, index) => (
+              {popularDestinations.map((destination) => (
                 <Link
                   key={destination._id}
                   href={`/destinations/${destination.slug}`}
-                  className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                    400 + index * 100
-                  } ${
+                  className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
                     isSectionVisible("destinations")
                       ? "opacity-100 translate-y-0"
                       : "opacity-0 translate-y-10"
@@ -486,13 +482,11 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-8">
-              {popularTours.map((tour, index) => (
+              {popularTours.map((tour) => (
                 <Link
                   key={tour._id}
                   href={`/tours/detail/${tour.slug}`}
-                  className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                    400 + index * 100
-                  } ${
+                  className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
                     isSectionVisible("tours")
                       ? "opacity-100 translate-y-0"
                       : "opacity-0 translate-y-10"
@@ -665,13 +659,11 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {popularEntertainments.map((place, index) => (
+            {popularEntertainments.map((place) => (
               <Link
                 key={place.id}
                 href="/entertainment"
-                className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                  400 + index * 100
-                } ${
+                className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
                   isSectionVisible("entertainment")
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-10"
