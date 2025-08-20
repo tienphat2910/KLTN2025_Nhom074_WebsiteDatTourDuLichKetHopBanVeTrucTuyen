@@ -1,14 +1,33 @@
 const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-// Configure multer for memory storage
-const storage = multer.memoryStorage();
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
-// File filter for images
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        // Generate unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+// File filter for images only
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+    if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('Chỉ chấp nhận file ảnh'), false);
+        cb(new Error('Chỉ chấp nhận file ảnh định dạng JPG, PNG, WEBP'), false);
     }
 };
 
@@ -21,17 +40,35 @@ const upload = multer({
     }
 });
 
-// Different upload configurations
+// Middleware for single file upload
 const uploadSingle = upload.single('avatar');
-const uploadMultiple = upload.array('images', 10);
-const uploadFields = upload.fields([
-    { name: 'avatar', maxCount: 1 },
-    { name: 'images', maxCount: 10 }
-]);
+
+// Error handling middleware for multer
+const handleUploadError = (error, req, res, next) => {
+    if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({
+                success: false,
+                message: 'Kích thước file quá lớn (tối đa 5MB)'
+            });
+        }
+        return res.status(400).json({
+            success: false,
+            message: 'Lỗi upload file: ' + error.message
+        });
+    }
+
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+
+    next();
+};
 
 module.exports = {
-    upload,
     uploadSingle,
-    uploadMultiple,
-    uploadFields
+    handleUploadError
 };

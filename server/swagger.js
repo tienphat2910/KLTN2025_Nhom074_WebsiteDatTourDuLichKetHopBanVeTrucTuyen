@@ -36,7 +36,7 @@ const options = {
                     type: 'object',
                     required: ['email', 'password', 'fullName'],
                     properties: {
-                        id: {
+                        _id: {
                             type: 'string',
                             description: 'User ID'
                         },
@@ -60,7 +60,23 @@ const options = {
                         },
                         phone: {
                             type: 'string',
-                            description: 'User phone number (optional)'
+                            description: 'User phone number (10-11 digits)',
+                            pattern: '^[0-9]{10,11}$'
+                        },
+                        dateOfBirth: {
+                            type: 'string',
+                            format: 'date',
+                            description: 'User date of birth'
+                        },
+                        address: {
+                            type: 'string',
+                            description: 'User address',
+                            maxLength: 200
+                        },
+                        bio: {
+                            type: 'string',
+                            description: 'User biography/description',
+                            maxLength: 500
                         },
                         role: {
                             type: 'string',
@@ -73,10 +89,24 @@ const options = {
                             default: false,
                             description: 'Email verification status'
                         },
+                        firebaseUid: {
+                            type: 'string',
+                            description: 'Firebase user ID'
+                        },
+                        lastLogin: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last login timestamp'
+                        },
                         createdAt: {
                             type: 'string',
                             format: 'date-time',
                             description: 'Account creation date'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update date'
                         }
                     }
                 },

@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { destinationService, Destination } from "@/services/destinationService";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const services = [
   {
@@ -44,6 +45,7 @@ const services = [
 ];
 
 export default function Home() {
+  const { isAuthLoading } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(
     new Set()
@@ -188,6 +190,11 @@ export default function Home() {
   const destinationsRef = useRef<HTMLElement>(null);
   const toursRef = useRef<HTMLElement>(null);
   const entertainmentRef = useRef<HTMLElement>(null);
+
+  // Don't wait for auth on home page - render immediately
+  if (isAuthLoading) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">

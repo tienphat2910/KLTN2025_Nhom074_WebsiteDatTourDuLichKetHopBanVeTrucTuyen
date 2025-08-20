@@ -94,6 +94,24 @@ app.get("/api/status", (req, res) => {
     });
 });
 
+// Global error handler
+app.use((error, req, res, next) => {
+    console.error('Global error handler:', error);
+
+    if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+            success: false,
+            message: 'File quá lớn'
+        });
+    }
+
+    res.status(500).json({
+        success: false,
+        message: 'Lỗi server',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+});
+
 // Khởi chạy server
 app.listen(PORT, () => {
     console.log(`🌐 Server chạy tại: http://localhost:${PORT}`);
