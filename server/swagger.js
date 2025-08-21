@@ -615,7 +615,11 @@ const options = {
             }
         }
     },
-    apis: ['./routes/*.js', './index.js']
+    apis: [
+        './routes/*.js',
+        './index.js',
+        './routes/flights.js'
+    ]
 };
 
 const specs = swaggerJsdoc(options);

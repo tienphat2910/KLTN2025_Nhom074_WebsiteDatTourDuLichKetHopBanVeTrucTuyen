@@ -23,6 +23,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tours', require('./routes/tours'));
 app.use('/api/destinations', require('./routes/destinations'));
 app.use('/api/hotels', require('./routes/hotels'));
+app.use('/api/flights', require('./routes/flights'));
 
 // Kết nối MongoDB
 mongoose
