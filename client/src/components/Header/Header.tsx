@@ -219,9 +219,14 @@ export default function Header() {
             {/* Logo */}
             <Link
               href="/"
-              className="text-xl sm:text-2xl font-bold text-slate-800 hover:text-blue-600 transition-colors flex-shrink-0"
+              className="flex items-center gap-2 text-2xl sm:text-3xl font-bold text-slate-800 hover:text-blue-600 transition-colors flex-shrink-0"
             >
-              🌎 LuTrip
+              <img
+                src="/images/logo/logo-lutrip.png"
+                alt="LuTrip Logo"
+                className="h-12 w-auto sm:h-13" // tăng size logo mobile lên h-10, desktop giữ sm:h-13
+              />
+              {/* <span className="sm:inline text-2xl sm:text-2xl">LuTrip</span> */}
             </Link>
 
             {/* Desktop Navigation - Hidden on tablet, shown on large desktop */}
