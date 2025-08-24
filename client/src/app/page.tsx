@@ -29,9 +29,9 @@ const services = [
   {
     title: "Vé Giải Trí",
     description: "Đặt vé các điểm vui chơi giải trí",
-    icon: "🎢",
-    href: "/entertainment",
-    gradient: "from-orange-500 to-red-500",
+    icon: "🏯",
+    href: "/activity",
+    gradient: "from-amber-400 to-orange-500",
     bgColor: "bg-orange-50/80"
   }
 ];

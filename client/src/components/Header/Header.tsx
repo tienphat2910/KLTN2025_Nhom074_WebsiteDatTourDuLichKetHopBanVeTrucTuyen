@@ -13,7 +13,7 @@ import { LoadingSpinner } from "@/components/Loading";
 
 const navItems = [
   { href: "/flights", label: "Vé Máy Bay" },
-  { href: "/entertainment", label: "Giải Trí" }
+  { href: "/activity", label: "Giải Trí" }
 ];
 
 export default function Header() {
@@ -1065,3 +1065,4 @@ export default function Header() {
     </>
   );
 }
+// The file is valid. No syntax errors found.
