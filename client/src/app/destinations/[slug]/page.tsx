@@ -16,22 +16,16 @@ const serviceIcons = [
     href: "/tours"
   },
   {
-    id: "hotel",
-    name: "Khách sạn",
-    icon: "🏨",
-    href: "/hotels"
-  },
-  {
     id: "flight",
     name: "Chuyến bay",
     icon: "✈️",
     href: "/flights"
   },
   {
-    id: "entertainment",
+    id: "activity",
     name: "Giải trí",
     icon: "🎉",
-    href: "/entertainment"
+    href: "/activity"
   },
   {
     id: "all-services",
@@ -291,10 +285,10 @@ export default function DestinationDetailPage() {
                   href={
                     service.id === "tour"
                       ? `/tours/${destination.slug}`
-                      : service.id === "hotel"
-                      ? `/hotels/${destination.slug}`
                       : service.id === "flight"
                       ? `/flights/${destination.slug}`
+                      : service.id === "activity"
+                      ? `/activity/${destination.slug}`
                       : service.href
                   }
                   className="flex flex-col items-center p-3 md:p-4 rounded-xl hover:scale-105 transition-all duration-200 group"
