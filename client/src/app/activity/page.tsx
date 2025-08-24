@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -10,7 +12,7 @@ function formatVND(amount: number) {
   return amount.toLocaleString("vi-VN") + "đ";
 }
 
-export default function Entertainment() {
+export default function Activity() {
   const [isVisible, setIsVisible] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
   const [keyword, setKeyword] = useState("");
@@ -21,6 +23,7 @@ export default function Entertainment() {
   const [pendingDestination, setPendingDestination] =
     useState(selectedDestination);
   const [destinations, setDestinations] = useState<any[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     setIsVisible(true);
@@ -273,7 +276,12 @@ export default function Entertainment() {
                     )}
                   </div>
                   <div className="mt-auto flex justify-end">
-                    <button className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-2 rounded-lg shadow">
+                    <button
+                      className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-2 rounded-lg shadow"
+                      onClick={() =>
+                        router.push(`/activity/detail/${activity.slug}`)
+                      }
+                    >
                       Xem chi tiết
                     </button>
                   </div>

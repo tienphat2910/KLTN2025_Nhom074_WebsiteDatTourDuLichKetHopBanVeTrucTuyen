@@ -92,4 +92,56 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/activities/slug/{slug}:
+ *   get:
+ *     summary: Lấy thông tin hoạt động theo slug
+ *     tags: [Activities]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Slug của hoạt động
+ *     responses:
+ *       200:
+ *         description: Thông tin hoạt động
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Activity'
+ *       404:
+ *         description: Không tìm thấy hoạt động
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Không tìm thấy hoạt động"
+ */
+router.get('/slug/:slug', async (req, res, next) => {
+    try {
+        const activity = await Activity.findOne({ slug: req.params.slug });
+        if (!activity) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hoạt động" });
+        }
+        res.json({ success: true, data: activity });
+    } catch (err) {
+        next(err);
+    }
+});
+
 module.exports = router;
