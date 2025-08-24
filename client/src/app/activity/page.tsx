@@ -114,11 +114,11 @@ export default function Activity() {
           {/* Search & Filter Form */}
           <form
             onSubmit={handleSearch}
-            className="mx-auto mt-4 flex flex-col md:flex-row items-end justify-center gap-4 bg-white rounded-3xl shadow-lg px-4 md:px-8 py-6 w-full max-w-3xl"
+            className="mx-auto mt-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-center md:gap-4 bg-white rounded-3xl shadow-lg px-4 md:px-8 py-6 w-full max-w-3xl"
             style={{ fontFamily: "inherit" }}
           >
             {/* Tìm kiếm từ khoá */}
-            <div className="flex flex-col flex-1 items-start w-full">
+            <div className="flex flex-col w-full md:flex-1">
               <label className="font-bold text-gray-800 mb-1 text-sm">
                 Từ khoá hoạt động
               </label>
@@ -131,7 +131,7 @@ export default function Activity() {
               />
             </div>
             {/* Địa điểm */}
-            <div className="flex flex-col flex-[0.8] items-start w-full max-w-xs">
+            <div className="flex flex-col w-full md:flex-[0.8] md:max-w-xs">
               <label className="font-bold text-gray-800 mb-1 text-sm">
                 Địa điểm
               </label>
@@ -139,7 +139,11 @@ export default function Activity() {
                 className="w-full border border-gray-400 rounded-lg px-4 py-3 text-base text-gray-800 bg-white"
                 value={pendingDestination}
                 onChange={(e) => setPendingDestination(e.target.value)}
-                style={{ minWidth: "140px", maxWidth: "200px" }}
+                style={{
+                  minWidth: "0px",
+                  maxWidth: "100%",
+                  width: "100%"
+                }}
               >
                 <option value="">Tất cả</option>
                 {destinations.map((d: any) => (
