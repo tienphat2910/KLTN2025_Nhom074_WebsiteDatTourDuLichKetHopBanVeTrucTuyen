@@ -30,7 +30,7 @@ const services = [
     title: "Vé Giải Trí",
     description: "Đặt vé các điểm vui chơi giải trí",
     icon: "🏯",
-    href: "/entertainment",
+    href: "/activity",
     gradient: "from-amber-400 to-orange-500",
     bgColor: "bg-orange-50/80"
   }
