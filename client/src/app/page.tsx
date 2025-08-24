@@ -8,6 +8,7 @@ import { destinationService, Destination } from "@/services/destinationService";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
 import { useAuth } from "@/contexts/AuthContext";
+import axios from "axios";
 
 const services = [
   {
@@ -49,32 +50,8 @@ export default function Home() {
   const [popularTours, setPopularTours] = useState<Tour[]>([]);
   const [isLoadingTours, setIsLoadingTours] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
-  const popularEntertainments = [
-    {
-      id: 1,
-      name: "Vinpearl Land Nha Trang",
-      location: "Nha Trang, Khánh Hòa",
-      price: "750,000",
-      type: "Công viên giải trí",
-      highlights: ["Tàu lượn siêu tốc", "Công viên nước", "Aquarium"]
-    },
-    {
-      id: 2,
-      name: "Sun World Bà Nà Hills",
-      location: "Đà Nẵng",
-      price: "850,000",
-      type: "Khu du lịch",
-      highlights: ["Cầu Vàng", "Cáp treo", "Làng Pháp"]
-    },
-    {
-      id: 3,
-      name: "Công Viên Văn Hóa Đầm Sen",
-      location: "TP. Hồ Chí Minh",
-      price: "150,000",
-      type: "Công viên",
-      highlights: ["Trò chơi cảm giác mạnh", "Biểu diễn", "Khu vui chơi trẻ em"]
-    }
-  ];
+  const [popularActivities, setPopularActivities] = useState<any[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   // Load popular destinations from the database
   useEffect(() => {
@@ -130,6 +107,26 @@ export default function Home() {
     };
 
     loadPopularTours();
+  }, []);
+
+  // Fetch popular activities
+  useEffect(() => {
+    setIsLoadingActivities(true);
+    axios
+      .get(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+        }/api/activities?popular=true&limit=3`
+      )
+      .then((res) => {
+        if (res.data.success) {
+          setPopularActivities(res.data.data);
+        } else {
+          setPopularActivities([]);
+        }
+      })
+      .catch(() => setPopularActivities([]))
+      .finally(() => setIsLoadingActivities(false));
   }, []);
 
   // Refs for sections (khai báo trước useEffect để không bị undefined)
@@ -658,86 +655,123 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {popularEntertainments.map((place) => (
-              <Link
-                key={place.id}
-                href="/activity"
-                className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
-                  isSectionVisible("activity")
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 translate-y-10"
-                } group bg-white/10 backdrop-blur-sm border border-white/20`}
-              >
-                <div className="h-64 bg-gradient-to-br from-orange-400 to-red-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
-                  <div className="p-6 text-white w-full">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-2xl font-bold drop-shadow-lg line-clamp-1">
-                        {place.name}
-                      </h3>
-                      <span className="text-xs bg-orange-400/90 text-black px-2 py-1 rounded-full font-semibold">
-                        {place.type}
-                      </span>
-                    </div>
-                    <p className="text-gray-200 text-sm mb-3 flex items-center gap-1">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+          {isLoadingActivities ? (
+            <div className="flex justify-center py-16">
+              <LoadingSpinner
+                type="dots"
+                size="lg"
+                text="Đang tải địa điểm vui chơi..."
+              />
+            </div>
+          ) : popularActivities.length === 0 ? (
+            <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-xl">
+              <p className="text-white text-lg">
+                Không tìm thấy địa điểm vui chơi phổ biến
+              </p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8">
+              {popularActivities
+                .filter((place) => place.popular)
+                .map((place) => (
+                  <Link
+                    key={place._id}
+                    href={`/activity/detail/${place.slug}`}
+                    className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
+                      isSectionVisible("activity")
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-10"
+                    } group`}
+                  >
+                    {/* Gallery image nếu có */}
+                    <div className="h-64 relative overflow-hidden">
+                      {place.gallery && place.gallery.length > 0 ? (
+                        <div
+                          className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-110"
+                          style={{
+                            backgroundImage: `url('${place.gallery[0]}')`
+                          }}
                         />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      {place.location}
-                    </p>
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      {place.highlights.slice(0, 3).map((h, i) => (
-                        <span
-                          key={i}
-                          className="text-xs bg-white/20 px-2 py-1 rounded-full"
-                        >
-                          {h}
-                        </span>
-                      ))}
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-orange-400 to-red-500" />
+                      )}
                     </div>
-                    <div className="flex items-baseline gap-2 justify-between">
-                      <span className="text-xl font-bold text-orange-200">
-                        {place.price}đ
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-white/90 text-sm">
-                        Xem chi tiết
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 8l4 4m0 0l-4 4m4-4H3"
-                          />
-                        </svg>
-                      </span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
+                      <div className="p-6 text-white w-full flex flex-col h-full justify-between">
+                        <div>
+                          <h3 className="text-2xl font-bold drop-shadow-lg line-clamp-2 mb-2">
+                            {place.name}
+                          </h3>
+                          <div className="flex items-center text-sm mb-2">
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            <span>
+                              {place.location?.address ||
+                                place.location?.name ||
+                                ""}
+                            </span>
+                          </div>
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            {(place.features || [])
+                              .slice(0, 1)
+                              .map((h: string, i: number) => (
+                                <span
+                                  key={i}
+                                  className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                                >
+                                  {h}
+                                </span>
+                              ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-auto pt-2">
+                          <span className="text-xl font-bold text-orange-200">
+                            {place.price?.retail?.adult
+                              ? `${place.price.retail.adult.toLocaleString(
+                                  "vi-VN"
+                                )}đ`
+                              : "Liên hệ"}
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-white/90 text-sm">
+                            Xem chi tiết
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17 8l4 4m0 0l-4 4m4-4H3"
+                              />
+                            </svg>
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                  </Link>
+                ))}
+            </div>
+          )}
 
           {/* Xem thêm button */}
           <div className="text-center mt-12">
