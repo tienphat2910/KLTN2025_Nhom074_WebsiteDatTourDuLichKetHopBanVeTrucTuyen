@@ -231,22 +231,16 @@ export default function Header() {
 
             {/* Desktop Navigation - Hidden on tablet, shown on large desktop */}
             <nav className="hidden xl:flex space-x-4 2xl:space-x-8">
-              {/* Destinations Dropdown - hover */}
-              <div
-                className="relative group"
-                onMouseEnter={() => setIsDestinationsOpen(true)}
-                onMouseLeave={() => setIsDestinationsOpen(false)}
-              >
-                <Link
-                  href="/destinations"
+              {/* Destinations Dropdown - click to open/close */}
+              <div className="relative">
+                <button
+                  type="button"
                   className={`relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg flex items-center space-x-1 text-sm 2xl:text-base ${
                     pathname.startsWith("/destinations")
                       ? "text-blue-600 font-semibold bg-blue-50"
                       : "text-slate-700 hover:text-blue-600 hover:bg-blue-50/50"
                   }`}
-                  onClick={() => {
-                    setIsDestinationsOpen(false);
-                  }}
+                  onClick={toggleDestinations}
                 >
                   <span>Địa Điểm</span>
                   <svg
@@ -264,16 +258,14 @@ export default function Header() {
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                  {/* underline effect */}
                   <span
                     className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-blue-600 transition-all duration-300 ${
                       pathname.startsWith("/destinations") || isDestinationsOpen
                         ? "w-full"
-                        : "w-0 group-hover:w-full"
+                        : "w-0"
                     }`}
                   ></span>
-                </Link>
-                {/* Dropdown menu on hover */}
+                </button>
                 {isDestinationsOpen && (
                   <div className="absolute top-full left-0 mt-2 w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
                     {/* Popular Destinations */}
@@ -345,22 +337,16 @@ export default function Header() {
                   </div>
                 )}
               </div>
-              {/* Tours Dropdown - hover */}
-              <div
-                className="relative group"
-                onMouseEnter={() => setIsToursOpen(true)}
-                onMouseLeave={() => setIsToursOpen(false)}
-              >
-                <Link
-                  href="/tours"
+              {/* Tours Dropdown - click to open/close */}
+              <div className="relative">
+                <button
+                  type="button"
                   className={`relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg flex items-center space-x-1 text-sm 2xl:text-base ${
                     pathname.startsWith("/tours")
                       ? "text-blue-600 font-semibold bg-blue-50"
                       : "text-slate-700 hover:text-blue-600 hover:bg-blue-50/50"
                   }`}
-                  onClick={() => {
-                    setIsToursOpen(false);
-                  }}
+                  onClick={toggleTours}
                 >
                   <span>Du Lịch</span>
                   <svg
@@ -378,16 +364,14 @@ export default function Header() {
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                  {/* underline effect */}
                   <span
                     className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-blue-600 transition-all duration-300 ${
                       pathname.startsWith("/tours") || isToursOpen
                         ? "w-full"
-                        : "w-0 group-hover:w-full"
+                        : "w-0"
                     }`}
                   ></span>
-                </Link>
-                {/* Dropdown menu on hover */}
+                </button>
                 {isToursOpen && (
                   <div className="absolute top-full left-0 mt-2 w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
                     {/* Popular Destinations with Tours */}
@@ -685,9 +669,9 @@ export default function Header() {
                 className="mobile-menu-button text-slate-700 hover:text-blue-600 transition-colors p-2"
               >
                 <svg
-                  className={`w-6 h-6 transform transition-transform ${
+                  className={`w-6 h-6 transform transition-transform $(
                     isMobileMenuOpen ? "rotate-90" : ""
-                  }`}
+                  )`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -811,9 +795,9 @@ export default function Header() {
                   >
                     <span>Địa Điểm</span>
                     <svg
-                      className={`w-4 h-4 transition-transform duration-300 ${
+                      className={`w-4 h-4 transition-transform duration-300 $(
                         isDestinationsOpen ? "rotate-180" : ""
-                      }`}
+                      )`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -911,9 +895,9 @@ export default function Header() {
                   >
                     <span>Du Lịch</span>
                     <svg
-                      className={`w-4 h-4 transition-transform duration-300 ${
+                      className={`w-4 h-4 transition-transform duration-300 $(
                         isToursOpen ? "rotate-180" : ""
-                      }`}
+                      )`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1108,4 +1092,3 @@ export default function Header() {
     </>
   );
 }
-// The file is valid. No syntax errors found.
