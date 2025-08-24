@@ -626,7 +626,8 @@ const options = {
                         },
                         createdAt: { type: 'string', format: 'date-time', description: 'Ngày tạo' },
                         updatedAt: { type: 'string', format: 'date-time', description: 'Ngày cập nhật' },
-                        popular: { type: 'boolean', description: 'Trạng thái nổi bật' }
+                        popular: { type: 'boolean', description: 'Trạng thái nổi bật' },
+                        destinationId: { type: 'string', description: 'ID địa điểm' }
                     }
                 }
             },

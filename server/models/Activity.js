@@ -34,7 +34,12 @@ const activitySchema = new mongoose.Schema({
         d7: String,
     },
     gallery: [String],
-    popular: Boolean
+    popular: Boolean,
+    destinationId: {
+        type: String,
+        required: [true, 'ID địa điểm là bắt buộc'],
+        ref: 'Destination'
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Activity', activitySchema);
