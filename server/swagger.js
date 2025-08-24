@@ -470,55 +470,6 @@ const options = {
                         }
                     }
                 },
-                Entertainment: {
-                    type: 'object',
-                    required: ['name', 'location', 'price', 'type'],
-                    properties: {
-                        id: {
-                            type: 'string',
-                            description: 'Entertainment ID'
-                        },
-                        name: {
-                            type: 'string',
-                            description: 'Entertainment venue name'
-                        },
-                        location: {
-                            type: 'string',
-                            description: 'Entertainment venue location'
-                        },
-                        price: {
-                            type: 'number',
-                            description: 'Ticket price in VND'
-                        },
-                        type: {
-                            type: 'string',
-                            enum: ['theme_park', 'museum', 'show', 'activity'],
-                            description: 'Entertainment type'
-                        },
-                        highlights: {
-                            type: 'array',
-                            items: {
-                                type: 'string'
-                            },
-                            description: 'Entertainment highlights'
-                        },
-                        images: {
-                            type: 'array',
-                            items: {
-                                type: 'string'
-                            },
-                            description: 'Entertainment images URLs'
-                        },
-                        description: {
-                            type: 'string',
-                            description: 'Entertainment description'
-                        },
-                        openingHours: {
-                            type: 'string',
-                            description: 'Opening hours'
-                        }
-                    }
-                },
                 Destination: {
                     type: 'object',
                     required: ['_id', 'name', 'country', 'description', 'image'],
@@ -611,14 +562,89 @@ const options = {
                             description: 'Response data'
                         }
                     }
+                },
+                Activity: {
+                    type: 'object',
+                    required: ['name', 'location', 'price'],
+                    properties: {
+                        _id: { type: 'string', description: 'Activity ID' },
+                        name: { type: 'string', description: 'Tên hoạt động' },
+                        description: { type: 'string', description: 'Mô tả hoạt động' },
+                        location: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string', description: 'Tên địa điểm' },
+                                address: { type: 'string', description: 'Địa chỉ' }
+                            }
+                        },
+                        price: {
+                            type: 'object',
+                            properties: {
+                                retail: {
+                                    type: 'object',
+                                    properties: {
+                                        adult: { type: 'number', description: 'Giá vé người lớn' },
+                                        child: { type: 'number', description: 'Giá vé trẻ em' },
+                                        locker: { type: 'number', description: 'Giá thuê tủ' },
+                                        baby: { type: 'number', description: 'Giá vé em bé' },
+                                        senior: { type: 'number', description: 'Giá vé người cao tuổi' }
+                                    }
+                                },
+                                note: { type: 'string', description: 'Ghi chú giá vé' }
+                            }
+                        },
+                        operating_hours: {
+                            type: 'object',
+                            properties: {
+                                mon_to_sat: { type: 'string', description: 'Giờ mở cửa từ thứ 2 đến thứ 7' },
+                                sunday_holidays: { type: 'string', description: 'Giờ mở cửa chủ nhật/ngày lễ' },
+                                ticket_cutoff: { type: 'string', description: 'Giờ ngừng bán vé' },
+                                rides_end: { type: 'string', description: 'Giờ kết thúc trò chơi' }
+                            }
+                        },
+                        features: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Các tính năng nổi bật'
+                        },
+                        detail: {
+                            type: 'object',
+                            properties: {
+                                d1: { type: 'string' },
+                                d2: { type: 'string' },
+                                d3: { type: 'string' },
+                                d4: { type: 'string' },
+                                d5: { type: 'string' },
+                                d6: { type: 'string' },
+                                d7: { type: 'string' }
+                            }
+                        },
+                        gallery: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Ảnh hoạt động'
+                        },
+                        createdAt: { type: 'string', format: 'date-time', description: 'Ngày tạo' },
+                        updatedAt: { type: 'string', format: 'date-time', description: 'Ngày cập nhật' },
+                        popular: { type: 'boolean', description: 'Trạng thái nổi bật' }
+                    }
                 }
-            }
+            },
+            tags: [
+                { name: 'Users', description: 'Operations about user' },
+                { name: 'Tours', description: 'Operations about tours' },
+                { name: 'Flights', description: 'Operations about flights' },
+                { name: 'Hotels', description: 'Operations about hotels' },
+                { name: 'Destinations', description: 'Operations about destinations' },
+                { name: 'Activities', description: 'Các hoạt động giải trí, tham quan, vui chơi' }
+            ]
         }
     },
     apis: [
         './routes/*.js',
         './index.js',
-        './routes/flights.js'
+        './routes/flights.js',
+        './routes/activities.js'
     ]
 };
 
@@ -628,4 +654,3 @@ module.exports = {
     specs,
     swaggerUi
 };
-

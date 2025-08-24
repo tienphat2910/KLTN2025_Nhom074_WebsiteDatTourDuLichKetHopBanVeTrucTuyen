@@ -1,44 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import axios from "axios";
+import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-const entertainments = [
-  {
-    id: 1,
-    name: "Vinpearl Land Nha Trang",
-    location: "Nha Trang, Khánh Hòa",
-    price: "750,000",
-    type: "Công viên giải trí",
-    highlights: ["Tàu lượn siêu tốc", "Công viên nước", "Aquarium"],
-    image: "/entertainment1.jpg"
-  },
-  {
-    id: 2,
-    name: "Sun World Ba Na Hills",
-    location: "Đà Nẵng",
-    price: "850,000",
-    type: "Khu du lịch",
-    highlights: ["Cầu Vàng", "Cáp treo", "Làng Pháp"],
-    image: "/entertainment2.jpg"
-  },
-  {
-    id: 3,
-    name: "Dam Sen Park",
-    location: "TP.HCM",
-    price: "150,000",
-    type: "Công viên",
-    highlights: ["Trò chơi cảm giác mạnh", "Biểu diễn", "Khu vui chơi trẻ em"],
-    image: "/entertainment3.jpg"
-  }
-];
+function formatVND(amount: number) {
+  return amount.toLocaleString("vi-VN") + "đ";
+}
 
 export default function Entertainment() {
   const [isVisible, setIsVisible] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
     setIsVisible(true);
+    axios
+      .get(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+        }/api/activities`
+      )
+      .then((res) => {
+        if (res.data.success) setActivities(res.data.data);
+      });
   }, []);
 
   return (
@@ -77,59 +63,111 @@ export default function Entertainment() {
         </div>
       </section>
 
+      {/* Breadcrumb */}
+      <div className="pt-2 pb-2">
+        <div className="container mx-auto px-4">
+          <nav className="text-sm text-gray-600">
+            <Link href="/" className="hover:text-blue-600">
+              Trang chủ
+            </Link>
+            <span className="mx-2">›</span>
+            <Link href="/destinations" className="hover:text-blue-600">
+              VIỆT NAM
+            </Link>
+            <span className="mx-2">›</span>
+            <span className="text-gray-800 font-medium">Hoạt động</span>
+          </nav>
+        </div>
+      </div>
+
       {/* Entertainment Section */}
-      <section className="py-16 px-4">
+      <section className="py-4 px-4">
         <div className="container mx-auto">
+          <h2 className="text-2xl font-bold text-black mb-8 text-left">
+            Hoạt động nổi bật
+          </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {entertainments.map((entertainment, index) => (
-              <div
-                key={entertainment.id}
-                className={`bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                  index * 100
-                } ${isVisible ? "animate-slide-up" : "opacity-0"}`}
-              >
-                <div className="h-48 bg-gradient-to-br from-orange-400 to-red-500"></div>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold text-gray-800">
-                      {entertainment.name}
+            {activities
+              .filter((activity) => activity.popular)
+              .map((activity, index) => (
+                <div
+                  key={activity._id}
+                  className="bg-white rounded-xl overflow-hidden shadow-lg transition-all duration-500 flex flex-col h-full"
+                >
+                  {/* Gallery image nếu có */}
+                  <div className="h-48 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center overflow-hidden">
+                    {activity.gallery && activity.gallery.length > 0 ? (
+                      <img
+                        src={activity.gallery[0]}
+                        alt={activity.name}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      {activity.name}
                     </h3>
-                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                      {entertainment.type}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mb-4">
-                    📍 {entertainment.location}
-                  </p>
-
-                  <div className="mb-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">
-                      Điểm nổi bật:
-                    </h4>
-                    <ul className="text-sm text-gray-600">
-                      {entertainment.highlights.map((highlight, idx) => (
-                        <li key={idx} className="flex items-center mb-1">
-                          <span className="text-orange-500 mr-2">🎯</span>
-                          {highlight}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-2xl font-bold text-orange-600">
-                        {entertainment.price}đ
-                      </span>
-                      <span className="text-gray-500 text-sm">/vé</span>
+                    <p className="text-gray-600 mb-2">
+                      📍{" "}
+                      {activity.location
+                        ? `${activity.location.name || ""} ${
+                            activity.location.address
+                              ? "- " + activity.location.address
+                              : ""
+                          }`
+                        : ""}
+                    </p>
+                    <p className="text-gray-600 mb-4">{activity.description}</p>
+                    <div className="mb-4">
+                      <h4 className="font-semibold text-gray-800 mb-2">
+                        Giá vé:
+                      </h4>
+                      {activity.price && activity.price.retail && (
+                        <ul className="text-sm text-gray-600">
+                          {activity.price.retail.adult && (
+                            <li>
+                              Người lớn:{" "}
+                              <span className="font-bold text-orange-600">
+                                {formatVND(activity.price.retail.adult)}
+                              </span>
+                            </li>
+                          )}
+                          {activity.price.retail.child && (
+                            <li>
+                              Trẻ em:{" "}
+                              <span className="font-bold text-orange-600">
+                                {formatVND(activity.price.retail.child)}
+                              </span>
+                            </li>
+                          )}
+                          {activity.price.retail.senior && (
+                            <li>
+                              Người cao tuổi:{" "}
+                              <span className="font-bold text-orange-600">
+                                {formatVND(activity.price.retail.senior)}
+                              </span>
+                            </li>
+                          )}
+                          {activity.price.retail.locker && (
+                            <li>
+                              Tủ khoá:{" "}
+                              <span className="font-bold text-orange-600">
+                                {formatVND(activity.price.retail.locker)}
+                              </span>
+                            </li>
+                          )}
+                        </ul>
+                      )}
                     </div>
-                    <button className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300">
-                      Đặt Vé
-                    </button>
+                    <div className="mt-auto flex justify-end">
+                      <button className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-2 rounded-lg shadow">
+                        Xem chi tiết
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </section>
