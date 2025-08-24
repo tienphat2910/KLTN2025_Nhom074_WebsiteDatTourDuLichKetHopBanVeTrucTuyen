@@ -136,7 +136,7 @@ export default function Home() {
   const servicesRef = useRef<HTMLElement>(null);
   const destinationsRef = useRef<HTMLElement>(null);
   const toursRef = useRef<HTMLElement>(null);
-  const entertainmentRef = useRef<HTMLElement>(null);
+  const activityRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -169,7 +169,7 @@ export default function Home() {
       { ref: servicesRef, id: "services" },
       { ref: destinationsRef, id: "destinations" },
       { ref: toursRef, id: "tours" },
-      { ref: entertainmentRef, id: "entertainment" }
+      { ref: activityRef, id: "activity" }
     ];
 
     sections.forEach(({ ref, id }) => {
@@ -621,11 +621,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Popular Entertainment Section */}
+      {/* Popular Activity Section */}
       <section
-        ref={entertainmentRef}
+        ref={activityRef}
         className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 ${
-          isSectionVisible("entertainment")
+          isSectionVisible("activity")
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
         }`}
@@ -645,7 +645,7 @@ export default function Home() {
         <div className="container mx-auto relative z-10">
           <div
             className={`text-center mb-16 transition-all duration-1000 delay-200 ${
-              isSectionVisible("entertainment")
+              isSectionVisible("activity")
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 translate-y-10"
             }`}
@@ -662,9 +662,9 @@ export default function Home() {
             {popularEntertainments.map((place) => (
               <Link
                 key={place.id}
-                href="/entertainment"
+                href="/activity"
                 className={`relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
-                  isSectionVisible("entertainment")
+                  isSectionVisible("activity")
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-10"
                 } group bg-white/10 backdrop-blur-sm border border-white/20`}
@@ -743,13 +743,13 @@ export default function Home() {
           <div className="text-center mt-12">
             <div
               className={`transition-all duration-1000 delay-700 ${
-                isSectionVisible("entertainment")
+                isSectionVisible("activity")
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-10"
               }`}
             >
               <Link
-                href="/entertainment"
+                href="/activity"
                 className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white/30 hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/30 group"
               >
                 <span>Xem thêm địa điểm vui chơi</span>

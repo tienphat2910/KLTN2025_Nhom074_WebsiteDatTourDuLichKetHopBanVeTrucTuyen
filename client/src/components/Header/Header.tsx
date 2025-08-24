@@ -83,16 +83,6 @@ export default function Header() {
     setIsSearchOpen(!isSearchOpen);
   };
 
-  const toggleDestinations = () => {
-    setIsDestinationsOpen(!isDestinationsOpen);
-    setIsToursOpen(false); // Close tours when opening destinations
-  };
-
-  const toggleTours = () => {
-    setIsToursOpen(!isToursOpen);
-    setIsDestinationsOpen(false); // Close destinations when opening tours
-  };
-
   const handleLogout = () => {
     setShowLogoutConfirm(true);
     setIsUserMenuOpen(false);
@@ -204,6 +194,16 @@ export default function Header() {
     };
   }, []);
 
+  const toggleDestinations = () => {
+    setIsDestinationsOpen((prev) => !prev);
+    setIsToursOpen(false);
+  };
+
+  const toggleTours = () => {
+    setIsToursOpen((prev) => !prev);
+    setIsDestinationsOpen(false);
+  };
+
   return (
     <>
       <header className="fixed top-0 w-full bg-white/95 backdrop-blur-md z-50 shadow-sm border-b border-white/20">
@@ -231,11 +231,22 @@ export default function Header() {
 
             {/* Desktop Navigation - Hidden on tablet, shown on large desktop */}
             <nav className="hidden xl:flex space-x-4 2xl:space-x-8">
-              {/* Destinations Dropdown */}
-              <div className="relative group">
-                <button
-                  onClick={toggleDestinations}
-                  className="relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1 text-sm 2xl:text-base"
+              {/* Destinations Dropdown - hover */}
+              <div
+                className="relative group"
+                onMouseEnter={() => setIsDestinationsOpen(true)}
+                onMouseLeave={() => setIsDestinationsOpen(false)}
+              >
+                <Link
+                  href="/destinations"
+                  className={`relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg flex items-center space-x-1 text-sm 2xl:text-base ${
+                    pathname.startsWith("/destinations")
+                      ? "text-blue-600 font-semibold bg-blue-50"
+                      : "text-slate-700 hover:text-blue-600 hover:bg-blue-50/50"
+                  }`}
+                  onClick={() => {
+                    setIsDestinationsOpen(false);
+                  }}
                 >
                   <span>Địa Điểm</span>
                   <svg
@@ -253,9 +264,16 @@ export default function Header() {
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                </button>
-
-                {/* Destinations Dropdown Menu */}
+                  {/* underline effect */}
+                  <span
+                    className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-blue-600 transition-all duration-300 ${
+                      pathname.startsWith("/destinations") || isDestinationsOpen
+                        ? "w-full"
+                        : "w-0 group-hover:w-full"
+                    }`}
+                  ></span>
+                </Link>
+                {/* Dropdown menu on hover */}
                 {isDestinationsOpen && (
                   <div className="absolute top-full left-0 mt-2 w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
                     {/* Popular Destinations */}
@@ -314,7 +332,11 @@ export default function Header() {
                     <div className="px-4 pt-3 border-t border-gray-100 mt-3">
                       <Link
                         href="/destinations"
-                        className="block w-full text-center py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors font-medium text-sm"
+                        className={`block w-full text-center py-2 rounded-md transition-colors font-medium text-sm ${
+                          pathname.startsWith("/destinations")
+                            ? "bg-blue-600 text-white"
+                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        }`}
                         onClick={() => setIsDestinationsOpen(false)}
                       >
                         Xem tất cả địa điểm
@@ -323,12 +345,22 @@ export default function Header() {
                   </div>
                 )}
               </div>
-
-              {/* Tours Dropdown */}
-              <div className="relative group">
-                <button
-                  onClick={toggleTours}
-                  className="relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 flex items-center space-x-1 text-sm 2xl:text-base"
+              {/* Tours Dropdown - hover */}
+              <div
+                className="relative group"
+                onMouseEnter={() => setIsToursOpen(true)}
+                onMouseLeave={() => setIsToursOpen(false)}
+              >
+                <Link
+                  href="/tours"
+                  className={`relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg flex items-center space-x-1 text-sm 2xl:text-base ${
+                    pathname.startsWith("/tours")
+                      ? "text-blue-600 font-semibold bg-blue-50"
+                      : "text-slate-700 hover:text-blue-600 hover:bg-blue-50/50"
+                  }`}
+                  onClick={() => {
+                    setIsToursOpen(false);
+                  }}
                 >
                   <span>Du Lịch</span>
                   <svg
@@ -346,9 +378,16 @@ export default function Header() {
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                </button>
-
-                {/* Tours Dropdown Menu */}
+                  {/* underline effect */}
+                  <span
+                    className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-blue-600 transition-all duration-300 ${
+                      pathname.startsWith("/tours") || isToursOpen
+                        ? "w-full"
+                        : "w-0 group-hover:w-full"
+                    }`}
+                  ></span>
+                </Link>
+                {/* Dropdown menu on hover */}
                 {isToursOpen && (
                   <div className="absolute top-full left-0 mt-2 w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
                     {/* Popular Destinations with Tours */}
@@ -401,7 +440,11 @@ export default function Header() {
                     <div className="px-4 pt-3 border-t border-gray-100 mt-3">
                       <Link
                         href="/tours"
-                        className="block w-full text-center py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition-colors font-medium text-sm"
+                        className={`block w-full text-center py-2 rounded-md transition-colors font-medium text-sm ${
+                          pathname.startsWith("/tours")
+                            ? "bg-blue-600 text-white"
+                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        }`}
                         onClick={() => setIsToursOpen(false)}
                       >
                         Xem tất cả tour
