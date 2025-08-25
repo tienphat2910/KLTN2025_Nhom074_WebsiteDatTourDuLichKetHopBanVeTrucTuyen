@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Flight, flightService } from "@/services/flightService"; // Import Flight interface and flightService
+import { Flight, flightService } from "@/services/flightService";
+import FlightSearchForm from "@/components/flight/FlightSearchForm";
 
 export default function Flights() {
   const [isVisible, setIsVisible] = useState(false);
@@ -14,6 +15,11 @@ export default function Flights() {
   const [selectedDeparture, setSelectedDeparture] = useState("");
   const [selectedArrival, setSelectedArrival] = useState("");
   const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
+  const [departureDate, setDepartureDate] = useState("");
+  const [returnDate, setReturnDate] = useState("");
+  const [passengerCount, setPassengerCount] = useState(1);
+  const [seatClass, setSeatClass] = useState("economy");
 
   useEffect(() => {
     setIsVisible(true);
@@ -35,18 +41,21 @@ export default function Flights() {
     let result = flights;
     if (searchValue.trim()) {
       const keyword = searchValue.toLowerCase();
-      result = result.filter(f =>
-        f.flightNumber.toLowerCase().includes(keyword) ||
-        f.airline.toLowerCase().includes(keyword) ||
-        f.departureAirport.city.toLowerCase().includes(keyword) ||
-        f.arrivalAirport.city.toLowerCase().includes(keyword)
+      result = result.filter(
+        (f) =>
+          f.flightNumber.toLowerCase().includes(keyword) ||
+          f.airline.toLowerCase().includes(keyword) ||
+          f.departureAirport.city.toLowerCase().includes(keyword) ||
+          f.arrivalAirport.city.toLowerCase().includes(keyword)
       );
     }
     if (selectedDeparture) {
-      result = result.filter(f => f.departureAirport.code === selectedDeparture);
+      result = result.filter(
+        (f) => f.departureAirport.code === selectedDeparture
+      );
     }
     if (selectedArrival) {
-      result = result.filter(f => f.arrivalAirport.code === selectedArrival);
+      result = result.filter((f) => f.arrivalAirport.code === selectedArrival);
     }
     setFilteredFlights(result);
   }, [flights, searchValue, selectedDeparture, selectedArrival]);
@@ -74,7 +83,10 @@ export default function Flights() {
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   };
 
   const formatDuration = (minutes: number) => {
@@ -116,69 +128,25 @@ export default function Flights() {
               Tìm và đặt vé máy bay giá tốt nhất
             </p>
           </div>
-          {/* Search & Filter Form */}
-          <form
-            onSubmit={handleSearch}
-            className="mx-auto mt-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-center md:gap-4 bg-white rounded-3xl shadow-lg px-4 md:px-8 py-6 w-full max-w-3xl"
-            style={{ fontFamily: "inherit" }}
-          >
-            {/* Tìm kiếm từ khoá */}
-            <div className="flex flex-col w-full md:flex-1">
-              <label className="font-bold text-gray-800 mb-1 text-sm">Từ khoá chuyến bay</label>
-              <input
-                type="text"
-                className="w-full border border-gray-400 rounded-lg px-4 py-3 text-base text-gray-800 bg-white"
-                value={searchValue}
-                onChange={e => setSearchValue(e.target.value)}
-                placeholder="Nhập số hiệu, hãng, điểm đi/đến..."
-              />
-            </div>
-            {/* Sân bay đi */}
-            <div className="flex flex-col w-full md:flex-[0.8] md:max-w-xs">
-              <label className="font-bold text-gray-800 mb-1 text-sm">Sân bay đi</label>
-              <select
-                className="w-full border border-gray-400 rounded-lg px-4 py-3 text-base text-gray-800 bg-white"
-                value={selectedDeparture}
-                onChange={e => setSelectedDeparture(e.target.value)}
-              >
-                <option value="">Tất cả</option>
-                {Array.from(new Set(flights.map(f => f.departureAirport.code))).map(code => (
-                  <option key={code} value={code}>
-                    {flights.find(f => f.departureAirport.code === code)?.departureAirport.city}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Sân bay đến */}
-            <div className="flex flex-col w-full md:flex-[0.8] md:max-w-xs">
-              <label className="font-bold text-gray-800 mb-1 text-sm">Sân bay đến</label>
-              <select
-                className="w-full border border-gray-400 rounded-lg px-4 py-3 text-base text-gray-800 bg-white"
-                value={selectedArrival}
-                onChange={e => setSelectedArrival(e.target.value)}
-              >
-                <option value="">Tất cả</option>
-                {Array.from(new Set(flights.map(f => f.arrivalAirport.code))).map(code => (
-                  <option key={code} value={code}>
-                    {flights.find(f => f.arrivalAirport.code === code)?.arrivalAirport.city}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Nút tìm kiếm */}
-            <div className="flex items-center w-full md:w-auto">
-              <button
-                type="submit"
-                className="flex items-center gap-2 bg-sky-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-all text-base whitespace-nowrap w-full md:w-auto justify-center"
-                style={{ minWidth: 140 }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Tìm kiếm
-              </button>
-            </div>
-          </form>
+          {/* Sử dụng component FlightSearchForm đã tách */}
+          <FlightSearchForm
+            flights={flights}
+            isRoundTrip={isRoundTrip}
+            setIsRoundTrip={setIsRoundTrip}
+            selectedDeparture={selectedDeparture}
+            setSelectedDeparture={setSelectedDeparture}
+            selectedArrival={selectedArrival}
+            setSelectedArrival={setSelectedArrival}
+            departureDate={departureDate}
+            setDepartureDate={setDepartureDate}
+            returnDate={returnDate}
+            setReturnDate={setReturnDate}
+            passengerCount={passengerCount}
+            setPassengerCount={setPassengerCount}
+            seatClass={seatClass}
+            setSeatClass={setSeatClass}
+            handleSearch={handleSearch}
+          />
         </div>
       </section>
 
@@ -207,7 +175,9 @@ export default function Flights() {
                         {flight.airline}
                       </h3>
                       <span className="text-xs bg-sky-100 text-sky-700 px-2 py-1 rounded-full">
-                        {flight.seatInfo.classes.business.available > 0 ? "Thương gia" : "Phổ thông"}
+                        {flight.seatInfo.classes.business.available > 0
+                          ? "Thương gia"
+                          : "Phổ thông"}
                       </span>
                     </div>
 
@@ -227,7 +197,7 @@ export default function Flights() {
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-2xl font-bold text-sky-600">
-                          {new Intl.NumberFormat('vi-VN').format(
+                          {new Intl.NumberFormat("vi-VN").format(
                             flight.seatInfo.classes.business.available > 0
                               ? flight.seatInfo.classes.business.price
                               : flight.seatInfo.classes.economy.price
