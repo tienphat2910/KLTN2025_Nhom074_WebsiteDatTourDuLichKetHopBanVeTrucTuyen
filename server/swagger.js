@@ -651,7 +651,79 @@ const options = {
 
 const specs = swaggerJsdoc(options);
 
+// Thêm mô tả API airports vào specs cho swagger test
+specs.paths = specs.paths || {};
+specs.paths['/api/airports'] = {
+    get: {
+        tags: ['Airports'],
+        summary: 'Lấy danh sách sân bay',
+        description: 'Trả về danh sách các sân bay.',
+        responses: {
+            200: {
+                description: 'Danh sách sân bay',
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'array',
+                            items: {
+                                $ref: '#/components/schemas/Airport'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
+specs.paths['/api/airports/{id}'] = {
+    get: {
+        tags: ['Airports'],
+        summary: 'Lấy thông tin chi tiết sân bay',
+        description: 'Trả về thông tin chi tiết của một sân bay theo id.',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+                description: 'ID sân bay'
+            }
+        ],
+        responses: {
+            200: {
+                description: 'Thông tin sân bay',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/Airport'
+                        }
+                    }
+                }
+            },
+            404: {
+                description: 'Không tìm thấy sân bay'
+            }
+        }
+    }
+};
+
+// Thêm schema Airport vào components nếu chưa có
+specs.components = specs.components || {};
+specs.components.schemas = specs.components.schemas || {};
+specs.components.schemas.Airport = {
+    type: 'object',
+    required: ['_id', 'name', 'city', 'icao', 'iata'],
+    properties: {
+        _id: { type: 'string', description: 'ID sân bay', example: 'A001' },
+        name: { type: 'string', description: 'Tên sân bay', example: 'Sân bay Quốc tế Nội Bài' },
+        city: { type: 'string', description: 'Thành phố', example: 'Hà Nội' },
+        icao: { type: 'string', description: 'Mã ICAO', example: 'VVNB' },
+        iata: { type: 'string', description: 'Mã IATA', example: 'HAN' }
+    }
+};
+
 module.exports = {
     specs,
     swaggerUi
 };
+
