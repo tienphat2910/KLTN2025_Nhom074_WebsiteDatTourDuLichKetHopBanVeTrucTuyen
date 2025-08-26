@@ -20,6 +20,7 @@ export default function Flights() {
   const [returnDate, setReturnDate] = useState("");
   const [passengerCount, setPassengerCount] = useState(1);
   const [seatClass, setSeatClass] = useState("economy");
+  const [showMobileForm, setShowMobileForm] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -112,7 +113,7 @@ export default function Flights() {
           <div className="absolute inset-0 bg-gradient-to-br from-sky-900/50 via-blue-900/40 to-indigo-900/50"></div>
         </div>
 
-        <div className="container mx-auto relative z-10">
+        <div className="container mx-auto relative z-10 pt-24 md:pt-0">
           <div
             className={`text-center transition-all duration-1000 ${
               isVisible ? "animate-fade-in" : "opacity-0"
@@ -128,25 +129,35 @@ export default function Flights() {
               Tìm và đặt vé máy bay giá tốt nhất
             </p>
           </div>
-          {/* Sử dụng component FlightSearchForm đã tách */}
-          <FlightSearchForm
-            flights={flights}
-            isRoundTrip={isRoundTrip}
-            setIsRoundTrip={setIsRoundTrip}
-            selectedDeparture={selectedDeparture}
-            setSelectedDeparture={setSelectedDeparture}
-            selectedArrival={selectedArrival}
-            setSelectedArrival={setSelectedArrival}
-            departureDate={departureDate}
-            setDepartureDate={setDepartureDate}
-            returnDate={returnDate}
-            setReturnDate={setReturnDate}
-            passengerCount={passengerCount}
-            setPassengerCount={setPassengerCount}
-            seatClass={seatClass}
-            setSeatClass={setSeatClass}
-            handleSearch={handleSearch}
-          />
+          {/* Nút mở form trên mobile */}
+          <button
+            type="button"
+            className="block md:hidden mx-auto mb-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-full px-6 py-3 shadow-lg"
+            onClick={() => setShowMobileForm((v) => !v)}
+          >
+            {showMobileForm ? "Đóng tìm chuyến bay" : "Tìm chuyến bay"}
+          </button>
+          {/* Form chỉ hiện trên desktop hoặc khi showMobileForm=true */}
+          <div className={`${showMobileForm ? "block" : "hidden"} md:block`}>
+            <FlightSearchForm
+              flights={flights}
+              isRoundTrip={isRoundTrip}
+              setIsRoundTrip={setIsRoundTrip}
+              selectedDeparture={selectedDeparture}
+              setSelectedDeparture={setSelectedDeparture}
+              selectedArrival={selectedArrival}
+              setSelectedArrival={setSelectedArrival}
+              departureDate={departureDate}
+              setDepartureDate={setDepartureDate}
+              returnDate={returnDate}
+              setReturnDate={setReturnDate}
+              passengerCount={passengerCount}
+              setPassengerCount={setPassengerCount}
+              seatClass={seatClass}
+              setSeatClass={setSeatClass}
+              handleSearch={handleSearch}
+            />
+          </div>
         </div>
       </section>
 
@@ -168,7 +179,6 @@ export default function Flights() {
                     isVisible ? "animate-slide-up" : "opacity-0"
                   } border border-white/20`}
                 >
-                  <div className="h-48 bg-gradient-to-br from-sky-400 to-blue-500"></div>
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <h3 className="text-xl font-bold text-gray-800">

@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Flight } from "@/services/flightService";
 import { airportService, Airport } from "@/services/airportService";
+import { addDays, format } from "date-fns";
+import { vi } from "date-fns/locale/vi";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 interface Props {
   flights: Flight[];
@@ -53,6 +57,12 @@ export default function FlightSearchForm({
   const classPopupRef = useRef<HTMLDivElement>(null);
   const [seatClassLabel, setSeatClassLabel] = useState("Phổ thông");
 
+  // Popup chọn ngày
+  const [showDepartureDatePicker, setShowDepartureDatePicker] = useState(false);
+  const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
+  const departureDatePickerRef = useRef<HTMLDivElement>(null);
+  const returnDatePickerRef = useRef<HTMLDivElement>(null);
+
   // Đóng popup khi click ngoài
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -68,16 +78,31 @@ export default function FlightSearchForm({
       ) {
         setShowClassPopup(false);
       }
+      // Đóng dropdown sân bay khi click ngoài
+      if (
+        (event.target as HTMLElement)?.closest(".airport-dropdown") === null
+      ) {
+        setShowDepartureDropdown(false);
+        setShowArrivalDropdown(false);
+      }
+      if (
+        departureDatePickerRef.current &&
+        !departureDatePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowDepartureDatePicker(false);
+      }
+      if (
+        returnDatePickerRef.current &&
+        !returnDatePickerRef.current.contains(event.target as Node)
+      ) {
+        setShowReturnDatePicker(false);
+      }
     }
-    if (showPassengerPopup || showClassPopup) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showPassengerPopup, showClassPopup]);
+  }, []);
 
   // Hạng vé popup options
   const seatClassOptions = [
@@ -123,10 +148,21 @@ export default function FlightSearchForm({
     }
   }, [arrivalSearch]);
 
+  // Đặt ngày mặc định là hôm nay nếu chưa có giá trị
+  useEffect(() => {
+    if (!departureDate) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      setDepartureDate(`${yyyy}-${mm}-${dd}`);
+    }
+  }, [departureDate, setDepartureDate]);
+
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white rounded-3xl shadow-2xl px-6 py-8">
+    <div className="w-full max-w-5xl mx-auto bg-white rounded-3xl shadow-2xl px-2 py-4 md:px-6 md:py-8">
       {/* Loại chuyến và Bay thẳng */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-2">
+      <div className="flex flex-col md:flex-row items-center justify-between mb-4 md:mb-6 gap-2">
         <div className="flex gap-2">
           <button
             type="button"
@@ -151,9 +187,10 @@ export default function FlightSearchForm({
             Khứ hồi
           </button>
         </div>
-        {/* Hạng vé - popup đẹp */}
+        {/* Hạng vé - popup đẹp, style giống số người */}
         <div
-          className="relative flex items-center rounded-xl border border-gray-300 px-4 py-3 min-w-[170px] h-[52px] bg-white flex-1 cursor-pointer"
+          className="relative flex items-center rounded-xl border border-gray-300 px-4 py-3 h-[52px] bg-white flex-1 cursor-pointer transition-shadow hover:shadow-md w-full md:w-[170px]"
+          style={{ fontWeight: 500, fontSize: 16 }}
           onClick={() => setShowClassPopup(true)}
         >
           <span className="mr-2 flex items-center text-sky-600">
@@ -227,9 +264,10 @@ export default function FlightSearchForm({
             </div>
           )}
         </div>
-        {/* Số người - popup kiểu hình mẫu */}
+        {/* Số người - popup kiểu hình mẫu, style giống hạng vé */}
         <div
-          className="relative flex items-center rounded-xl border border-gray-300 px-4 py-3 min-w-[180px] h-[52px] bg-white flex-1 cursor-pointer"
+          className="relative flex items-center rounded-xl border border-gray-300 px-4 py-3 h-[52px] bg-white flex-1 cursor-pointer transition-shadow hover:shadow-md w-full md:w-[170px]"
+          style={{ fontWeight: 500, fontSize: 16 }}
           onClick={() => setShowPassengerPopup(true)}
         >
           <span className="mr-2 flex items-center text-sky-600">
@@ -405,12 +443,13 @@ export default function FlightSearchForm({
       {/* Form search */}
       <form
         onSubmit={handleSearch}
-        className="flex flex-col md:flex-row flex-wrap items-center justify-center gap-4"
+        className="flex flex-col gap-4 items-center justify-center w-full"
         style={{ fontFamily: "inherit" }}
       >
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        {/* Container tổng cho các input */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 w-full max-w-5xl bg-[#f5faff] rounded-2xl py-4 px-2 md:py-6 md:px-4 shadow">
           {/* Từ - search sân bay */}
-          <div className="flex items-center rounded-xl border border-gray-300 px-4 py-3 min-w-[260px] h-[52px] bg-white flex-1 relative">
+          <div className="flex items-center rounded-xl border border-gray-300 px-3 py-2 md:px-4 md:py-3 w-full md:w-[220px] h-[48px] md:h-[52px] bg-white flex-shrink-0 relative mb-2 md:mb-0">
             <span className="mr-2 flex items-center text-sky-600">
               {/* Icon máy bay cất cánh mới */}
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -442,14 +481,14 @@ export default function FlightSearchForm({
                 setShowDepartureDropdown(true);
               }}
               onFocus={() => setShowDepartureDropdown(true)}
-              onBlur={() =>
-                setTimeout(() => setShowDepartureDropdown(false), 150)
-              }
+              onBlur={() => {
+                /* bỏ setTimeout, dropdown sẽ đóng khi click ngoài qua useEffect */
+              }}
               placeholder="Tìm sân bay đi..."
               autoComplete="off"
             />
             {showDepartureDropdown && departureSearch.trim() && (
-              <div className="absolute left-0 top-[110%] w-[380px] bg-white rounded-xl shadow-lg z-10 max-h-96 overflow-auto border border-gray-200">
+              <div className="airport-dropdown absolute left-0 top-[110%] w-[380px] bg-white rounded-xl shadow-lg z-10 max-h-96 overflow-auto border border-gray-200">
                 <div className="px-4 py-2 text-xs font-semibold text-gray-500 border-b">
                   Kết quả tìm kiếm
                 </div>
@@ -493,8 +532,8 @@ export default function FlightSearchForm({
           {/* Nút hoán đổi */}
           <button
             type="button"
-            className="flex items-center justify-center bg-[#e3f2fd] hover:bg-[#bbdefb] rounded-full w-10 h-10 mx-2 shadow transition-all border border-[#90caf9]"
-            style={{ marginTop: 8 }}
+            className="flex items-center justify-center bg-[#e3f2fd] hover:bg-[#bbdefb] rounded-full w-9 h-9 md:w-10 md:h-10 mx-0 md:mx-2 shadow transition-all border border-[#90caf9] flex-shrink-0 mb-2 md:mb-0"
+            style={{ marginTop: 0 }}
             aria-label="Hoán đổi sân bay"
             onClick={() => {
               const tempIata = selectedDeparture;
@@ -505,35 +544,63 @@ export default function FlightSearchForm({
               setArrivalSearch(tempText);
             }}
           >
-            <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-              <circle
-                cx="12"
-                cy="12"
-                r="11"
-                fill="#e3f2fd"
-                stroke="#90caf9"
-                strokeWidth="1"
-              />
-              {/* Mũi tên hướng sang phải */}
-              <path
-                d="M15 8l4 4-4 4"
-                stroke="#1976d2"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* Mũi tên hướng sang trái */}
-              <path
-                d="M9 15l-4-4 4-4"
-                stroke="#1976d2"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            {/* Mobile: icon bình thường */}
+            <span className="md:hidden rotate-90">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="11"
+                  fill="#e3f2fd"
+                  stroke="#90caf9"
+                  strokeWidth="1"
+                />
+                <path
+                  d="M15 8l4 4-4 4"
+                  stroke="#1976d2"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 15l-4-4 4-4"
+                  stroke="#1976d2"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            {/* Desktop: icon xoay 90 độ */}
+            <span className="hidden md:inline-block transform">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="11"
+                  fill="#e3f2fd"
+                  stroke="#90caf9"
+                  strokeWidth="1"
+                />
+                <path
+                  d="M15 8l4 4-4 4"
+                  stroke="#1976d2"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 15l-4-4 4-4"
+                  stroke="#1976d2"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
           </button>
           {/* Đến - search sân bay */}
-          <div className="flex items-center rounded-xl border border-gray-300 px-4 py-3 min-w-[260px] h-[52px] bg-white flex-1 relative">
+          <div className="flex items-center rounded-xl border border-gray-300 px-3 py-2 md:px-4 md:py-3 w-full md:w-[220px] h-[48px] md:h-[52px] bg-white flex-shrink-0 relative mb-2 md:mb-0">
             <span className="mr-2 flex items-center text-sky-600">
               {/* Icon máy bay hạ cánh mới */}
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -565,14 +632,14 @@ export default function FlightSearchForm({
                 setShowArrivalDropdown(true);
               }}
               onFocus={() => setShowArrivalDropdown(true)}
-              onBlur={() =>
-                setTimeout(() => setShowArrivalDropdown(false), 150)
-              }
+              onBlur={() => {
+                /* bỏ setTimeout, dropdown sẽ đóng khi click ngoài qua useEffect */
+              }}
               placeholder="Tìm sân bay đến..."
               autoComplete="off"
             />
             {showArrivalDropdown && arrivalSearch.trim() && (
-              <div className="absolute left-0 top-[110%] w-[380px] bg-white rounded-xl shadow-lg z-10 max-h-96 overflow-auto border border-gray-200">
+              <div className="airport-dropdown absolute left-0 top-[110%] w-[380px] bg-white rounded-xl shadow-lg z-10 max-h-96 overflow-auto border border-gray-200">
                 <div className="px-4 py-2 text-xs font-semibold text-gray-500 border-b">
                   Kết quả tìm kiếm
                 </div>
@@ -613,91 +680,140 @@ export default function FlightSearchForm({
               </div>
             )}
           </div>
+          {/* Ngày khởi hành */}
+          <div
+            className="flex flex-col items-start justify-center rounded-xl border border-sky-200 bg-white px-3 py-2 md:px-4 md:py-2 w-full md:w-[180px] h-[48px] md:h-[52px] flex-shrink-0 relative cursor-pointer transition-shadow hover:shadow-lg mb-2 md:mb-0"
+            onClick={() => setShowDepartureDatePicker(true)}
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex items-center text-sky-600">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                  <rect
+                    x="3"
+                    y="5"
+                    width="18"
+                    height="16"
+                    rx="2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M16 3v4M8 3v4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </span>
+              <span
+                className="text-base font-semibold"
+                style={{ color: "#1976d2" }}
+              >
+                {departureDate
+                  ? format(new Date(departureDate), "dd/MM/yyyy", {
+                      locale: vi
+                    })
+                  : "Chọn ngày đi"}
+              </span>
+            </div>
+            {showDepartureDatePicker && (
+              <div
+                ref={departureDatePickerRef}
+                className="absolute left-0 top-[110%] z-50 bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-4 text-black"
+                style={{ width: 420, background: "#fff" }}
+              >
+                <DayPicker
+                  mode="single"
+                  selected={departureDate ? new Date(departureDate) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      setDepartureDate(format(date, "yyyy-MM-dd"));
+                      setShowDepartureDatePicker(false);
+                    }
+                  }}
+                  locale={vi}
+                  numberOfMonths={2}
+                  fromDate={new Date()}
+                  disabled={{ before: new Date() }}
+                  modifiersClassNames={{
+                    today: "bg-orange-500 text-white font-bold"
+                  }}
+                  modifiers={{ today: new Date() }}
+                />
+              </div>
+            )}
+          </div>
+          {/* Ngày về (nếu khứ hồi) */}
+          <div
+            className={`flex flex-col items-start justify-center rounded-xl border border-sky-200 bg-white px-3 py-2 md:px-4 md:py-2 w-full md:w-[180px] h-[48px] md:h-[52px] flex-shrink-0 relative cursor-pointer transition-shadow hover:shadow-lg ml-0 md:ml-2 ${
+              !isRoundTrip ? "opacity-50 pointer-events-none" : ""
+            } mb-2 md:mb-0`}
+            onClick={() => isRoundTrip && setShowReturnDatePicker(true)}
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex items-center text-sky-600">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+                  <rect
+                    x="3"
+                    y="5"
+                    width="18"
+                    height="16"
+                    rx="2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M16 3v4M8 3v4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </span>
+              <span
+                className="text-base font-semibold"
+                style={{ color: "#1976d2" }}
+              >
+                {returnDate
+                  ? format(new Date(returnDate), "dd/MM/yyyy", { locale: vi })
+                  : "Chọn ngày về"}
+              </span>
+            </div>
+            {showReturnDatePicker && (
+              <div
+                ref={returnDatePickerRef}
+                className="absolute left-0 top-[90%] z-50 bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-3 text-black"
+                style={{ width: 420, background: "#fff" }}
+              >
+                <DayPicker
+                  mode="single"
+                  selected={returnDate ? new Date(returnDate) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      setReturnDate(format(date, "yyyy-MM-dd"));
+                      setShowReturnDatePicker(false);
+                    }
+                  }}
+                  locale={vi}
+                  numberOfMonths={2}
+                  fromDate={
+                    departureDate
+                      ? addDays(new Date(departureDate), 0)
+                      : new Date()
+                  }
+                  disabled={{ before: new Date() }}
+                  modifiersClassNames={{
+                    today: "bg-orange-500 text-white font-bold"
+                  }}
+                  modifiers={{ today: new Date() }}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        {/* Ngày khởi hành */}
-        <div className="flex items-center rounded-xl border border-gray-300 px-4 py-3 min-w-[150px] h-[52px] bg-white flex-1">
-          <span className="mr-2 flex items-center text-sky-600">
-            {/* Chỉ 1 icon lịch, căn giữa */}
-            <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-              <rect
-                x="3"
-                y="5"
-                width="18"
-                height="16"
-                rx="2"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path d="M16 3v4M8 3v4" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </span>
-          <input
-            type="date"
-            className="
-            bg-transparent outline-none w-full text-base 
-            placeholder:text-blue-200
-            appearance-none 
-            [&::-webkit-calendar-picker-indicator]:opacity-0 
-            [&::-webkit-calendar-picker-indicator]:absolute 
-            [&::-webkit-calendar-picker-indicator]:w-full 
-            [&::-webkit-calendar-picker-indicator]:h-full 
-            [&::-webkit-calendar-picker-indicator]:cursor-pointer
-        "
-            style={{ color: "#1976d2" }}
-            value={departureDate}
-            onChange={(e) => setDepartureDate(e.target.value)}
-            // Thêm placeholder để hiển thị nn/mm/yyyy khi value rỗng
-            placeholder="nn/mm/yyyy"
-          />
-        </div>
-
-        {/* Ngày về (nếu khứ hồi) */}
-        <div
-          className={`flex items-center rounded-xl border border-gray-300 px-4 py-3 min-w-[150px] h-[52px] bg-white flex-1 ${
-            !isRoundTrip ? "opacity-50 pointer-events-none" : ""
-          }`}
-        >
-          {/* Thêm icon lịch cho Ngày về để đồng bộ style */}
-          <span className="mr-2 flex items-center text-sky-600">
-            <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-              <rect
-                x="3"
-                y="5"
-                width="18"
-                height="16"
-                rx="2"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path d="M16 3v4M8 3v4" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </span>
-          <input
-            type="date"
-            className="
-            bg-transparent outline-none w-full text-base 
-            placeholder:text-blue-200 
-            appearance-none 
-            [&::-webkit-calendar-picker-indicator]:opacity-0 
-            [&::-webkit-calendar-picker-indicator]:absolute 
-            [&::-webkit-calendar-picker-indicator]:w-full 
-            [&::-webkit-calendar-picker-indicator]:h-full 
-            [&::-webkit-calendar-picker-indicator]:cursor-pointer
-        "
-            style={{ color: "#1976d2" }}
-            value={returnDate}
-            onChange={(e) => setReturnDate(e.target.value)}
-            disabled={!isRoundTrip}
-            // Thêm placeholder để hiển thị nn/mm/yyyy khi value rỗng
-            placeholder="nn/mm/yyyy"
-          />
-        </div>
-
-        {/* Nút tìm kiếm */}
+        {/* Nút tìm kiếm nằm hàng dưới */}
         <button
           type="submit"
-          className="flex items-center justify-center bg-gradient-to-r from-sky-500 to-blue-600 hover:from-blue-600 hover:to-sky-500 rounded-full px-8 h-12 transition-all shadow-lg text-white font-bold text-lg"
-          style={{ minWidth: 180 }}
+          className="flex items-center justify-center bg-gradient-to-r from-sky-500 to-blue-600 hover:from-blue-600 hover:to-sky-500 rounded-full px-6 md:px-8 h-11 md:h-12 transition-all shadow-lg text-white font-bold text-base md:text-lg mt-2 w-full md:w-auto"
+          style={{ minWidth: 0 }}
         >
           Tìm chuyến bay
         </button>
