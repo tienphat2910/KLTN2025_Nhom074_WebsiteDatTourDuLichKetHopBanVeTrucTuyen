@@ -395,4 +395,57 @@ router.get('/slug/:slug', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/tours/{id}:
+ *   put:
+ *     summary: Update tour by ID
+ *     tags: [Tours]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tour ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Tour'
+ *     responses:
+ *       200:
+ *         description: Tour updated successfully
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: Tour not found
+ */
+router.put('/:id', async (req, res) => {
+    try {
+        const updatedTour = await Tour.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!updatedTour) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy tour để cập nhật'
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: 'Cập nhật tour thành công',
+            data: updatedTour
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 module.exports = router;
