@@ -47,4 +47,14 @@ export const flightService = {
     const response = await axios.get(`${API_URL}/flights`);
     return response.data;
   },
+  getFlightById: async (id: string): Promise<Flight> => {
+    const response = await axios.get(`${API_URL}/flights/${id}`);
+    // Nếu backend trả về { success, data }, thì return response.data.data
+    // Nếu trả về trực tiếp object chuyến bay, thì return response.data
+    return response.data.data || response.data;
+  },
+  updateFlight: async (id: string, data: any): Promise<Flight> => {
+    const response = await axios.put(`${API_URL}/flights/${id}`, data);
+    return response.data.data || response.data;
+  },
 };

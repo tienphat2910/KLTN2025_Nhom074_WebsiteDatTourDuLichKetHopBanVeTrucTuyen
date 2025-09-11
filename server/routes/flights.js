@@ -34,4 +34,32 @@ router.get('/', async (req, res) => {
     }
 });
 
+router.get('/:id', async (req, res) => {
+    try {
+        const flight = await Flight.findById(req.params.id);
+        if (!flight) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy chuyến bay' });
+        }
+        res.json({ success: true, data: flight });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+router.put('/:id', async (req, res) => {
+    try {
+        const updatedFlight = await Flight.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!updatedFlight) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy chuyến bay để cập nhật' });
+        }
+        res.status(200).json({ success: true, message: 'Cập nhật chuyến bay thành công', data: updatedFlight });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;
