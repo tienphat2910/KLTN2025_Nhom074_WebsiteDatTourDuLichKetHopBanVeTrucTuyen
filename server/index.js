@@ -26,6 +26,8 @@ app.use('/api/hotels', require('./routes/hotels'));
 app.use('/api/flights', require('./routes/flights'));
 app.use('/api/activities', require('./routes/activities'));
 app.use('/api/airports', require('./routes/airports'));
+app.use('/api/bookingtours', require('./routes/bookingtours'));
+app.use('/api/booking', require('./routes/booking'));
 
 
 // Kết nối MongoDB

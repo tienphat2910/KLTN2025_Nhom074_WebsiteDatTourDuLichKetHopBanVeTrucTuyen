@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour, ItineraryDay } from "@/services/tourService";
-import BookingModal from "@/components/TourBooking/BookingModal";
 
 export default function TourDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const router = useRouter();
 
   const [tour, setTour] = useState<Tour | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -405,7 +405,11 @@ export default function TourDetailPage() {
   };
 
   const handleBookTour = () => {
-    setShowBookingModal(true);
+    if (!tour) return;
+    // Chuyển sang trang bookingtour với các tham số
+    router.push(
+      `/bookingtour?tourId=${tour._id}&adults=${selectedParticipants.adult}&children=${selectedParticipants.child}&infants=${selectedParticipants.infant}`
+    );
   };
 
   if (isLoading) {
@@ -1856,17 +1860,6 @@ export default function TourDetailPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* Booking Modal */}
-      {tour && (
-        <BookingModal
-          tour={tour}
-          isOpen={showBookingModal}
-          onClose={() => setShowBookingModal(false)}
-          participants={selectedParticipants}
-          totalPrice={calculateTotalPrice()}
-        />
       )}
 
       <Footer />

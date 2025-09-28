@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { authService } from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,8 +14,12 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const { startLoading, stopLoading } = useLoading();
+
+  // Get redirect parameter
+  const redirectPath = searchParams.get("redirect");
 
   const [formData, setFormData] = useState({
     email: "",
@@ -78,7 +82,10 @@ export default function Login() {
           description: `Chào mừng ${result.data.user.fullName} trở lại!`,
           duration: 3000
         });
-        router.push("/");
+
+        // Redirect to the original page or home
+        const targetPath = redirectPath || "/";
+        router.push(decodeURIComponent(targetPath));
       } else {
         setError(
           result.message ||
