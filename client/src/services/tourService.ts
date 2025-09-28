@@ -213,6 +213,27 @@ export const tourService = {
     }
   },
 
+  // Update tour by ID
+  updateTour: async (id: string, data: Partial<Tour>): Promise<ApiResponse<Tour>> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tours/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Update tour error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
   // Format price for display
   formatPrice: (price: number): string => {
     return new Intl.NumberFormat("vi-VN", {

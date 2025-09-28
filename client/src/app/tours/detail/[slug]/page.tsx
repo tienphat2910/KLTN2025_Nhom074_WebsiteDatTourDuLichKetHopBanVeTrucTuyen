@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -33,6 +33,12 @@ export default function TourDetailPage() {
   // Related tours
   const [relatedTours, setRelatedTours] = useState<Tour[]>([]);
   const [isLoadingRelated, setIsLoadingRelated] = useState<boolean>(false);
+
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editData, setEditData] = useState<Tour | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Helper function to check if title contains departure location
   const checkTitleContainsDeparture = (
@@ -410,6 +416,42 @@ export default function TourDetailPage() {
     router.push(
       `/bookingtour?tourId=${tour._id}&adults=${selectedParticipants.adult}&children=${selectedParticipants.child}&infants=${selectedParticipants.infant}`
     );
+  };
+
+  // Khi nhấn nút Sửa, mở form và set dữ liệu hiện tại
+  const handleEditClick = () => {
+    setEditData(tour);
+    setShowEditForm(true);
+    setUpdateMessage(null);
+  };
+
+  // Xử lý thay đổi input
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!editData) return;
+    const { name, value } = e.target;
+    setEditData({ ...editData, [name]: value });
+  };
+
+  // Xử lý submit cập nhật
+  const handleUpdateTour = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editData || !editData._id) return;
+    setIsUpdating(true);
+    setUpdateMessage(null);
+    try {
+      const res = await tourService.updateTour(editData._id, editData);
+      if (res.success) {
+        setTour(res.data);
+        setShowEditForm(false);
+        setUpdateMessage("Cập nhật thành công!");
+      } else {
+        setUpdateMessage(res.message || "Cập nhật thất bại");
+      }
+    } catch (err) {
+      setUpdateMessage("Lỗi khi cập nhật tour");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (isLoading) {
