@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -426,7 +426,9 @@ export default function TourDetailPage() {
   };
 
   // Xử lý thay đổi input
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     if (!editData) return;
     const { name, value } = e.target;
     setEditData({ ...editData, [name]: value });
@@ -805,10 +807,11 @@ export default function TourDetailPage() {
               }`}
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4 md:mb-6">
-                <div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-3 md:mb-4">
+                <div className="flex-1">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-3 md:mb-4 break-words leading-tight">
                     {tour?.title || "Đang tải..."}
                   </h1>
+
                   <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
                     <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
                       <svg
@@ -878,19 +881,10 @@ export default function TourDetailPage() {
                     </div>
                   </div>
                 </div>
-                <div className="text-right mt-3 md:mt-0">
-                  {tour?.rating && tour.rating > 0 && (
-                    <div className="flex items-center mb-2">
-                      <span className="text-yellow-500 text-lg">⭐</span>
-                      <span className="ml-1 font-semibold">{tour.rating}</span>
-                      <span className="ml-1 text-gray-500">
-                        ({tour.reviewCount || 0} đánh giá)
-                      </span>
-                    </div>
-                  )}
+                <div className="mt-3 md:mt-0 flex-shrink-0">
                   {tour?.isFeatured && (
-                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                      ⭐ Tour nổi bật
+                    <span className="inline-block bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded-md text-xs font-medium">
+                      ⭐ Nổi bật
                     </span>
                   )}
                 </div>
@@ -1214,11 +1208,6 @@ export default function TourDetailPage() {
               {/* Price Display */}
               <div className="mb-6">
                 <div className="flex items-baseline space-x-2 mb-2">
-                  {tour?.discount && tour.discount > 0 && (
-                    <span className="text-base md:text-lg text-gray-500 line-through">
-                      {tourService.formatPrice(tour.price || 0)}
-                    </span>
-                  )}
                   <span className="text-2xl md:text-3xl font-bold text-green-600">
                     {tourService.formatPrice(
                       tourService.getDiscountedPrice(
@@ -1229,11 +1218,6 @@ export default function TourDetailPage() {
                   </span>
                 </div>
                 <p className="text-gray-500 text-sm">Giá/người lớn</p>
-                {tour?.discount && tour.discount > 0 && (
-                  <span className="inline-block mt-2 bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
-                    Giảm {tour.discount}%
-                  </span>
-                )}
               </div>
 
               {/* Participant Selection - Mobile friendly touchable area */}
