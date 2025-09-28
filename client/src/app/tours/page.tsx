@@ -5,45 +5,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { LoadingSpinner } from "@/components/Loading";
 import { destinationService, Destination } from "@/services/destinationService";
+import { tourService, Tour } from "@/services/tourService";
 import { toast } from "sonner";
-
-const tours = [
-  {
-    id: 1,
-    title: "Tour Hạ Long 2N1Đ",
-    price: "1,500,000",
-    duration: "2 ngày 1 đêm",
-    location: "Quảng Ninh",
-    rating: 4.8,
-    image: "/tour1.jpg",
-    highlights: ["Du thuyền qua đêm", "Hang Sửng Sốt", "Làng chài Cửa Vạn"]
-  },
-  {
-    id: 2,
-    title: "Tour Sapa 3N2Đ",
-    price: "2,200,000",
-    duration: "3 ngày 2 đêm",
-    location: "Lào Cai",
-    rating: 4.9,
-    image: "/tour2.jpg",
-    highlights: ["Fansipan", "Bản Cát Cát", "Thác Bạc"]
-  },
-  {
-    id: 3,
-    title: "Tour Phú Quốc 4N3Đ",
-    price: "3,800,000",
-    duration: "4 ngày 3 đêm",
-    location: "Kiên Giang",
-    rating: 4.7,
-    image: "/tour3.jpg",
-    highlights: ["Cáp treo Hòn Thơm", "Sunset Sanato", "Chợ đêm Dinh Cậu"]
-  }
-];
 
 export default function Tours() {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [tours, setTours] = useState<Tour[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -60,6 +29,13 @@ export default function Tours() {
     destinationService.getDestinations({ limit: 100 }).then((res) => {
       if (res.success) setDestinations(res.data.destinations);
     });
+
+    // Load tours from API
+    tourService.getTours({ limit: 12 }).then((res) => {
+      if (res.success) setTours(res.data.tours);
+      setIsLoading(false);
+      setIsVisible(true);
+    });
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -75,6 +51,11 @@ export default function Tours() {
     if (endDate) params.push(`end=${endDate}`);
     if (params.length > 0) url += `?${params.join("&")}`;
     window.location.href = url;
+  };
+
+  // Xử lý đặt tour: chuyển sang trang chi tiết tour để đặt
+  const handleBookTour = (slug: string) => {
+    window.location.href = `/tours/detail/${slug}`;
   };
 
   if (isLoading) {
@@ -218,14 +199,21 @@ export default function Tours() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {tours.map((tour, index) => (
               <div
-                key={tour.id}
+                key={tour._id}
                 className={`card-surface rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
                   index * 100
                 } ${
                   isVisible ? "animate-slide-up" : "opacity-0"
                 } border border-white/20`}
               >
-                <div className="h-48 bg-gradient-to-br from-green-400 to-blue-500"></div>
+                <div
+                  className="h-48 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url('${
+                      tour.images?.[0] || "/tour1.jpg"
+                    }')`
+                  }}
+                ></div>
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-xl font-bold text-gray-800">
@@ -238,31 +226,39 @@ export default function Tours() {
                       </span>
                     </div>
                   </div>
-                  <p className="text-gray-600 mb-2">📍 {tour.location}</p>
-                  <p className="text-gray-600 mb-4">⏰ {tour.duration}</p>
-
-                  <div className="mb-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">
-                      Điểm nổi bật:
-                    </h4>
-                    <ul className="text-sm text-gray-600">
-                      {tour.highlights.map((highlight, idx) => (
-                        <li key={idx} className="flex items-center mb-1">
-                          <span className="text-green-500 mr-2">✓</span>
-                          {highlight}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
+                  <p className="text-gray-600 mb-2">
+                    📍 {tour.departureLocation?.name || "Đang cập nhật"}
+                  </p>
+                  <p className="text-gray-600 mb-4">
+                    ⏰ {tour.duration || "Đang cập nhật"}
+                  </p>
+                  {/* Điểm nổi bật nếu có */}
+                  {tour.category && (
+                    <div className="mb-4">
+                      <h4 className="font-semibold text-gray-800 mb-2">
+                        Thể loại:
+                      </h4>
+                      <span className="text-sm text-gray-600">
+                        {tour.category}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="text-2xl font-bold text-green-600">
-                        {tour.price}đ
+                        {tourService.formatPrice(
+                          tourService.getDiscountedPrice(
+                            tour.price,
+                            tour.discount
+                          )
+                        )}
                       </span>
                       <span className="text-gray-500 text-sm">/người</span>
                     </div>
-                    <button className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                    <button
+                      className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                      onClick={() => handleBookTour(tour.slug)}
+                    >
                       Đặt Tour
                     </button>
                   </div>

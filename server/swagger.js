@@ -629,6 +629,55 @@ const options = {
                         popular: { type: 'boolean', description: 'Trạng thái nổi bật' },
                         destinationId: { type: 'string', description: 'ID địa điểm' }
                     }
+                },
+                Booking: {
+                    type: 'object',
+                    required: ['userId', 'bookingDate', 'totalPrice', 'status', 'bookingType'],
+                    properties: {
+                        _id: { type: 'string', description: 'Booking ID' },
+                        userId: { type: 'string', description: 'User ID' },
+                        bookingDate: { type: 'string', format: 'date-time', description: 'Booking date' },
+                        totalPrice: { type: 'number', description: 'Total price' },
+                        discountCode: { type: 'string', description: 'Discount code ID' },
+                        status: {
+                            type: 'string',
+                            enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+                            description: 'Booking status'
+                        },
+                        bookingType: { type: 'string', description: 'Booking type' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
+                    }
+                },
+                BookingTour: {
+                    type: 'object',
+                    required: ['bookingId', 'tourId', 'numAdults', 'numChildren', 'numInfants', 'priceByAge', 'subtotal', 'status'],
+                    properties: {
+                        _id: { type: 'string', description: 'BookingTour ID' },
+                        bookingId: { type: 'string', description: 'Booking ID' },
+                        tourId: { type: 'string', description: 'Tour ID' },
+                        numAdults: { type: 'number', description: 'Number of adults' },
+                        numChildren: { type: 'number', description: 'Number of children' },
+                        numInfants: { type: 'number', description: 'Number of infants' },
+                        priceByAge: {
+                            type: 'object',
+                            properties: {
+                                adult: { type: 'number', description: 'Giá người lớn', example: 7989000 },
+                                child: { type: 'number', description: 'Giá trẻ em', example: 6990000 },
+                                infant: { type: 'number', description: 'Giá em bé', example: 3790000 }
+                            },
+                            required: ['adult', 'child', 'infant'],
+                            description: 'Giá theo từng nhóm tuổi'
+                        },
+                        subtotal: { type: 'number', description: 'Subtotal price' },
+                        status: {
+                            type: 'string',
+                            enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+                            description: 'BookingTour status'
+                        },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
+                    }
                 }
             },
             tags: [
@@ -637,7 +686,9 @@ const options = {
                 { name: 'Flights', description: 'Operations about flights' },
                 { name: 'Hotels', description: 'Operations about hotels' },
                 { name: 'Destinations', description: 'Operations about destinations' },
-                { name: 'Activities', description: 'Các hoạt động giải trí, tham quan, vui chơi' }
+                { name: 'Activities', description: 'Các hoạt động giải trí, tham quan, vui chơi' },
+                { name: 'Booking', description: 'Operations about booking' },
+                { name: 'BookingTour', description: 'Operations about booking tour' }
             ]
         }
     },
@@ -719,6 +770,259 @@ specs.components.schemas.Airport = {
         city: { type: 'string', description: 'Thành phố', example: 'Hà Nội' },
         icao: { type: 'string', description: 'Mã ICAO', example: 'VVNB' },
         iata: { type: 'string', description: 'Mã IATA', example: 'HAN' }
+    }
+};
+
+// Thêm mô tả API booking và bookingtours vào specs.paths
+specs.paths['/api/booking'] = {
+    get: {
+        tags: ['Booking'],
+        summary: 'Lấy danh sách booking',
+        description: 'Trả về danh sách các booking.',
+        responses: {
+            200: {
+                description: 'Danh sách booking',
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                success: { type: 'boolean' },
+                                data: {
+                                    type: 'array',
+                                    items: { $ref: '#/components/schemas/Booking' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    post: {
+        tags: ['Booking'],
+        summary: 'Tạo booking mới',
+        description: 'Tạo một booking mới.',
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: { $ref: '#/components/schemas/Booking' }
+                }
+            }
+        },
+        responses: {
+            201: {
+                description: 'Tạo booking thành công',
+                content: {
+                    'application/json': {
+                        schema: { $ref: '#/components/schemas/Booking' }
+                    }
+                }
+            }
+        }
+    }
+};
+
+specs.paths['/api/booking/{id}'] = {
+    get: {
+        tags: ['Booking'],
+        summary: 'Lấy thông tin booking theo ID',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+                description: 'Booking ID'
+            }
+        ],
+        responses: {
+            200: {
+                description: 'Thông tin booking',
+                content: {
+                    'application/json': {
+                        schema: { $ref: '#/components/schemas/Booking' }
+                    }
+                }
+            },
+            404: { description: 'Không tìm thấy booking' }
+        }
+    },
+    put: {
+        tags: ['Booking'],
+        summary: 'Cập nhật booking',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+                description: 'Booking ID'
+            }
+        ],
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: { $ref: '#/components/schemas/Booking' }
+                }
+            }
+        },
+        responses: {
+            200: {
+                description: 'Cập nhật booking thành công',
+                content: {
+                    'application/json': {
+                        schema: { $ref: '#/components/schemas/Booking' }
+                    }
+                }
+            },
+            404: { description: 'Không tìm thấy booking' }
+        }
+    },
+    delete: {
+        tags: ['Booking'],
+        summary: 'Xóa booking',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+                description: 'Booking ID'
+            }
+        ],
+        responses: {
+            200: { description: 'Xóa booking thành công' },
+            404: { description: 'Không tìm thấy booking' }
+        }
+    }
+};
+
+specs.paths['/api/bookingtours'] = {
+    get: {
+        tags: ['BookingTour'],
+        summary: 'Lấy danh sách booking tour',
+        description: 'Trả về danh sách các booking tour.',
+        responses: {
+            200: {
+                description: 'Danh sách booking tour',
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                success: { type: 'boolean' },
+                                data: {
+                                    type: 'array',
+                                    items: { $ref: '#/components/schemas/BookingTour' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    post: {
+        tags: ['BookingTour'],
+        summary: 'Tạo booking tour mới',
+        description: 'Tạo một booking tour mới.',
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: { $ref: '#/components/schemas/BookingTour' }
+                }
+            }
+        },
+        responses: {
+            201: {
+                description: 'Tạo booking tour thành công',
+                content: {
+                    'application/json': {
+                        schema: { $ref: '#/components/schemas/BookingTour' }
+                    }
+                }
+            }
+        }
+    }
+};
+
+specs.paths['/api/bookingtours/{id}'] = {
+    get: {
+        tags: ['BookingTour'],
+        summary: 'Lấy thông tin booking tour theo ID',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+                description: 'BookingTour ID'
+            }
+        ],
+        responses: {
+            200: {
+                description: 'Thông tin booking tour',
+                content: {
+                    'application/json': {
+                        schema: { $ref: '#/components/schemas/BookingTour' }
+                    }
+                }
+            },
+            404: { description: 'Không tìm thấy booking tour' }
+        }
+    },
+    put: {
+        tags: ['BookingTour'],
+        summary: 'Cập nhật booking tour',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+                description: 'BookingTour ID'
+            }
+        ],
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: { $ref: '#/components/schemas/BookingTour' }
+                }
+            }
+        },
+        responses: {
+            200: {
+                description: 'Cập nhật booking tour thành công',
+                content: {
+                    'application/json': {
+                        schema: { $ref: '#/components/schemas/BookingTour' }
+                    }
+                }
+            },
+            404: { description: 'Không tìm thấy booking tour' }
+        }
+    },
+    delete: {
+        tags: ['BookingTour'],
+        summary: 'Xóa booking tour',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string' },
+                description: 'BookingTour ID'
+            }
+        ],
+        responses: {
+            200: { description: 'Xóa booking tour thành công' },
+            404: { description: 'Không tìm thấy booking tour' }
+        }
     }
 };
 

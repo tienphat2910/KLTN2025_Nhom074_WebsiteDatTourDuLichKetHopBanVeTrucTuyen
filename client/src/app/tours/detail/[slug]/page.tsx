@@ -7,11 +7,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour, ItineraryDay } from "@/services/tourService";
-import BookingModal from "@/components/TourBooking/BookingModal";
 
 export default function TourDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const router = useRouter();
 
   const [tour, setTour] = useState<Tour | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -411,7 +411,11 @@ export default function TourDetailPage() {
   };
 
   const handleBookTour = () => {
-    setShowBookingModal(true);
+    if (!tour) return;
+    // Chuyển sang trang bookingtour với các tham số
+    router.push(
+      `/bookingtour?tourId=${tour._id}&adults=${selectedParticipants.adult}&children=${selectedParticipants.child}&infants=${selectedParticipants.infant}`
+    );
   };
 
   // Khi nhấn nút Sửa, mở form và set dữ liệu hiện tại
@@ -1899,66 +1903,6 @@ export default function TourDetailPage() {
           )}
         </div>
       )}
-
-      {/* Booking Modal */}
-      {tour && (
-        <BookingModal
-          tour={tour}
-          isOpen={showBookingModal}
-          onClose={() => setShowBookingModal(false)}
-          participants={selectedParticipants}
-          totalPrice={calculateTotalPrice()}
-        />
-      )}
-
-      <div className="container mx-auto px-4 py-4">
-        <button
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4"
-          onClick={handleEditClick}
-        >
-          Sửa thông tin tour
-        </button>
-        {updateMessage && (
-          <div className="mb-2 text-green-600 font-semibold">{updateMessage}</div>
-        )}
-        {showEditForm && editData && (
-          <form ref={formRef} onSubmit={handleUpdateTour} className="bg-white p-4 rounded shadow mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold">Tiêu đề</label>
-              <input name="title" value={editData.title} onChange={handleInputChange} className="border p-2 w-full" />
-            </div>
-            <div>
-              <label className="block font-semibold">Mô tả</label>
-              <textarea name="description" value={editData.description || ""} onChange={handleInputChange} className="border p-2 w-full" />
-            </div>
-            <div>
-              <label className="block font-semibold">Giá</label>
-              <input name="price" type="number" value={editData.price} onChange={handleInputChange} className="border p-2 w-full" />
-            </div>
-            <div>
-              <label className="block font-semibold">Giảm giá (%)</label>
-              <input name="discount" type="number" value={editData.discount} onChange={handleInputChange} className="border p-2 w-full" />
-            </div>
-            <div>
-              <label className="block font-semibold">Số chỗ</label>
-              <input name="seats" type="number" value={editData.seats} onChange={handleInputChange} className="border p-2 w-full" />
-            </div>
-            <div>
-              <label className="block font-semibold">Số chỗ còn lại</label>
-              <input name="availableSeats" type="number" value={editData.availableSeats} onChange={handleInputChange} className="border p-2 w-full" />
-            </div>
-            {/* Thêm các trường khác nếu muốn */}
-            <div className="col-span-2 flex gap-2 mt-2">
-              <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" disabled={isUpdating}>
-                {isUpdating ? "Đang cập nhật..." : "Lưu thay đổi"}
-              </button>
-              <button type="button" className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500" onClick={() => setShowEditForm(false)}>
-                Hủy
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
 
       <Footer />
     </div>
