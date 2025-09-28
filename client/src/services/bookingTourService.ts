@@ -2,6 +2,16 @@ import { env } from "@/config/env";
 
 const API_BASE_URL = env.API_BASE_URL;
 
+interface PassengerInfo {
+  fullName: string;
+  phone?: string;
+  email?: string;
+  gender: string;
+  dateOfBirth: string;
+  cccd?: string;
+  type: "adult" | "child" | "infant";
+}
+
 export interface BookingTourPayload {
   tourId: string;
   numAdults: number;
@@ -14,12 +24,9 @@ export interface BookingTourPayload {
   };
   subtotal: number;
   status?: string;
-  passenger?: {
-    fullName: string;
-    phone: string;
-    email: string;
-    note?: string;
-  };
+  passengers?: PassengerInfo[];
+  note?: string;
+  paymentMethod?: string; // Add payment method field
   bookingId?: string;
 }
 
