@@ -218,9 +218,9 @@ export default function Flights() {
                         <span className="text-gray-500 text-sm">/người</span>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <button className="bg-gradient-to-r from-sky-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300">
-                          Đặt Vé
-                        </button>
+                        <Link href={`/flights/booking/${flight._id}`} legacyBehavior>
+                          <a className="bg-gradient-to-r from-sky-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center font-medium">Đặt Vé</a>
+                        </Link>
                         <Link href={`/flights/detail/${flight._id}`} legacyBehavior>
                           <a className="bg-white border border-sky-500 text-sky-600 px-6 py-2 rounded-lg hover:bg-sky-50 transition-all duration-300 text-center font-medium">Xem chi tiết</a>
                         </Link>

@@ -14,10 +14,6 @@ export default function FlightDetailPage() {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [editData, setEditData] = useState<Partial<Flight> | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -33,100 +29,6 @@ export default function FlightDetailPage() {
     };
     fetchFlight();
   }, [id]);
-
-  useEffect(() => {
-    if (flight) setEditData(flight);
-  }, [flight]);
-
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    if (!editData) return;
-    const { name, value } = e.target;
-    // Nested fields
-    if (name.startsWith("departureAirport.")) {
-      setEditData({
-        ...editData,
-        departureAirport: {
-          ...editData.departureAirport,
-          [name.split(".")[1]]: value,
-        },
-      });
-    } else if (name.startsWith("arrivalAirport.")) {
-      setEditData({
-        ...editData,
-        arrivalAirport: {
-          ...editData.arrivalAirport,
-          [name.split(".")[1]]: value,
-        },
-      });
-    } else if (name.startsWith("aircraft.")) {
-      setEditData({
-        ...editData,
-        aircraft: {
-          ...editData.aircraft,
-          [name.split(".")[1]]: value,
-        },
-      });
-    } else if (name.startsWith("seatInfo.classes.")) {
-      const [_, __, cls, field] = name.split(".");
-      setEditData({
-        ...editData,
-        seatInfo: {
-          ...editData.seatInfo,
-          classes: {
-            ...editData.seatInfo?.classes,
-            [cls]: {
-              ...editData.seatInfo?.classes?.[cls],
-              [field]: value,
-            },
-          },
-        },
-      });
-    } else {
-      setEditData({ ...editData, [name]: value });
-    }
-  };
-
-  const handleUpdateFlight = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editData || !flight) return;
-    setIsUpdating(true);
-    setUpdateMessage(null);
-    try {
-      const payload: any = { ...editData };
-      if (payload.durationMinutes !== undefined) {
-        payload.durationMinutes = Number(payload.durationMinutes);
-      }
-      if (payload.seatInfo?.classes?.economy?.price !== undefined) {
-        payload.seatInfo.classes.economy.price = Number(payload.seatInfo.classes.economy.price);
-      }
-      if (payload.seatInfo?.classes?.business?.price !== undefined) {
-        payload.seatInfo.classes.business.price = Number(payload.seatInfo.classes.business.price);
-      }
-      if (payload.seatInfo?.classes?.economy?.available !== undefined) {
-        payload.seatInfo.classes.economy.available = Number(payload.seatInfo.classes.economy.available);
-      }
-      if (payload.seatInfo?.classes?.business?.available !== undefined) {
-        payload.seatInfo.classes.business.available = Number(payload.seatInfo.classes.business.available);
-      }
-
-      // Datetime-local -> ISO
-      if (typeof payload.departureTime === 'string' && payload.departureTime.length <= 16) {
-        payload.departureTime = new Date(payload.departureTime).toISOString();
-      }
-      if (typeof payload.arrivalTime === 'string' && payload.arrivalTime.length <= 16) {
-        payload.arrivalTime = new Date(payload.arrivalTime).toISOString();
-      }
-
-      const updated = await flightService.updateFlight(flight._id, payload);
-      setFlight(updated);
-      setShowEditForm(false);
-      setUpdateMessage("Cập nhật thành công!");
-    } catch (err: any) {
-      setUpdateMessage("Cập nhật thất bại: " + (err?.response?.data?.message || err.message));
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -188,6 +90,24 @@ export default function FlightDetailPage() {
       {/* Main content */}
       <section className="container mx-auto px-4 py-10 md:py-16">
         <div className="max-w-3xl mx-auto">
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-6">
+            <button
+              type="button"
+              onClick={() => router.push("/flights")}
+              className="inline-flex items-center px-4 py-2 bg-white border border-sky-500 text-sky-600 font-semibold rounded-lg hover:bg-sky-50 transition-all duration-300"
+            >
+              ← Quay lại danh sách chuyến bay
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/flights/booking/${id}`)}
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300"
+            >
+              Đặt Vé
+            </button>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-10 flex flex-col gap-6 animate-fade-in">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex-1">
@@ -240,101 +160,6 @@ export default function FlightDetailPage() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col md:flex-row gap-4 mt-2">
-              <button
-                className="w-full md:w-auto bg-gradient-to-r from-sky-600 to-blue-600 text-white font-semibold py-3 px-8 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-base md:text-lg"
-                disabled={flight.seatInfo?.availableSeats === 0}
-              >
-                {flight.seatInfo?.availableSeats === 0 ? "Hết chỗ" : "Đặt vé ngay"}
-              </button>
-              <button
-                className="w-full md:w-auto bg-white border border-sky-500 text-sky-600 font-semibold py-3 px-8 rounded-lg hover:bg-sky-50 transition-all duration-300 text-base md:text-lg"
-                onClick={() => router.push("/flights")}
-              >
-                ← Quay lại danh sách
-              </button>
-              <button
-                className="w-full md:w-auto bg-yellow-100 border border-yellow-400 text-yellow-700 font-semibold py-3 px-8 rounded-lg hover:bg-yellow-200 transition-all duration-300 text-base md:text-lg"
-                onClick={() => setShowEditForm((v) => !v)}
-              >
-                {showEditForm ? "Đóng sửa" : "Sửa thông tin"}
-              </button>
-            </div>
-            {updateMessage && (
-              <div className={`text-center font-semibold ${updateMessage.includes("thành công") ? "text-green-600" : "text-red-600"}`}>{updateMessage}</div>
-            )}
-            {showEditForm && editData && (
-              <form onSubmit={handleUpdateFlight} className="bg-blue-50 rounded-xl p-6 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold mb-1">Hãng</label>
-                  <input name="airline" value={editData.airline || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Mã chuyến bay</label>
-                  <input name="flightNumber" value={editData.flightNumber || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Thành phố đi</label>
-                  <input name="departureAirport.city" value={editData.departureAirport?.city || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Mã sân bay đi</label>
-                  <input name="departureAirport.code" value={editData.departureAirport?.code || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Thành phố đến</label>
-                  <input name="arrivalAirport.city" value={editData.arrivalAirport?.city || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Mã sân bay đến</label>
-                  <input name="arrivalAirport.code" value={editData.arrivalAirport?.code || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Giờ khởi hành</label>
-                  <input name="departureTime" type="datetime-local" value={editData.departureTime ? new Date(editData.departureTime).toISOString().slice(0,16) : ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Giờ đến</label>
-                  <input name="arrivalTime" type="datetime-local" value={editData.arrivalTime ? new Date(editData.arrivalTime).toISOString().slice(0,16) : ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Thời lượng (phút)</label>
-                  <input name="durationMinutes" type="number" value={editData.durationMinutes || 0} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Loại máy bay</label>
-                  <input name="aircraft.model" value={editData.aircraft?.model || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Trạng thái</label>
-                  <input name="status" value={editData.status || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Giá phổ thông</label>
-                  <input name="seatInfo.classes.economy.price" type="number" value={editData.seatInfo?.classes?.economy?.price || 0} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Số ghế phổ thông còn</label>
-                  <input name="seatInfo.classes.economy.available" type="number" value={editData.seatInfo?.classes?.economy?.available || 0} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Giá thương gia</label>
-                  <input name="seatInfo.classes.business.price" type="number" value={editData.seatInfo?.classes?.business?.price || 0} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Số ghế thương gia còn</label>
-                  <input name="seatInfo.classes.business.available" type="number" value={editData.seatInfo?.classes?.business?.available || 0} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                </div>
-                <div className="col-span-2 flex gap-2 mt-2">
-                  <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" disabled={isUpdating}>
-                    {isUpdating ? "Đang cập nhật..." : "Lưu thay đổi"}
-                  </button>
-                  <button type="button" className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500" onClick={() => setShowEditForm(false)}>
-                    Hủy
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       </section>

@@ -53,8 +53,4 @@ export const flightService = {
     // Nếu trả về trực tiếp object chuyến bay, thì return response.data
     return response.data.data || response.data;
   },
-  updateFlight: async (id: string, data: any): Promise<Flight> => {
-    const response = await axios.put(`${API_URL}/flights/${id}`, data);
-    return response.data.data || response.data;
-  },
 };
