@@ -232,6 +232,8 @@ export default function ToursByDestinationPage() {
   }, [searchParams]);
 
   // Load tours data
+  const today = new Date().toISOString().split("T")[0];
+
   const loadToursAndDestination = useCallback(async () => {
     try {
       setIsLoading(true); // Luôn set loading khi gọi API
@@ -247,7 +249,7 @@ export default function ToursByDestinationPage() {
           destination: destResponse.data._id,
           page: currentPage,
           limit: 9,
-          ...(startDate ? { start: startDate } : {}),
+          start: startDate || today, // Always filter from today onwards
           ...(endDate ? { end: endDate } : {})
         } as any); // ép kiểu any để tránh lỗi TS
 
@@ -262,7 +264,7 @@ export default function ToursByDestinationPage() {
       setIsLoading(false);
       setTimeout(() => setIsVisible(true), 100);
     }
-  }, [slug, currentPage, startDate, endDate]);
+  }, [slug, currentPage, startDate, endDate, today]);
 
   useEffect(() => {
     if (slug) {
@@ -526,6 +528,7 @@ export default function ToursByDestinationPage() {
                     className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
                     value={searchStartDate}
                     onChange={(e) => setSearchStartDate(e.target.value)}
+                    min={today}
                   />
                   <span className="px-1 text-gray-600 flex items-center">
                     -
@@ -535,6 +538,7 @@ export default function ToursByDestinationPage() {
                     className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
                     value={searchEndDate}
                     onChange={(e) => setSearchEndDate(e.target.value)}
+                    min={searchStartDate || today}
                   />
                 </div>
               </div>
