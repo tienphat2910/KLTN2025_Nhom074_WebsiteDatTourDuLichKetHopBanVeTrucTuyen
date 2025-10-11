@@ -30,12 +30,15 @@ export default function Tours() {
       if (res.success) setDestinations(res.data.destinations);
     });
 
-    // Load tours from API
-    tourService.getTours({ limit: 12 }).then((res) => {
-      if (res.success) setTours(res.data.tours);
-      setIsLoading(false);
-      setIsVisible(true);
-    });
+    // Load tours from API with filter for departure dates from today onwards
+    const today = new Date().toISOString().split("T")[0];
+    tourService
+      .getTours({ limit: 12, start: today, end: "2099-12-31" })
+      .then((res) => {
+        if (res.success) setTours(res.data.tours);
+        setIsLoading(false);
+        setIsVisible(true);
+      });
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -57,6 +60,25 @@ export default function Tours() {
   const handleBookTour = (slug: string) => {
     window.location.href = `/tours/detail/${slug}`;
   };
+
+  // Helper function to calculate duration from startDate and endDate
+  const calculateDuration = (
+    startDate: string | undefined,
+    endDate: string | undefined
+  ) => {
+    if (!startDate || !endDate) return null;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+    const days = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (days <= 0) return null;
+    const nights = days - 1;
+    return `${days} ngày ${nights} đêm`;
+  };
+
+  const today = new Date().toISOString().split("T")[0];
 
   if (isLoading) {
     return (
@@ -155,6 +177,7 @@ export default function Tours() {
                   className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
+                  min={today}
                 />
                 <span className="px-1 text-gray-600 flex items-center">-</span>
                 <input
@@ -162,6 +185,7 @@ export default function Tours() {
                   className="flex-1 border border-gray-400 rounded-lg px-3 py-3 text-gray-800 bg-white text-base"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || today}
                 />
               </div>
             </div>
@@ -230,7 +254,13 @@ export default function Tours() {
                     📍 {tour.departureLocation?.name || "Đang cập nhật"}
                   </p>
                   <p className="text-gray-600 mb-4">
-                    ⏰ {tour.duration || "Đang cập nhật"}
+                    ⏰{" "}
+                    {tour.duration
+                      ? typeof tour.duration === "string"
+                        ? tour.duration
+                        : `${tour.duration} ngày`
+                      : calculateDuration(tour.startDate, tour.endDate) ||
+                        "Đang cập nhật"}
                   </p>
                   {/* Điểm nổi bật nếu có */}
                   {tour.category && (
