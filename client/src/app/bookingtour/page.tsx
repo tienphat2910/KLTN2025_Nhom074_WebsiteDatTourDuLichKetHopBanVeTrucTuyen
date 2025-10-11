@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { tourService, Tour } from "@/services/tourService";
 import { bookingTourService } from "@/services/bookingTourService";
+import { paymentService } from "@/services/paymentService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -184,20 +185,79 @@ export default function BookingTourPage() {
     setSubmitting(true);
 
     try {
+      // Calculate total amount
+      const totalAmount =
+        adults * tour.pricingByAge.adult +
+        children * tour.pricingByAge.child +
+        infants * tour.pricingByAge.infant;
+
+      // If payment method is MoMo, handle MoMo payment flow
+      if (paymentMethod === "momo") {
+        try {
+          // Create MoMo payment
+          const momoResponse = await paymentService.createMoMoPayment({
+            amount: totalAmount,
+            orderInfo: `Thanh toán tour: ${tour.title}`,
+            extraData: JSON.stringify({
+              tourId: tour._id,
+              numAdults: adults,
+              numChildren: children,
+              numInfants: infants,
+              passengers,
+              note
+            })
+          });
+
+          if (momoResponse.success && momoResponse.data?.payUrl) {
+            // Store booking data temporarily for after payment
+            const bookingData = {
+              tourId: tour._id,
+              numAdults: adults,
+              numChildren: children,
+              numInfants: infants,
+              priceByAge: tour.pricingByAge,
+              subtotal: totalAmount,
+              status: "pending",
+              passengers,
+              note,
+              paymentMethod,
+              momoOrderId: momoResponse.data.orderId
+            };
+
+            // Store in localStorage to retrieve after payment redirect
+            localStorage.setItem("pendingBooking", JSON.stringify(bookingData));
+
+            // Show success message and redirect to MoMo
+            toast.success("Đang chuyển hướng đến trang thanh toán MoMo...");
+
+            // Redirect to MoMo payment page
+            paymentService.redirectToMoMoPayment(momoResponse.data.payUrl);
+            return;
+          } else {
+            throw new Error(
+              momoResponse.message || "Không thể tạo thanh toán MoMo"
+            );
+          }
+        } catch (momoError) {
+          console.error("MoMo payment error:", momoError);
+          toast.error("Lỗi khi tạo thanh toán MoMo. Vui lòng thử lại!");
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // For other payment methods, proceed with normal booking flow
       const res = await bookingTourService.createBookingTour({
         tourId: tour._id,
         numAdults: adults,
         numChildren: children,
         numInfants: infants,
         priceByAge: tour.pricingByAge,
-        subtotal:
-          adults * tour.pricingByAge.adult +
-          children * tour.pricingByAge.child +
-          infants * tour.pricingByAge.infant,
+        subtotal: totalAmount,
         status: "pending",
         passengers,
         note,
-        paymentMethod // Add payment method to payload
+        paymentMethod
       });
 
       if (res.success) {
@@ -215,6 +275,7 @@ export default function BookingTourPage() {
         }
       }
     } catch (err) {
+      console.error("Booking error:", err);
       toast.error("Lỗi kết nối server!");
     } finally {
       setSubmitting(false);
