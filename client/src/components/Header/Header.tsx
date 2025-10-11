@@ -373,14 +373,14 @@ export default function Header() {
                   ></span>
                 </button>
                 {isToursOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-80 xl:w-96 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
+                  <div className="absolute top-full left-0 mt-2 w-80 xl:w-130 bg-white rounded-lg shadow-xl border border-gray-200 py-4 z-50">
                     {/* Popular Destinations with Tours */}
                     <div className="px-4 pb-3 border-b border-gray-100">
                       <h3 className="text-sm font-semibold text-gray-800 mb-3">
                         Tour theo địa điểm
                       </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        {popularDestinations.slice(0, 6).map((destination) => (
+                      <div className="grid grid-cols-4 gap-2">
+                        {destinations.map((destination) => (
                           <Link
                             key={destination._id}
                             href={`/tours/${destination.slug}`}
@@ -919,27 +919,25 @@ export default function Header() {
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
                           Tour theo địa điểm
                         </div>
-                        <div className="grid grid-cols-2 gap-1">
-                          {popularDestinations
-                            .slice(0, 6)
-                            .map((destination) => (
-                              <Link
-                                key={destination._id}
-                                href={`/tours/${destination.slug}`}
-                                className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                onClick={() => {
-                                  setIsToursOpen(false);
-                                  setIsMobileMenuOpen(false);
-                                }}
-                              >
-                                <div className="font-medium">
-                                  {destination.name}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {destination.region}
-                                </div>
-                              </Link>
-                            ))}
+                        <div className="grid grid-cols-3 gap-1">
+                          {destinations.map((destination) => (
+                            <Link
+                              key={destination._id}
+                              href={`/tours/${destination.slug}`}
+                              className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              onClick={() => {
+                                setIsToursOpen(false);
+                                setIsMobileMenuOpen(false);
+                              }}
+                            >
+                              <div className="font-medium">
+                                {destination.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {destination.region}
+                              </div>
+                            </Link>
+                          ))}
                         </div>
                       </div>
 
