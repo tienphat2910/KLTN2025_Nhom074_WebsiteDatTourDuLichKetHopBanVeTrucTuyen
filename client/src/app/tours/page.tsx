@@ -224,9 +224,7 @@ export default function Tours() {
             {tours.map((tour, index) => (
               <div
                 key={tour._id}
-                className={`card-surface rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                  index * 100
-                } ${
+                className={`card-surface rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
                   isVisible ? "animate-slide-up" : "opacity-0"
                 } border border-white/20`}
               >
@@ -240,14 +238,11 @@ export default function Tours() {
                 ></div>
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold text-gray-800">
+                    <h3 className="text-xl font-bold text-gray-800 line-clamp-2">
                       {tour.title}
                     </h3>
                     <div className="flex items-center">
                       <span className="text-yellow-500">⭐</span>
-                      <span className="text-sm text-gray-600 ml-1">
-                        {tour.rating}
-                      </span>
                     </div>
                   </div>
                   <p className="text-gray-600 mb-2">
@@ -262,17 +257,6 @@ export default function Tours() {
                       : calculateDuration(tour.startDate, tour.endDate) ||
                         "Đang cập nhật"}
                   </p>
-                  {/* Điểm nổi bật nếu có */}
-                  {tour.category && (
-                    <div className="mb-4">
-                      <h4 className="font-semibold text-gray-800 mb-2">
-                        Thể loại:
-                      </h4>
-                      <span className="text-sm text-gray-600">
-                        {tour.category}
-                      </span>
-                    </div>
-                  )}
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="text-2xl font-bold text-green-600">
