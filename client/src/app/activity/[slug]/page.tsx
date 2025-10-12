@@ -144,9 +144,9 @@ export default function ActivityDetail() {
             Chi tiết
           </h2>
           <ul className="text-gray-700">
-            {Object.values(activity.detail || {}).map(
-              (d: string, idx: number) => (d ? <li key={idx}>{d}</li> : null)
-            )}
+            {/* {Object.values(activity.detail || {}).map(
+              // (d: string, idx: number) => (d ? <li key={idx}>{d}</li> : null)
+            )} */}
           </ul>
         </div>
       </div>
