@@ -15,7 +15,8 @@ import {
   CreditCard,
   Activity,
   Menu,
-  X
+  X,
+  Percent
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -58,6 +59,11 @@ const sidebarItems = [
     title: "Bookings",
     href: "/admin/bookings",
     icon: Calendar,
+  },
+  {
+    title: "Discounts",
+    href: "/admin/discounts",
+    icon: Percent,
   },
   {
     title: "Payments",
