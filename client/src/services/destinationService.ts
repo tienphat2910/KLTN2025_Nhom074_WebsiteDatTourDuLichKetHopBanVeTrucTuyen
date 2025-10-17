@@ -233,6 +233,22 @@ export const destinationService = {
     }
   },
 
+  // Get destination by slug
+  getDestinationBySlug: async (slug: string): Promise<DestinationResponse> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/destinations/slug/${slug}`);
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Get destination by slug error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server",
+        data: {} as Destination
+      };
+    }
+  },
+
   // Upload destination image
   uploadDestinationImage: async (
     file: File

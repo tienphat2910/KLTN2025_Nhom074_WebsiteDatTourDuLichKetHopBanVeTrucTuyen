@@ -36,6 +36,9 @@ export interface BookingTourPayload {
     infant: number;
   };
   subtotal: number;
+  discountAmount?: number;
+  finalTotal?: number;
+  discountCode?: string;
   status?: string;
   passengers?: PassengerInfo[];
   note?: string;
