@@ -8,3 +8,5 @@ export { DiscountManagement } from "./DiscountManagement";
 export { DiscountModal } from "./DiscountModal";
 export { TourManagement } from "./TourManagement";
 export { TourModal } from "./TourModal";
+export { ActivityManagement } from "./ActivityManagement";
+export { ActivityModal } from "./ActivityModal";
