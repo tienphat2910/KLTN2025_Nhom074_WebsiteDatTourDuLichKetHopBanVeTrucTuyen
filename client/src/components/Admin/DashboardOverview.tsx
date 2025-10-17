@@ -10,7 +10,8 @@ import {
   MapPin,
   Activity,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  RefreshCw
 } from "lucide-react";
 import {
   Card,
@@ -25,7 +26,10 @@ import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
 import { userService } from "@/services/userService";
 import { tourService } from "@/services/tourService";
+import { useSocket } from "@/hooks/useSocket";
+import { RecentActivities } from "./RecentActivities";
 import Link from "next/link";
+import { toast } from "sonner";
 
 interface StatsCardProps {
   title: string;
@@ -35,6 +39,7 @@ interface StatsCardProps {
   trend?: {
     value: string;
     isPositive: boolean;
+    isPercentage?: boolean;
   };
 }
 
@@ -78,17 +83,88 @@ function StatsCard({
 export function DashboardOverview() {
   const [userStats, setUserStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [userGrowth, setUserGrowth] = useState<{
+    value: string;
+    isPositive: boolean;
+    isPercentage?: boolean;
+  } | null>(null);
   const [tourStats, setTourStats] = useState<any>(null);
   const [isLoadingTourStats, setIsLoadingTourStats] = useState(true);
+  const [tourGrowth, setTourGrowth] = useState<{
+    value: string;
+    isPositive: boolean;
+    isPercentage?: boolean;
+  } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const { socketService } = useSocket();
 
   // Load user statistics
-  const loadUserStats = async () => {
+  const loadUserStats = async (showRefreshing = false) => {
     try {
-      setIsLoadingStats(true);
-      const response = await userService.getUserStats();
+      if (showRefreshing) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoadingStats(true);
+      }
+      const response = await userService.getUsers({ limit: 1000 }); // Get all users for stats
 
       if (response.success && response.data) {
-        setUserStats(response.data);
+        const users = response.data.users;
+
+        // Calculate basic stats
+        const stats = {
+          total: users.length,
+          active: users.filter((u: any) => u.status === "active").length,
+          inactive: users.filter((u: any) => u.status === "inactive").length,
+          banned: users.filter((u: any) => u.status === "banned").length,
+          admins: users.filter((u: any) => u.role === "admin").length,
+          totalBookings: users.reduce(
+            (sum: number, u: any) => sum + u.totalBookings,
+            0
+          ),
+          totalSpent: users.reduce(
+            (sum: number, u: any) => sum + u.totalSpent,
+            0
+          )
+        };
+
+        // Calculate monthly growth
+        const now = new Date();
+        const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const currentMonthUsers = users.filter((u: any) => {
+          const createdAt = new Date(u.createdAt);
+          return createdAt >= currentMonth;
+        }).length;
+
+        const lastMonthUsers = users.filter((u: any) => {
+          const createdAt = new Date(u.createdAt);
+          return createdAt >= lastMonth && createdAt <= lastMonthEnd;
+        }).length;
+
+        // Calculate growth percentage
+        let growthValue = "0%";
+        let isPositive = true;
+        let isPercentage = true;
+
+        if (lastMonthUsers > 0) {
+          const growth =
+            ((currentMonthUsers - lastMonthUsers) / lastMonthUsers) * 100;
+          const roundedGrowth = Math.round(Math.abs(growth) * 10) / 10; // Round to 1 decimal place
+          growthValue = `${growth >= 0 ? "+" : "-"}${roundedGrowth}%`;
+          isPositive = growth >= 0;
+        } else if (currentMonthUsers > 0) {
+          // If no users last month but some this month, show the number of new users
+          growthValue = `+${currentMonthUsers}`;
+          isPositive = true;
+          isPercentage = false;
+        }
+
+        setUserStats(stats);
+        setUserGrowth({ value: growthValue, isPositive, isPercentage });
       } else {
         console.error("Failed to load user stats:", response.message);
         // Set default values if API fails
@@ -101,6 +177,7 @@ export function DashboardOverview() {
           totalBookings: 0,
           totalSpent: 0
         });
+        setUserGrowth({ value: "0%", isPositive: true, isPercentage: true });
       }
     } catch (error) {
       console.error("Load user stats error:", error);
@@ -113,52 +190,230 @@ export function DashboardOverview() {
         totalBookings: 0,
         totalSpent: 0
       });
+      setUserGrowth({ value: "0%", isPositive: true, isPercentage: true });
     } finally {
       setIsLoadingStats(false);
+      setIsRefreshing(false);
     }
   };
 
   // Load tour statistics
-  const loadTourStats = async () => {
+  const loadTourStats = async (showRefreshing = false) => {
     try {
-      setIsLoadingTourStats(true);
-      // Get total tours count by fetching with limit 1 to get pagination info
-      const response = await tourService.getTours({ limit: 1 });
+      if (showRefreshing) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoadingTourStats(true);
+      }
+
+      // Get all tours for stats calculation (limit 1000 should be sufficient)
+      const response = await tourService.getTours({ limit: 1000 });
 
       if (response.success && response.data) {
+        const tours = response.data.tours;
+
+        // Calculate monthly growth
+        const now = new Date();
+        const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const currentMonthTours = tours.filter((tour: any) => {
+          const createdAt = new Date(tour.createdAt);
+          return createdAt >= currentMonth;
+        }).length;
+
+        const lastMonthTours = tours.filter((tour: any) => {
+          const createdAt = new Date(tour.createdAt);
+          return createdAt >= lastMonth && createdAt <= lastMonthEnd;
+        }).length;
+
+        // Calculate growth percentage
+        let growthValue = "0%";
+        let isPositive = true;
+        let isPercentage = true;
+
+        if (lastMonthTours > 0) {
+          const growth =
+            ((currentMonthTours - lastMonthTours) / lastMonthTours) * 100;
+          const roundedGrowth = Math.round(Math.abs(growth) * 10) / 10; // Round to 1 decimal place
+          growthValue = `${growth >= 0 ? "+" : "-"}${roundedGrowth}%`;
+          isPositive = growth >= 0;
+        } else if (currentMonthTours > 0) {
+          // If no tours last month but some this month, show the number of new tours
+          growthValue = `+${currentMonthTours}`;
+          isPositive = true;
+          isPercentage = false;
+        }
+
         setTourStats({
           total: response.data.pagination.totalTours
         });
+        setTourGrowth({ value: growthValue, isPositive, isPercentage });
       } else {
         console.error("Failed to load tour stats:", response.message);
         setTourStats({
           total: 0
         });
+        setTourGrowth({ value: "0%", isPositive: true, isPercentage: true });
       }
     } catch (error) {
       console.error("Load tour stats error:", error);
       setTourStats({
         total: 0
       });
+      setTourGrowth({ value: "0%", isPositive: true, isPercentage: true });
     } finally {
       setIsLoadingTourStats(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     loadUserStats();
     loadTourStats();
+
+    // Set up socket connection status
+    const handleConnected = () => setIsConnected(true);
+    const handleDisconnected = () => setIsConnected(false);
+
+    socketService.on("connected", handleConnected);
+    socketService.on("disconnected", handleDisconnected);
+
+    // Set initial connection status
+    setIsConnected(socketService.isConnected());
+
+    // Set up real-time updates
+    const handleUserRegistered = (data: any) => {
+      // Refresh user stats and growth when new user registers
+      loadUserStats(true);
+      // Show notification
+      toast.success("Người dùng mới đăng ký!", {
+        description: `${
+          data?.user?.fullName || "Người dùng mới"
+        } đã tạo tài khoản`,
+        duration: 5000,
+        action: {
+          label: "Xem",
+          onClick: () => {
+            // Could navigate to user management page
+            window.location.href = "/admin/users";
+          }
+        }
+      });
+    };
+
+    const handleUserStatusChanged = (data: any) => {
+      // Refresh user stats when user status changes
+      loadUserStats(true);
+      // Show notification
+      const statusText =
+        data.newStatus === "banned"
+          ? "bị cấm"
+          : data.newStatus === "active"
+          ? "được kích hoạt"
+          : "bị vô hiệu hóa";
+      toast.info("Trạng thái người dùng thay đổi", {
+        description: `Người dùng ${data.userId} đã ${statusText}`,
+        duration: 4000
+      });
+    };
+
+    const handleBookingCreated = (data: any) => {
+      // Could refresh booking stats here if implemented
+      toast.success("Đặt chỗ mới!", {
+        description: `Đặt chỗ ${data?.booking?.type || "mới"} trị giá ${
+          data?.booking?.totalPrice?.toLocaleString("vi-VN") || "N/A"
+        } VND`,
+        duration: 5000,
+        action: {
+          label: "Xem",
+          onClick: () => {
+            // Could navigate to bookings page
+            console.log("Navigate to bookings");
+          }
+        }
+      });
+    };
+
+    const handlePaymentCompleted = (data: any) => {
+      // Could refresh payment stats here if implemented
+      toast.success("Thanh toán hoàn tất!", {
+        description: `Thanh toán ${
+          data?.payment?.amount?.toLocaleString("vi-VN") || "N/A"
+        } VND cho booking ${data?.payment?.bookingId || "N/A"}`,
+        duration: 5000
+      });
+    };
+
+    const handleTourCreated = (data: any) => {
+      // Refresh tour stats when new tour is created
+      loadTourStats(true);
+      // Show notification
+      toast.success("Tour mới được tạo!", {
+        description: `${
+          data?.tour?.title || "Tour mới"
+        } đã được thêm vào hệ thống`,
+        duration: 5000,
+        action: {
+          label: "Xem",
+          onClick: () => {
+            // Could navigate to tours management page
+            console.log("Navigate to tours");
+          }
+        }
+      });
+    };
+
+    socketService.on("user_registered", handleUserRegistered);
+    socketService.on("user_status_changed", handleUserStatusChanged);
+    socketService.on("booking_created", handleBookingCreated);
+    socketService.on("payment_completed", handlePaymentCompleted);
+    socketService.on("tour_created", handleTourCreated);
+
+    // Cleanup listeners
+    return () => {
+      socketService.off("connected", handleConnected);
+      socketService.off("disconnected", handleDisconnected);
+      socketService.off("user_registered", handleUserRegistered);
+      socketService.off("user_status_changed", handleUserStatusChanged);
+      socketService.off("booking_created", handleBookingCreated);
+      socketService.off("payment_completed", handlePaymentCompleted);
+      socketService.off("tour_created", handleTourCreated);
+    };
   }, []);
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">
-          Chào mừng trở lại, Quản trị viên!
-        </h2>
-        <p className="text-muted-foreground">
-          Đây là những gì đang diễn ra với LuTrip hôm nay.
-        </p>
+        <div className="flex items-center space-x-2">
+          <h2 className="text-3xl font-bold tracking-tight">
+            Chào mừng trở lại, Quản trị viên!
+          </h2>
+          {isRefreshing && (
+            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        <div className="flex items-center space-x-4">
+          <p className="text-muted-foreground">
+            Đây là những gì đang diễn ra với LuTrip hôm nay.
+            {isRefreshing && (
+              <span className="ml-2 text-xs text-blue-600">
+                Đang cập nhật...
+              </span>
+            )}
+          </p>
+          <div className="flex items-center space-x-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? "bg-green-500" : "bg-red-500"
+              }`}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? "Real-time" : "Offline"}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -168,9 +423,11 @@ export function DashboardOverview() {
           value={
             isLoadingStats ? "..." : (userStats?.total || 0).toLocaleString()
           }
-          description="Người dùng đang hoạt động"
+          description="Tổng số người dùng đã đăng ký"
           icon={Users}
-          trend={{ value: "+12.5%", isPositive: true }}
+          trend={
+            userGrowth || { value: "0%", isPositive: true, isPercentage: true }
+          }
         />
         <StatsCard
           title="Tổng tour"
@@ -181,7 +438,9 @@ export function DashboardOverview() {
           }
           description="Gói tour có sẵn"
           icon={Package}
-          trend={{ value: "+8.2%", isPositive: true }}
+          trend={
+            tourGrowth || { value: "0%", isPositive: true, isPercentage: true }
+          }
         />
         <StatsCard
           title="Đặt vé máy bay"
@@ -359,65 +618,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Hoạt động gần đây</CardTitle>
-            <CardDescription>Nhật ký hoạt động hệ thống</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                {
-                  action: "Đăng ký người dùng mới",
-                  user: "john.doe@email.com",
-                  time: "5 phút trước",
-                  type: "user"
-                },
-                {
-                  action: "Xác nhận đặt tour",
-                  user: "admin",
-                  time: "12 phút trước",
-                  type: "booking"
-                },
-                {
-                  action: "Thêm chuyến bay vào hệ thống",
-                  user: "admin",
-                  time: "1 giờ trước",
-                  type: "system"
-                },
-                {
-                  action: "Xử lý thanh toán",
-                  user: "mary.jane@email.com",
-                  time: "2 giờ trước",
-                  type: "payment"
-                }
-              ].map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <div
-                    className={`h-2 w-2 rounded-full mt-2 ${
-                      activity.type === "user"
-                        ? "bg-blue-500"
-                        : activity.type === "booking"
-                        ? "bg-green-500"
-                        : activity.type === "payment"
-                        ? "bg-yellow-500"
-                        : "bg-gray-500"
-                    }`}
-                  ></div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium">{activity.action}</p>
-                    <p className="text-xs text-muted-foreground">
-                      bởi {activity.user}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {activity.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <RecentActivities />
       </div>
     </div>
   );
