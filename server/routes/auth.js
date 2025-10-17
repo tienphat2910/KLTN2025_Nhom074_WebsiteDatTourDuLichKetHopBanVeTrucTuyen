@@ -4,6 +4,7 @@ const generateToken = require('../utils/generateToken');
 const { uploadAvatar } = require('../utils/cloudinaryUpload'); // Updated import
 const { createFirebaseUser, signInFirebaseUser, sendFirebaseEmailVerification } = require('../utils/firebaseAuth');
 const { generateOTP, sendOTPEmail } = require('../utils/emailService');
+const { validateEmail } = require('../utils/emailValidation');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const router = express.Router();
@@ -56,6 +57,15 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Email, mật khẩu và họ tên là bắt buộc'
+            });
+        }
+
+        // Validate email format and domain
+        const emailValidation = await validateEmail(email);
+        if (!emailValidation.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: emailValidation.error || 'Email không hợp lệ'
             });
         }
 

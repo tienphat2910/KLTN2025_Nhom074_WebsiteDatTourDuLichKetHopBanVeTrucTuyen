@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import env from "@/config/env";
+import { LoadingSpinner } from "@/components/Loading";
 
 export default function VerifyEmail() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -227,46 +228,58 @@ export default function VerifyEmail() {
         ></div>
       </div>
 
+      {/* Back to Home Button */}
+      <Link
+        href="/"
+        className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-2 sm:px-4 rounded-lg transition-all duration-300 flex items-center space-x-1 sm:space-x-2 hover:scale-105 text-sm sm:text-base"
+      >
+        <svg
+          className="w-3 h-3 sm:w-4 sm:h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
+        </svg>
+        <span className="hidden sm:inline">Quay lại trang chủ</span>
+        <span className="sm:hidden">Trang chủ</span>
+      </Link>
       <div
         className={`w-full max-w-sm sm:max-w-md auth-transition-slow relative z-20 ${
           isVisible ? "auth-fade-in" : "opacity-0"
         }`}
       >
-        {/* Glass Card */}
+        {/* White Card with Glass Effect */}
         <div
-          className="bg-black/15 border border-white/20 rounded-xl sm:rounded-2xl shadow-2xl p-8 sm:p-10 relative overflow-hidden auth-glow"
+          className="bg-white/95 border border-white/20 rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden backdrop-blur-sm"
           style={{
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            background: "rgba(0, 0, 0, 0.15)"
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)"
           }}
         >
           {!success ? (
             <>
               {/* Header */}
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
+              <div className="text-center mb-6 sm:mb-8">
+                <Link href="/" className="inline-block mb-4 sm:mb-6">
+                  <img
+                    src="/images/logo/logo-lutrip.png"
+                    alt="LuTrip"
+                    className="h-14 sm:h-18 w-auto"
+                  />
+                </Link>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
                   Xác Thực Email
                 </h1>
-                <p className="text-white/70 text-sm sm:text-base">
+                <p className="text-gray-600 text-sm sm:text-base">
                   Chúng tôi đã gửi mã OTP đến email
                 </p>
-                <p className="text-white font-semibold text-sm sm:text-base mt-1">
+                <p className="text-gray-800 font-semibold text-sm sm:text-base mt-1">
                   {email}
                 </p>
               </div>
@@ -287,7 +300,7 @@ export default function VerifyEmail() {
                       onChange={(e) => handleChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       onPaste={handlePaste}
-                      className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold bg-white/10 border-2 border-white/20 rounded-lg text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                      className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                       disabled={loading || success}
                     />
                   ))}
@@ -297,7 +310,7 @@ export default function VerifyEmail() {
                 <div className="text-center mb-4">
                   <p
                     className={`text-sm font-medium ${
-                      timeLeft <= 60 ? "text-red-400" : "text-white/70"
+                      timeLeft <= 60 ? "text-red-600" : "text-gray-600"
                     }`}
                   >
                     {timeLeft > 0 ? (
@@ -308,7 +321,7 @@ export default function VerifyEmail() {
                         </span>
                       </>
                     ) : (
-                      <span className="text-red-400 font-bold">
+                      <span className="text-red-600 font-bold">
                         Mã OTP đã hết hạn
                       </span>
                     )}
@@ -317,8 +330,8 @@ export default function VerifyEmail() {
 
                 {/* Error Message */}
                 {error && (
-                  <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-                    <p className="text-red-200 text-sm text-center">{error}</p>
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700 text-sm text-center">{error}</p>
                   </div>
                 )}
 
@@ -359,7 +372,7 @@ export default function VerifyEmail() {
                     type="button"
                     onClick={handleResend}
                     disabled={resendDisabled}
-                    className="text-white/80 hover:text-white text-sm underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline transition-all"
+                    className="text-gray-600 hover:text-gray-800 text-sm underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline transition-all"
                   >
                     {resendCooldown > 0
                       ? `Gửi lại mã sau ${resendCooldown}s`
@@ -387,10 +400,10 @@ export default function VerifyEmail() {
                     />
                   </svg>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white mb-4">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
                   Xác Thực Thành Công!
                 </h1>
-                <p className="text-white/70 text-sm sm:text-base mb-6">
+                <p className="text-gray-600 text-sm sm:text-base mb-6">
                   Email của bạn đã được xác thực. Đang chuyển hướng đến trang
                   đăng nhập...
                 </p>
@@ -399,13 +412,26 @@ export default function VerifyEmail() {
           )}
 
           {/* LuTrip Logo */}
-          <div className="mt-8 pt-6 border-t border-white/20 text-center">
+          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
             <Link href="/" className="inline-block">
-              <span className="text-lg font-bold text-white/80">🌎 LuTrip</span>
+              <img
+                src="/images/logo/logo-lutrip.png"
+                alt="LuTrip"
+                className="h-14 sm:h-18 w-auto"
+              />
             </Link>
           </div>
         </div>
       </div>
+
+      {/* Add loading indicator */}
+      {loading && (
+        <div className="absolute inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl shadow-xl">
+            <LoadingSpinner type="travel" size="lg" text="Đang xác thực..." />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
