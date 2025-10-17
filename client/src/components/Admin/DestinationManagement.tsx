@@ -370,6 +370,7 @@ export function DestinationManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">STT</TableHead>
                   <TableHead>ID</TableHead>
                   <TableHead>Địa điểm</TableHead>
                   <TableHead>Vùng miền</TableHead>
@@ -381,8 +382,11 @@ export function DestinationManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {destinations.map((destination: Destination) => (
+                {destinations.map((destination: Destination, index: number) => (
                   <TableRow key={destination.id}>
+                    <TableCell className="font-medium">
+                      {(currentPage - 1) * 10 + index + 1}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">
                       {destination.id}
                     </TableCell>

@@ -54,9 +54,13 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Activity } from "@/types/activity";
-import { activityService, ActivitiesResponse } from "@/services/activityService";
+import {
+  activityService,
+  ActivitiesResponse
+} from "@/services/activityService";
 import { ActivityModal } from "./ActivityModal";
 import { toast } from "sonner";
+import { useSocket } from "@/hooks/useSocket";
 
 export function ActivityManagement() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -70,6 +74,8 @@ export function ActivityManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const { socketService } = useSocket();
 
   // Load activities data
   const loadActivities = async (page = 1, showRefreshing = false) => {
@@ -85,7 +91,8 @@ export function ActivityManagement() {
         page,
         limit: 10,
         search: searchTerm || undefined,
-        popular: popularFilter === "all" ? undefined : popularFilter === "popular"
+        popular:
+          popularFilter === "all" ? undefined : popularFilter === "popular"
       });
 
       if (response.success && response.data) {
@@ -111,6 +118,74 @@ export function ActivityManagement() {
   useEffect(() => {
     loadActivities(1);
   }, [searchTerm, popularFilter]);
+
+  // Set up socket connection and real-time updates
+  useEffect(() => {
+    // Set up socket connection status
+    const handleConnected = () => setIsConnected(true);
+    const handleDisconnected = () => setIsConnected(false);
+
+    socketService.on("connected", handleConnected);
+    socketService.on("disconnected", handleDisconnected);
+
+    // Set initial connection status
+    setIsConnected(socketService.isConnected());
+
+    // Set up real-time updates for activity management
+    const handleActivityCreated = (data: any) => {
+      // Refresh activity list when new activity is created
+      loadActivities(currentPage, true);
+      // Show notification
+      toast.success("Hoạt động mới được tạo!", {
+        description: `${
+          data?.activity?.name || "Hoạt động mới"
+        } đã được thêm vào hệ thống`,
+        duration: 5000,
+        action: {
+          label: "Xem",
+          onClick: () => {
+            // Scroll to the new activity or refresh the list
+            loadActivities(1, true);
+          }
+        }
+      });
+    };
+
+    const handleActivityUpdated = (data: any) => {
+      // Refresh activity list when activity is updated
+      loadActivities(currentPage, true);
+      // Show notification
+      toast.info("Hoạt động đã được cập nhật", {
+        description: `Thông tin của ${
+          data?.activity?.name || "hoạt động"
+        } đã thay đổi`,
+        duration: 3000
+      });
+    };
+
+    const handleActivityDeleted = (data: any) => {
+      // Refresh activity list when activity is deleted
+      loadActivities(currentPage, true);
+      // Show notification
+      toast.warning("Hoạt động đã bị xóa", {
+        description: `Hoạt động ${data.activityId} đã được xóa khỏi hệ thống`,
+        duration: 4000
+      });
+    };
+
+    socketService.on("activity_created", handleActivityCreated);
+    socketService.on("activity_updated", handleActivityUpdated);
+    socketService.on("activity_deleted", handleActivityDeleted);
+
+    // Cleanup listeners
+    return () => {
+      socketService.off("connected", handleConnected);
+      socketService.off("disconnected", handleDisconnected);
+      socketService.off("activity_created", handleActivityCreated);
+      socketService.off("activity_updated", handleActivityUpdated);
+      socketService.off("activity_deleted", handleActivityDeleted);
+    };
+  }, [currentPage]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -227,6 +302,16 @@ export function ActivityManagement() {
           )}
         </div>
         <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? "bg-green-500" : "bg-red-500"
+              }`}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? "Real-time" : "Offline"}
+            </span>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -279,9 +364,7 @@ export function ActivityManagement() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Có hình ảnh
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Có hình ảnh</CardTitle>
             <ImageIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -357,6 +440,7 @@ export function ActivityManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">STT</TableHead>
                   <TableHead className="min-w-[200px]">Hoạt động</TableHead>
                   <TableHead className="min-w-[150px]">Địa điểm</TableHead>
                   <TableHead className="min-w-[120px]">Giá vé</TableHead>
@@ -370,7 +454,7 @@ export function ActivityManagement() {
               <TableBody>
                 {isLoading || isRefreshing ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                       <p className="mt-2 text-muted-foreground">
                         {isRefreshing ? "Đang cập nhật..." : "Đang tải..."}
@@ -379,15 +463,18 @@ export function ActivityManagement() {
                   </TableRow>
                 ) : activities.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <p className="text-muted-foreground">
                         Không tìm thấy hoạt động nào
                       </p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  activities.map((activity) => (
+                  activities.map((activity, index) => (
                     <TableRow key={activity._id}>
+                      <TableCell className="font-medium">
+                        {(currentPage - 1) * 10 + index + 1}
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-medium text-sm">
@@ -418,10 +505,12 @@ export function ActivityManagement() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="text-sm font-medium">
-                            NL: {formatCurrency(activity.price?.retail?.adult || 0)}
+                            NL:{" "}
+                            {formatCurrency(activity.price?.retail?.adult || 0)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            TE: {formatCurrency(activity.price?.retail?.child || 0)}
+                            TE:{" "}
+                            {formatCurrency(activity.price?.retail?.child || 0)}
                           </div>
                           {activity.price?.retail?.senior !== undefined &&
                             activity.price?.retail?.senior > 0 && (
@@ -439,7 +528,8 @@ export function ActivityManagement() {
                             T2-T7
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {activity.operating_hours?.mon_to_sat || "Chưa cập nhật"}
+                            {activity.operating_hours?.mon_to_sat ||
+                              "Chưa cập nhật"}
                           </div>
                           {activity.operating_hours?.sunday_holidays && (
                             <div className="text-xs text-muted-foreground">

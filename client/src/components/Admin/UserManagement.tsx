@@ -613,6 +613,7 @@ export function UserManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-16">STT</TableHead>
                     <TableHead>Người dùng</TableHead>
                     <TableHead className="hidden md:table-cell">
                       Liên hệ
@@ -638,7 +639,7 @@ export function UserManagement() {
                 <TableBody>
                   {isLoading || isRefreshing ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={9} className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <Loader2 className="h-6 w-6 animate-spin mr-2" />
                           {isRefreshing ? "Đang cập nhật..." : "Đang tải..."}
@@ -647,7 +648,7 @@ export function UserManagement() {
                     </TableRow>
                   ) : users.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={9} className="text-center py-8">
                         <div className="flex flex-col items-center space-y-2">
                           <AlertCircle className="h-8 w-8 text-muted-foreground" />
                           <p className="text-muted-foreground">
@@ -657,8 +658,11 @@ export function UserManagement() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map((user: User) => (
+                    users.map((user: User, index: number) => (
                       <TableRow key={user.id}>
+                        <TableCell className="font-medium">
+                          {(currentPage - 1) * 10 + index + 1}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-8 w-8">
