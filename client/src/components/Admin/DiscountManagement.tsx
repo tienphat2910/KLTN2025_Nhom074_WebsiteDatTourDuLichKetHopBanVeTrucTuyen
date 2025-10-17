@@ -403,6 +403,7 @@ export function DiscountManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">STT</TableHead>
                   <TableHead>Mã giảm giá</TableHead>
                   <TableHead>Loại & Giá trị</TableHead>
                   <TableHead>Thời gian áp dụng</TableHead>
@@ -414,22 +415,25 @@ export function DiscountManagement() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                       <p className="mt-2 text-muted-foreground">Đang tải...</p>
                     </TableCell>
                   </TableRow>
                 ) : discounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <p className="text-muted-foreground">
                         Không tìm thấy mã giảm giá nào
                       </p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  discounts.map((discount) => (
+                  discounts.map((discount, index) => (
                     <TableRow key={discount._id}>
+                      <TableCell className="font-medium">
+                        {(currentPage - 1) * 10 + index + 1}
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-mono font-medium text-sm bg-muted px-2 py-1 rounded inline-block">

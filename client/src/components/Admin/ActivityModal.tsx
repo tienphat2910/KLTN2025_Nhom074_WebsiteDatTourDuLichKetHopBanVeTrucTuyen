@@ -120,6 +120,7 @@ export function ActivityModal({
   const [isLoading, setIsLoading] = useState(false);
   const [newFeature, setNewFeature] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [detailItems, setDetailItems] = useState<number[]>([1]); // Start with only item 1
 
   // Load destinations on mount
   useEffect(() => {
@@ -166,6 +167,24 @@ export function ActivityModal({
         popular: activity.popular || false,
         destinationId: activity.destinationId || ""
       });
+
+      // Initialize detail items based on existing data
+      const existingItems: number[] = [];
+      const details = activity.detail;
+      if (details) {
+        if (details.d1?.trim()) existingItems.push(1);
+        if (details.d2?.trim()) existingItems.push(2);
+        if (details.d3?.trim()) existingItems.push(3);
+        if (details.d4?.trim()) existingItems.push(4);
+        if (details.d5?.trim()) existingItems.push(5);
+        if (details.d6?.trim()) existingItems.push(6);
+        if (details.d7?.trim()) existingItems.push(7);
+      }
+      // Always show at least item 1
+      if (existingItems.length === 0) {
+        existingItems.push(1);
+      }
+      setDetailItems(existingItems);
     } else {
       // Reset form for new activity
       setFormData({
@@ -205,6 +224,7 @@ export function ActivityModal({
         popular: false,
         destinationId: ""
       });
+      setDetailItems([1]); // Reset to only show item 1
     }
   }, [activity]);
 
@@ -213,8 +233,8 @@ export function ActivityModal({
       const response = await destinationService.getDestinations();
       if (response.success && response.data) {
         // Handle both array and object with destinations property
-        const destinationsArray = Array.isArray(response.data) 
-          ? response.data 
+        const destinationsArray = Array.isArray(response.data)
+          ? response.data
           : response.data.destinations || [];
         setDestinations(destinationsArray);
       }
@@ -286,6 +306,49 @@ export function ActivityModal({
       ...prev,
       gallery: prev.gallery.filter((_, i) => i !== index)
     }));
+  };
+
+  const addDetailItem = () => {
+    const nextItem = Math.max(...detailItems) + 1;
+    if (nextItem <= 7) {
+      setDetailItems((prev) => [...prev, nextItem]);
+    }
+  };
+
+  const removeDetailItem = (itemNumber: number) => {
+    if (detailItems.length > 1) {
+      const sortedItems = detailItems.sort((a, b) => a - b);
+      const remainingItems = sortedItems.filter((item) => item !== itemNumber);
+
+      // Create new detail object with renumbered content
+      const newDetail = { ...formData.detail };
+
+      // Clear all detail fields first
+      Object.keys(newDetail).forEach((key) => {
+        newDetail[key as keyof typeof newDetail] = "";
+      });
+
+      // Copy content to consecutive positions starting from d1
+      remainingItems.forEach((oldItemNumber, index) => {
+        const newPosition = index + 1; // 1, 2, 3, etc.
+        const oldKey = `d${oldItemNumber}` as keyof typeof formData.detail;
+        const newKey = `d${newPosition}` as keyof typeof formData.detail;
+        newDetail[newKey] = formData.detail[oldKey];
+      });
+
+      // Create new detailItems array with consecutive numbers
+      const newDetailItems = Array.from(
+        { length: remainingItems.length },
+        (_, i) => i + 1
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        detail: newDetail
+      }));
+
+      setDetailItems(newDetailItems);
+    }
   };
 
   return (
@@ -654,27 +717,64 @@ export function ActivityModal({
 
           {/* Details */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Chi tiết hoạt động</h3>
-            {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-              <div key={day}>
-                <Label htmlFor={`detail-d${day}`}>Mục {day}</Label>
-                <Textarea
-                  id={`detail-d${day}`}
-                  value={formData.detail[`d${day}` as keyof typeof formData.detail]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      detail: {
-                        ...formData.detail,
-                        [`d${day}`]: e.target.value
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Chi tiết hoạt động</h3>
+              {detailItems.length < 7 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDetailItem}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm mục
+                </Button>
+              )}
+            </div>
+            <div className="space-y-4">
+              {detailItems
+                .sort((a, b) => a - b)
+                .map((itemNumber) => (
+                  <div key={itemNumber} className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label htmlFor={`detail-d${itemNumber}`}>
+                        Mục {itemNumber}
+                      </Label>
+                      {detailItems.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDetailItem(itemNumber)}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <Textarea
+                      id={`detail-d${itemNumber}`}
+                      value={
+                        formData.detail[
+                          `d${itemNumber}` as keyof typeof formData.detail
+                        ] || ""
                       }
-                    })
-                  }
-                  placeholder={`Nội dung chi tiết mục ${day}...`}
-                  rows={2}
-                />
-              </div>
-            ))}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          detail: {
+                            ...formData.detail,
+                            [`d${itemNumber}` as keyof typeof formData.detail]:
+                              e.target.value
+                          }
+                        })
+                      }
+                      placeholder={`Nội dung chi tiết mục ${itemNumber}...`}
+                      rows={2}
+                    />
+                  </div>
+                ))}
+            </div>
           </div>
 
           {/* Gallery */}
@@ -725,11 +825,7 @@ export function ActivityModal({
               Hủy
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading
-                ? "Đang lưu..."
-                : activity
-                ? "Cập nhật"
-                : "Tạo mới"}
+              {isLoading ? "Đang lưu..." : activity ? "Cập nhật" : "Tạo mới"}
             </Button>
           </DialogFooter>
         </form>
