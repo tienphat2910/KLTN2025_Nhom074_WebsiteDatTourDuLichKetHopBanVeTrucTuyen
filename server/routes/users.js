@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
 const router = express.Router();
 
 /**
@@ -82,7 +83,7 @@ const router = express.Router();
  *                         pages:
  *                           type: integer
  */
-router.get('/', auth, async (req, res) => {
+router.get('/', admin, async (req, res) => {
     try {
         // Check if user is admin
         if (req.user.role !== 'admin') {
@@ -194,7 +195,7 @@ router.get('/', auth, async (req, res) => {
  *       404:
  *         description: User not found
  */
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', admin, async (req, res) => {
     try {
         // Check if user is admin
         if (req.user.role !== 'admin') {
@@ -277,7 +278,7 @@ router.get('/:id', auth, async (req, res) => {
  *       200:
  *         description: User updated successfully
  */
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', admin, async (req, res) => {
     try {
         // Check if user is admin
         if (req.user.role !== 'admin') {
@@ -356,7 +357,7 @@ router.put('/:id', auth, async (req, res) => {
  *       200:
  *         description: User deleted successfully
  */
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', admin, async (req, res) => {
     try {
         // Check if user is admin
         if (req.user.role !== 'admin') {
@@ -407,7 +408,7 @@ router.delete('/:id', auth, async (req, res) => {
  *       200:
  *         description: User banned successfully
  */
-router.post('/:id/ban', auth, async (req, res) => {
+router.post('/:id/ban', admin, async (req, res) => {
     try {
         // Check if user is admin
         if (req.user.role !== 'admin') {
@@ -464,7 +465,7 @@ router.post('/:id/ban', auth, async (req, res) => {
  *       200:
  *         description: User unbanned successfully
  */
-router.post('/:id/unban', auth, async (req, res) => {
+router.post('/:id/unban', admin, async (req, res) => {
     try {
         // Check if user is admin
         if (req.user.role !== 'admin') {

@@ -672,6 +672,76 @@ const options = {
                         createdAt: { type: 'string', format: 'date-time' },
                         updatedAt: { type: 'string', format: 'date-time' }
                     }
+                },
+                Discount: {
+                    type: 'object',
+                    required: ['code', 'description', 'discountType', 'value', 'validFrom', 'validUntil', 'usageLimit'],
+                    properties: {
+                        _id: {
+                            type: 'string',
+                            description: 'Discount ID'
+                        },
+                        code: {
+                            type: 'string',
+                            description: 'Discount code (uppercase)',
+                            example: 'WELCOME50K'
+                        },
+                        description: {
+                            type: 'string',
+                            description: 'Discount description',
+                            example: 'Mã giảm giá chào mừng thành viên mới'
+                        },
+                        discountType: {
+                            type: 'string',
+                            enum: ['percentage', 'fixed'],
+                            description: 'Type of discount',
+                            example: 'fixed'
+                        },
+                        value: {
+                            type: 'number',
+                            description: 'Discount value (percentage 0-100 or fixed amount)',
+                            example: 50000
+                        },
+                        validFrom: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Start date',
+                            example: '2024-01-01T00:00:00.000Z'
+                        },
+                        validUntil: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'End date',
+                            example: '2024-12-31T23:59:59.000Z'
+                        },
+                        usageLimit: {
+                            type: 'number',
+                            description: 'Maximum usage count',
+                            example: 500
+                        },
+                        usedCount: {
+                            type: 'number',
+                            description: 'Current usage count',
+                            default: 0,
+                            example: 123
+                        },
+                        isActive: {
+                            type: 'boolean',
+                            description: 'Whether discount is active',
+                            default: true,
+                            example: true
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation date'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update date'
+                        }
+                    }
                 }
             },
             tags: [
@@ -682,7 +752,8 @@ const options = {
                 { name: 'Destinations', description: 'Operations about destinations' },
                 { name: 'Activities', description: 'Các hoạt động giải trí, tham quan, vui chơi' },
                 { name: 'Booking', description: 'Operations about booking' },
-                { name: 'BookingTour', description: 'Operations about booking tour' }
+                { name: 'BookingTour', description: 'Operations about booking tour' },
+                { name: 'Discounts', description: 'Discount code management' }
             ]
         }
     },
