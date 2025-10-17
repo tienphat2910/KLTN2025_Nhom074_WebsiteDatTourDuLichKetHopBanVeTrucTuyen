@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { env } from "@/config/env";
 
 function formatVND(amount: number) {
   return amount?.toLocaleString("vi-VN") + "đ";
@@ -12,32 +13,32 @@ function formatVND(amount: number) {
 
 export default function ActivityDetail() {
   const { slug } = useParams();
+  const router = useRouter();
   const [activity, setActivity] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
   const [adultCount, setAdultCount] = useState(1);
   const [childCount, setChildCount] = useState(0);
+  const [babyCount, setBabyCount] = useState(0);
   const [seniorCount, setSeniorCount] = useState(0);
+  const [selectedDate, setSelectedDate] = useState("");
 
   useEffect(() => {
     if (!slug) return;
     axios
-      .get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        }/api/activities/slug/${slug}`
-      )
+      .get(`${env.API_BASE_URL}/activities/slug/${slug}`)
       .then((res) => {
         if (res.data.success) setActivity(res.data.data);
       })
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const getPrice = (type: "adult" | "child" | "senior") => {
+  const getPrice = (type: "adult" | "child" | "baby" | "senior") => {
     if (!activity?.price?.retail) return 0;
     if (type === "adult") return activity.price.retail.adult || 0;
     if (type === "child") return activity.price.retail.child || 0;
+    if (type === "baby") return activity.price.retail.baby || 0;
     if (type === "senior") return activity.price.retail.senior || 0;
     return 0;
   };
@@ -45,7 +46,32 @@ export default function ActivityDetail() {
   const totalPrice =
     getPrice("adult") * adultCount +
     getPrice("child") * childCount +
+    getPrice("baby") * babyCount +
     getPrice("senior") * seniorCount;
+
+  const handleBooking = () => {
+    if (!selectedDate) {
+      alert("Vui lòng chọn ngày tham gia!");
+      return;
+    }
+
+    if (!activity?._id) {
+      alert("Không tìm thấy thông tin hoạt động!");
+      return;
+    }
+
+    // Construct booking URL with parameters
+    const params = new URLSearchParams({
+      activityId: activity._id,
+      adults: adultCount.toString(),
+      children: childCount.toString(),
+      babies: babyCount.toString(),
+      seniors: seniorCount.toString(),
+      date: selectedDate,
+    });
+
+    router.push(`/bookingactivity?${params.toString()}`);
+  };
 
   if (loading) {
     return (
@@ -336,6 +362,20 @@ export default function ActivityDetail() {
                 <p className="text-gray-500 text-sm">Giá/người lớn</p>
                 {/* Số lượng người */}
                 <div className="mt-4 mb-4 space-y-3">
+                  {/* Chọn ngày */}
+                  <div className="mb-4">
+                    <label className="block font-medium text-gray-700 mb-2 text-left">
+                      Chọn ngày tham gia
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <div className="min-w-[110px]">
                       <span className="font-medium text-gray-700 block text-left">
@@ -403,6 +443,38 @@ export default function ActivityDetail() {
                   <div className="flex items-center justify-between">
                     <div className="min-w-[110px]">
                       <span className="font-medium text-gray-700 block text-left">
+                        Em bé
+                      </span>
+                      <span className="block text-base text-gray-600 text-left mt-1">
+                        {formatVND(getPrice("baby"))}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        className="w-8 h-8 rounded-full bg-white border border-orange-300 flex items-center justify-center text-orange-600 hover:bg-orange-50 transition"
+                        onClick={() =>
+                          setBabyCount(Math.max(0, babyCount - 1))
+                        }
+                        disabled={babyCount <= 0}
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center font-medium bg-white rounded-md px-2 py-1 border border-orange-200 text-orange-700">
+                        {babyCount}
+                      </span>
+                      <button
+                        type="button"
+                        className="w-8 h-8 rounded-full bg-white border border-orange-300 flex items-center justify-center text-orange-600 hover:bg-orange-50 transition"
+                        onClick={() => setBabyCount(babyCount + 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-[110px]">
+                      <span className="font-medium text-gray-700 block text-left">
                         Người cao tuổi
                       </span>
                       <span className="block text-base text-gray-600 text-left mt-1">
@@ -458,7 +530,10 @@ export default function ActivityDetail() {
                   </div>
                 )}
               </div>
-              <button className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-base">
+              <button 
+                onClick={handleBooking}
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-base"
+              >
                 Đặt vé ngay
               </button>
               <div className="mt-6 p-4 border border-gray-200 rounded-lg">
