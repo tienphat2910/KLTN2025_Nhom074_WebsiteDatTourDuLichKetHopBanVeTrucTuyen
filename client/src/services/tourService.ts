@@ -213,8 +213,33 @@ export const tourService = {
     }
   },
 
-  // Update tour by ID
-  updateTour: async (id: string, data: Partial<Tour>): Promise<ApiResponse<Tour>> => {
+  // Create new tour (Admin only)
+  createTour: async (tourData: Partial<Tour>): Promise<ApiResponse<Tour>> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/tours`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(tourData)
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Create tour error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Update tour by ID (regular API - no admin auth required)
+  updateTour: async (
+    id: string,
+    data: Partial<Tour>
+  ): Promise<ApiResponse<Tour>> => {
     try {
       const response = await fetch(`${API_BASE_URL}/tours/${id}`, {
         method: "PUT",
@@ -230,6 +255,99 @@ export const tourService = {
       return {
         success: false,
         message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Update tour (Admin only)
+  updateTourAdmin: async (
+    id: string,
+    tourData: Partial<Tour>
+  ): Promise<ApiResponse<Tour>> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(tourData)
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Update tour admin error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Delete tour (Admin only)
+  deleteTour: async (id: string): Promise<ApiResponse<void>> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Delete tour error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Get tours for admin (Admin only)
+  getToursAdmin: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+    isFeatured?: boolean;
+  }): Promise<ToursResponse> => {
+    try {
+      const queryParams = new URLSearchParams();
+
+      if (params?.page) queryParams.append("page", params.page.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.search) queryParams.append("search", params.search);
+      if (params?.isActive !== undefined)
+        queryParams.append("isActive", params.isActive.toString());
+      if (params?.isFeatured !== undefined)
+        queryParams.append("isFeatured", params.isFeatured.toString());
+
+      const response = await fetch(
+        `${API_BASE_URL}/admin/tours?${queryParams}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          }
+        }
+      );
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Get tours admin error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server",
+        data: {
+          tours: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalTours: 0,
+            hasNext: false,
+            hasPrev: false
+          }
+        }
       };
     }
   },

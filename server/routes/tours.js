@@ -115,19 +115,14 @@ router.get('/', async (req, res) => {
             filter.endDate = { $lte: end };
         }
 
-        // Use $or condition to include tours where isActive is true OR undefined/null
+        // No additional filter for isActive - show all tours for admin management
         const enhancedFilter = {
-            ...filter,
-            $or: [
-                { isActive: true },
-                { isActive: { $exists: false } },
-                { isActive: null }
-            ]
+            ...filter
         };
 
         console.log('🔍 Tour filter:', enhancedFilter);
 
-        // Get tours with pagination
+        // Get tours with pagination - now includes all tours for admin management
         const tours = await Tour.find(enhancedFilter)
             .select('title slug description destinationId departureLocation itinerary startDate endDate price discount pricingByAge seats availableSeats images isFeatured rating reviewCount category duration isActive')
             .sort({ isFeatured: -1, createdAt: -1 })
