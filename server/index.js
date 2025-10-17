@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const { specs, swaggerUi } = require('./swagger');
+const { initSocket } = require('./utils/socketHandler');
 require("dotenv").config(); // Load biến môi trường từ .env
 
 const app = express();
@@ -126,7 +127,11 @@ app.use((error, req, res, next) => {
 });
 
 // Khởi chạy server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🌐 Server chạy tại: http://localhost:${PORT}`);
     console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
 });
+
+// Khởi tạo Socket.IO
+initSocket(server);
+console.log('🔌 Socket.IO đã được khởi tạo');
