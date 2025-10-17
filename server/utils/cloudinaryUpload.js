@@ -66,7 +66,66 @@ const deleteAvatar = async (publicId) => {
     }
 };
 
+// Upload destination image to Cloudinary
+const uploadDestinationImage = async (file, destinationId) => {
+    try {
+        console.log('Starting Cloudinary upload for destination:', destinationId);
+        console.log('File path:', file.path);
+
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(file.path, {
+            folder: 'LuTrip/destinations',
+            public_id: `destination_${destinationId}_${Date.now()}`,
+            transformation: [
+                { width: 800, height: 600, crop: 'fill' },
+                { quality: 'auto', fetch_format: 'auto' }
+            ],
+            overwrite: true
+        });
+
+        console.log('Cloudinary upload successful:', result.secure_url);
+
+        // Clean up temporary file
+        try {
+            await fs.unlink(file.path);
+            console.log('Temporary file cleaned up');
+        } catch (cleanupError) {
+            console.warn('Failed to clean up temporary file:', cleanupError.message);
+        }
+
+        return {
+            url: result.secure_url,
+            public_id: result.public_id
+        };
+    } catch (error) {
+        console.error('Cloudinary upload error:', error);
+
+        // Clean up temporary file on error
+        try {
+            await fs.unlink(file.path);
+        } catch (cleanupError) {
+            console.warn('Failed to clean up temporary file after error:', cleanupError.message);
+        }
+
+        throw new Error(`Upload failed: ${error.message}`);
+    }
+};
+
+// Delete destination image from Cloudinary
+const deleteDestinationImage = async (publicId) => {
+    try {
+        const result = await cloudinary.uploader.destroy(publicId);
+        console.log('Cloudinary delete result:', result);
+        return result;
+    } catch (error) {
+        console.error('Cloudinary delete error:', error);
+        throw new Error(`Delete failed: ${error.message}`);
+    }
+};
+
 module.exports = {
     uploadAvatar,
-    deleteAvatar
+    deleteAvatar,
+    uploadDestinationImage,
+    deleteDestinationImage
 };

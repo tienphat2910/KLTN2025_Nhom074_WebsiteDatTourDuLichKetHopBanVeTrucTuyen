@@ -472,7 +472,7 @@ const options = {
                 },
                 Destination: {
                     type: 'object',
-                    required: ['_id', 'name', 'country', 'description', 'image'],
+                    required: ['_id', 'name', 'description', 'image'],
                     properties: {
                         _id: {
                             type: 'string',
@@ -483,12 +483,6 @@ const options = {
                             type: 'string',
                             description: 'Destination name',
                             example: 'TP. Hồ Chí Minh'
-                        },
-                        country: {
-                            type: 'string',
-                            description: 'Country name',
-                            default: 'Việt Nam',
-                            example: 'Việt Nam'
                         },
                         description: {
                             type: 'string',
@@ -513,7 +507,7 @@ const options = {
                         },
                         region: {
                             type: 'string',
-                            enum: ['Miền Bắc', 'Miền Trung', 'Miền Nam'],
+                            enum: ['Miền Bắc', 'Miền Trung', 'Miền Nam', 'Tây Nguyên'],
                             description: 'Vietnamese region',
                             example: 'Miền Nam'
                         },

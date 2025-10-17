@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import PageTransition from "@/components/Loading/PageTransition";
 import { Toaster } from "sonner";
+import { RouteGuard } from "@/components/Auth";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,10 +21,10 @@ const poppins = Poppins({
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <RouteGuard>
       <PageTransition />
       {children}
-    </>
+    </RouteGuard>
   );
 }
 

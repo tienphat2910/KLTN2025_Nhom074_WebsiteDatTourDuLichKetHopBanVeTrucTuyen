@@ -2,6 +2,19 @@ import { env } from "@/config/env";
 
 const API_BASE_URL = env.API_BASE_URL;
 
+// Helper function to get the correct token based on user role
+const getToken = (): string | null => {
+  // First try admin token
+  const adminToken = localStorage.getItem("lutrip_admin_token");
+  if (adminToken) return adminToken;
+
+  // Then try regular token
+  const regularToken = localStorage.getItem("lutrip_token");
+  if (regularToken) return regularToken;
+
+  return null;
+};
+
 export interface RegisterData {
   fullName: string;
   email: string;
@@ -119,9 +132,11 @@ export const authService = {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid
+        // Token expired or invalid - clear both token types
         localStorage.removeItem("lutrip_token");
         localStorage.removeItem("lutrip_user");
+        localStorage.removeItem("lutrip_admin_token");
+        localStorage.removeItem("lutrip_admin_user");
         return {
           success: false,
           message: "Phiên đăng nhập đã hết hạn"
@@ -148,7 +163,7 @@ export const authService = {
     bio?: string;
   }): Promise<AuthResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         return {
           success: false,
@@ -205,7 +220,7 @@ export const authService = {
   // Upload avatar to Cloudinary
   uploadAvatar: async (formData: FormData): Promise<AuthResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         return {
           success: false,
@@ -292,7 +307,7 @@ export const authService = {
   // Delete avatar
   deleteAvatar: async (): Promise<AuthResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         return {
           success: false,

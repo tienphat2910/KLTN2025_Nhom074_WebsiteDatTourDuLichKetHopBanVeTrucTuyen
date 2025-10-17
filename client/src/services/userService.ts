@@ -2,6 +2,19 @@ import { env } from "@/config/env";
 
 const API_BASE_URL = env.API_BASE_URL;
 
+// Helper function to get the correct token based on user role
+const getToken = (): string | null => {
+  // First try admin token
+  const adminToken = localStorage.getItem("lutrip_admin_token");
+  if (adminToken) return adminToken;
+
+  // Then try regular token
+  const regularToken = localStorage.getItem("lutrip_token");
+  if (regularToken) return regularToken;
+
+  return null;
+};
+
 export interface User {
   _id: string;
   fullName: string;
@@ -19,10 +32,10 @@ export interface User {
 
 export interface UserFormData {
   fullName: string;
-  email: string;
+  email?: string; // Email is not editable but kept for reference
   phone?: string;
   role: "user" | "admin";
-  isVerified?: boolean;
+  status: "active" | "inactive" | "banned";
 }
 
 export interface UsersResponse {
@@ -61,7 +74,7 @@ export const userService = {
     role?: string;
   }): Promise<UsersResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         throw new Error("No authentication token found");
       }
@@ -101,7 +114,7 @@ export const userService = {
   // Get user by ID
   getUserById: async (userId: string): Promise<UserResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         throw new Error("No authentication token found");
       }
@@ -137,7 +150,7 @@ export const userService = {
     userData: Partial<UserFormData>
   ): Promise<UpdateUserResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         throw new Error("No authentication token found");
       }
@@ -173,7 +186,7 @@ export const userService = {
     userId: string
   ): Promise<{ success: boolean; message?: string }> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         throw new Error("No authentication token found");
       }
@@ -205,7 +218,7 @@ export const userService = {
   // Ban user
   banUser: async (userId: string): Promise<UpdateUserResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         throw new Error("No authentication token found");
       }
@@ -238,7 +251,7 @@ export const userService = {
   // Unban user
   unbanUser: async (userId: string): Promise<UpdateUserResponse> => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         throw new Error("No authentication token found");
       }

@@ -2,6 +2,19 @@ import { env } from "@/config/env";
 
 const API_BASE_URL = env.API_BASE_URL;
 
+// Helper function to get the correct token based on user role
+const getToken = (): string | null => {
+  // First try admin token
+  const adminToken = localStorage.getItem("lutrip_admin_token");
+  if (adminToken) return adminToken;
+
+  // Then try regular token
+  const regularToken = localStorage.getItem("lutrip_token");
+  if (regularToken) return regularToken;
+
+  return null;
+};
+
 export interface PassengerInfo {
   fullName: string;
   phone?: string;
@@ -33,9 +46,12 @@ export interface BookingFlightPayload {
 export const bookingFlightService = {
   createBookingFlight: async (payload: BookingFlightPayload) => {
     try {
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
-        return { success: false, message: "Vui lòng đăng nhập để đặt vé máy bay" };
+        return {
+          success: false,
+          message: "Vui lòng đăng nhập để đặt vé máy bay"
+        };
       }
       if (!payload.flightId || payload.subtotal <= 0) {
         return { success: false, message: "Thông tin đặt vé không hợp lệ" };
@@ -59,7 +75,9 @@ export const bookingFlightService = {
       if (!bookingRes.ok || !bookingData.success || !bookingData.data?._id) {
         if (bookingRes.status === 401) {
           localStorage.removeItem("lutrip_token");
+          localStorage.removeItem("lutrip_admin_token");
           localStorage.removeItem("lutrip_user");
+          localStorage.removeItem("lutrip_admin_user");
           return {
             success: false,
             message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",

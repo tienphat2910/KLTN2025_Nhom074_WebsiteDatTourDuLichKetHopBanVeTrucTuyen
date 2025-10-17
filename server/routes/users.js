@@ -112,14 +112,9 @@ router.get('/', auth, async (req, res) => {
             ];
         }
 
-        // Status filter (for admin purposes, we'll consider isVerified as status)
+        // Status filter
         if (status) {
-            if (status === 'active') {
-                query.isVerified = true;
-            } else if (status === 'inactive') {
-                query.isVerified = false;
-            }
-            // Note: 'banned' status would need additional implementation
+            query.status = status;
         }
 
         // Role filter
@@ -151,8 +146,8 @@ router.get('/', auth, async (req, res) => {
                     ...user,
                     totalBookings,
                     totalSpent,
-                    // Map isVerified to status for frontend compatibility
-                    status: user.isVerified ? 'active' : 'inactive'
+                    // Status is now stored directly in the database
+                    status: user.status || 'inactive'
                 };
             })
         );
@@ -230,7 +225,7 @@ router.get('/:id', auth, async (req, res) => {
             ...user.toObject(),
             totalBookings,
             totalSpent,
-            status: user.isVerified ? 'active' : 'inactive'
+            status: user.status || 'inactive'
         };
 
         res.json({
@@ -275,8 +270,9 @@ router.get('/:id', auth, async (req, res) => {
  *               role:
  *                 type: string
  *                 enum: [user, admin]
- *               isVerified:
- *                 type: boolean
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, banned]
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -291,7 +287,7 @@ router.put('/:id', auth, async (req, res) => {
             });
         }
 
-        const { fullName, phone, role, isVerified } = req.body;
+        const { fullName, phone, role, status } = req.body;
 
         // Validate input
         if (role && !['user', 'admin'].includes(role)) {
@@ -301,11 +297,18 @@ router.put('/:id', auth, async (req, res) => {
             });
         }
 
+        if (status && !['active', 'inactive', 'banned'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Trạng thái không hợp lệ'
+            });
+        }
+
         const updateData = {};
         if (fullName !== undefined) updateData.fullName = fullName;
         if (phone !== undefined) updateData.phone = phone;
         if (role !== undefined) updateData.role = role;
-        if (isVerified !== undefined) updateData.isVerified = isVerified;
+        if (status !== undefined) updateData.status = status;
 
         const user = await User.findByIdAndUpdate(
             req.params.id,
@@ -414,11 +417,10 @@ router.post('/:id/ban', auth, async (req, res) => {
             });
         }
 
-        // For now, we'll implement banning by setting isVerified to false
-        // In a real application, you might want a separate banned field
+        // Set user status to banned
         const user = await User.findByIdAndUpdate(
             req.params.id,
-            { isVerified: false },
+            { status: 'banned' },
             { new: true }
         ).select('-password -verificationCode -verificationCodeExpires -resetPasswordCode -resetPasswordExpires');
 
@@ -474,7 +476,7 @@ router.post('/:id/unban', auth, async (req, res) => {
 
         const user = await User.findByIdAndUpdate(
             req.params.id,
-            { isVerified: true },
+            { status: 'active' },
             { new: true }
         ).select('-password -verificationCode -verificationCodeExpires -resetPasswordCode -resetPasswordExpires');
 

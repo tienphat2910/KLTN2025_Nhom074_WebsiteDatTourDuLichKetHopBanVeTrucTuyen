@@ -56,24 +56,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         console.log("Starting initial auth check...");
 
-        // Check localStorage first (synchronous)
+        // Check localStorage for both regular and admin tokens
         const savedToken = localStorage.getItem("lutrip_token");
         const savedUser = localStorage.getItem("lutrip_user");
+        const adminToken = localStorage.getItem("lutrip_admin_token");
+        const adminUser = localStorage.getItem("lutrip_admin_user");
 
         console.log("Saved data exists:", {
           token: !!savedToken,
-          user: !!savedUser
+          user: !!savedUser,
+          adminToken: !!adminToken,
+          adminUser: !!adminUser
         });
 
-        if (savedToken && savedUser) {
+        // Prioritize admin tokens if they exist
+        if (adminToken && adminUser) {
           try {
-            const parsedUser = JSON.parse(savedUser);
-            console.log("Setting user from localStorage immediately");
-
-            // Set user immediately to prevent redirect
+            const parsedUser = JSON.parse(adminUser);
+            console.log("Setting admin user from localStorage immediately");
             setUser(parsedUser);
 
-            // Then validate token in background (don't await)
+            // Validate admin token in background
+            authService
+              .getProfile(adminToken)
+              .then((profileResult) => {
+                if (!profileResult.success || !profileResult.data) {
+                  console.log("Admin token invalid, clearing auth data");
+                  localStorage.removeItem("lutrip_admin_token");
+                  localStorage.removeItem("lutrip_admin_user");
+                  setUser(null);
+                } else {
+                  console.log("Admin token validated successfully");
+                }
+              })
+              .catch((error) => {
+                console.error("Admin token validation failed:", error);
+                localStorage.removeItem("lutrip_admin_token");
+                localStorage.removeItem("lutrip_admin_user");
+                setUser(null);
+              });
+          } catch (parseError) {
+            console.error("Error parsing saved admin user:", parseError);
+            localStorage.removeItem("lutrip_admin_token");
+            localStorage.removeItem("lutrip_admin_user");
+            setUser(null);
+          }
+        } else if (savedToken && savedUser) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            console.log("Setting regular user from localStorage immediately");
+            setUser(parsedUser);
+
+            // Validate regular token in background
             authService
               .getProfile(savedToken)
               .then((profileResult) => {
@@ -106,6 +140,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error in auth check:", error);
         localStorage.removeItem("lutrip_token");
         localStorage.removeItem("lutrip_user");
+        localStorage.removeItem("lutrip_admin_token");
+        localStorage.removeItem("lutrip_admin_user");
         setUser(null);
       } finally {
         console.log("Auth check completed");
@@ -121,15 +157,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = (userData: User, userToken: string) => {
     console.log("Logging in user:", userData.email);
     setUser(userData);
-    localStorage.setItem("lutrip_token", userToken);
-    localStorage.setItem("lutrip_user", JSON.stringify(userData));
+
+    // Store token based on role
+    if (userData.role === "admin") {
+      // Store admin token temporarily (will be cleared when leaving admin pages)
+      localStorage.setItem("lutrip_admin_token", userToken);
+      localStorage.setItem("lutrip_admin_user", JSON.stringify(userData));
+    } else {
+      // Store regular user tokens persistently
+      localStorage.setItem("lutrip_token", userToken);
+      localStorage.setItem("lutrip_user", JSON.stringify(userData));
+    }
   };
 
   const logout = () => {
     console.log("Logging out user");
     setUser(null);
+    // Clear all tokens
     localStorage.removeItem("lutrip_token");
     localStorage.removeItem("lutrip_user");
+    localStorage.removeItem("lutrip_admin_token");
+    localStorage.removeItem("lutrip_admin_user");
     setHasCheckedAuth(false); // Reset auth check flag
     toast.success("Đăng xuất thành công!", {
       description: "Hẹn gặp lại bạn!",
