@@ -455,7 +455,7 @@ router.put('/profile', auth, async (req, res) => {
  *               avatar:
  *                 type: string
  *                 format: binary
- *                 description: Avatar image file (max 5MB, formats: JPG, PNG, WEBP)
+ *                 description: "Avatar image file (max 5MB, formats: JPG, PNG, WEBP)"
  *     responses:
  *       200:
  *         description: Avatar uploaded successfully

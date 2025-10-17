@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { tourService, Tour } from "@/services/tourService";
 import { bookingTourService } from "@/services/bookingTourService";
 import { paymentService } from "@/services/paymentService";
+import { discountService } from "@/services/discountService";
+import { Discount } from "@/types/discount";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -36,6 +38,11 @@ export default function BookingTourPage() {
   const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>(""); // Add payment method state
+
+  // Discount information
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(null);
+  const [applyingDiscount, setApplyingDiscount] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -129,6 +136,58 @@ export default function BookingTourPage() {
     }
   };
 
+  // Apply discount code
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) {
+      toast.error("Vui lòng nhập mã giảm giá!");
+      return;
+    }
+
+    setApplyingDiscount(true);
+    try {
+      const response = await discountService.validateDiscount(
+        discountCode.trim().toUpperCase()
+      );
+
+      if (response.success && response.data) {
+        setAppliedDiscount(response.data);
+        toast.success("Áp dụng mã giảm giá thành công!");
+      } else {
+        setAppliedDiscount(null);
+        toast.error(response.message || "Mã giảm giá không hợp lệ!");
+      }
+    } catch (error) {
+      console.error("Validate discount error:", error);
+      setAppliedDiscount(null);
+      toast.error("Có lỗi xảy ra khi kiểm tra mã giảm giá!");
+    } finally {
+      setApplyingDiscount(false);
+    }
+  };
+
+  // Remove applied discount
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCode("");
+    toast.success("Đã xóa mã giảm giá!");
+  };
+
+  // Calculate discount amount
+  const calculateDiscountAmount = (subtotal: number) => {
+    if (!appliedDiscount) return 0;
+
+    if (appliedDiscount.discountType === "percentage") {
+      return Math.round((subtotal * appliedDiscount.value) / 100);
+    } else {
+      return Math.min(appliedDiscount.value, subtotal);
+    }
+  };
+
+  // Calculate final total after discount
+  const calculateFinalTotal = (subtotal: number) => {
+    return subtotal - calculateDiscountAmount(subtotal);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -186,17 +245,20 @@ export default function BookingTourPage() {
 
     try {
       // Calculate total amount
-      const totalAmount =
+      const subtotal =
         adults * tour.pricingByAge.adult +
         children * tour.pricingByAge.child +
         infants * tour.pricingByAge.infant;
+
+      const discountAmount = calculateDiscountAmount(subtotal);
+      const finalTotal = calculateFinalTotal(subtotal);
 
       // If payment method is MoMo, handle MoMo payment flow
       if (paymentMethod === "momo") {
         try {
           // Create MoMo payment
           const momoResponse = await paymentService.createMoMoPayment({
-            amount: totalAmount,
+            amount: finalTotal,
             orderInfo: `Thanh toán tour: ${tour.title}`,
             extraData: JSON.stringify({
               tourId: tour._id,
@@ -204,7 +266,9 @@ export default function BookingTourPage() {
               numChildren: children,
               numInfants: infants,
               passengers,
-              note
+              note,
+              discountCode: appliedDiscount?.code,
+              discountAmount
             })
           });
 
@@ -216,7 +280,10 @@ export default function BookingTourPage() {
               numChildren: children,
               numInfants: infants,
               priceByAge: tour.pricingByAge,
-              subtotal: totalAmount,
+              subtotal: subtotal,
+              discountAmount,
+              finalTotal,
+              discountCode: appliedDiscount?.code,
               status: "pending",
               passengers,
               note,
@@ -253,7 +320,10 @@ export default function BookingTourPage() {
         numChildren: children,
         numInfants: infants,
         priceByAge: tour.pricingByAge,
-        subtotal: totalAmount,
+        subtotal: subtotal,
+        discountAmount,
+        finalTotal,
+        discountCode: appliedDiscount?.code,
         status: "pending",
         passengers,
         note,
@@ -329,14 +399,21 @@ export default function BookingTourPage() {
               </span>
               <span>
                 💰 Tổng:{" "}
-                {tour.pricingByAge
-                  ? (
-                      adults * tour.pricingByAge.adult +
+                {(() => {
+                  const subtotal = tour.pricingByAge
+                    ? adults * tour.pricingByAge.adult +
                       children * tour.pricingByAge.child +
                       infants * tour.pricingByAge.infant
-                    ).toLocaleString("vi-VN")
-                  : 0}{" "}
+                    : 0;
+                  const finalTotal = calculateFinalTotal(subtotal);
+                  return finalTotal.toLocaleString("vi-VN");
+                })()}{" "}
                 đ
+                {appliedDiscount && (
+                  <span className="ml-2 text-yellow-300 text-sm">
+                    (Đã áp dụng mã giảm giá)
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -505,6 +582,95 @@ export default function BookingTourPage() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Discount Code Section */}
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                Mã giảm giá (không bắt buộc)
+              </h3>
+
+              {!appliedDiscount ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400 uppercase"
+                    value={discountCode}
+                    onChange={(e) =>
+                      setDiscountCode(e.target.value.toUpperCase())
+                    }
+                    placeholder="Nhập mã giảm giá"
+                    disabled={applyingDiscount}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyDiscount}
+                    disabled={applyingDiscount || !discountCode.trim()}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    {applyingDiscount ? (
+                      <span className="flex items-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Đang kiểm tra...
+                      </span>
+                    ) : (
+                      "Áp dụng"
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 font-bold">✓</span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-green-800">
+                          Mã giảm giá: {appliedDiscount.code}
+                        </p>
+                        <p className="text-sm text-green-700">
+                          {appliedDiscount.description}
+                        </p>
+                        <p className="text-sm text-green-600 font-medium">
+                          Giảm:{" "}
+                          {appliedDiscount.discountType === "percentage"
+                            ? `${appliedDiscount.value}%`
+                            : `${appliedDiscount.value.toLocaleString(
+                                "vi-VN"
+                              )} đ`}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveDiscount}
+                      className="text-red-500 hover:text-red-700 font-medium text-sm"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Payment Method Selection */}
@@ -711,61 +877,89 @@ export default function BookingTourPage() {
                 Chi tiết đặt tour
               </h3>
               <div className="space-y-2 text-sm text-black">
-                {adults > 0 && (
-                  <div className="flex justify-between">
-                    <span>
-                      Người lớn ({adults} x{" "}
-                      {tour.pricingByAge?.adult.toLocaleString("vi-VN")} đ)
-                    </span>
-                    <span className="font-medium">
-                      {(
-                        adults * (tour.pricingByAge?.adult || 0)
-                      ).toLocaleString("vi-VN")}{" "}
-                      đ
-                    </span>
-                  </div>
-                )}
-                {children > 0 && (
-                  <div className="flex justify-between">
-                    <span>
-                      Trẻ em ({children} x{" "}
-                      {tour.pricingByAge?.child.toLocaleString("vi-VN")} đ)
-                    </span>
-                    <span className="font-medium">
-                      {(
-                        children * (tour.pricingByAge?.child || 0)
-                      ).toLocaleString("vi-VN")}{" "}
-                      đ
-                    </span>
-                  </div>
-                )}
-                {infants > 0 && (
-                  <div className="flex justify-between">
-                    <span>
-                      Em bé ({infants} x{" "}
-                      {tour.pricingByAge?.infant.toLocaleString("vi-VN")} đ)
-                    </span>
-                    <span className="font-medium">
-                      {(
-                        infants * (tour.pricingByAge?.infant || 0)
-                      ).toLocaleString("vi-VN")}{" "}
-                      đ
-                    </span>
-                  </div>
-                )}
-                <div className="border-t pt-2 flex justify-between text-lg font-bold text-green-600">
-                  <span>Tổng tiền:</span>
-                  <span>
-                    {tour.pricingByAge
-                      ? (
-                          adults * tour.pricingByAge.adult +
-                          children * tour.pricingByAge.child +
-                          infants * tour.pricingByAge.infant
-                        ).toLocaleString("vi-VN")
-                      : 0}{" "}
-                    đ
-                  </span>
-                </div>
+                {(() => {
+                  const subtotal = tour.pricingByAge
+                    ? adults * tour.pricingByAge.adult +
+                      children * tour.pricingByAge.child +
+                      infants * tour.pricingByAge.infant
+                    : 0;
+                  const discountAmount = calculateDiscountAmount(subtotal);
+                  const finalTotal = calculateFinalTotal(subtotal);
+
+                  return (
+                    <>
+                      {adults > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            Người lớn ({adults} x{" "}
+                            {tour.pricingByAge?.adult.toLocaleString("vi-VN")}{" "}
+                            đ)
+                          </span>
+                          <span className="font-medium">
+                            {(
+                              adults * (tour.pricingByAge?.adult || 0)
+                            ).toLocaleString("vi-VN")}{" "}
+                            đ
+                          </span>
+                        </div>
+                      )}
+                      {children > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            Trẻ em ({children} x{" "}
+                            {tour.pricingByAge?.child.toLocaleString("vi-VN")}{" "}
+                            đ)
+                          </span>
+                          <span className="font-medium">
+                            {(
+                              children * (tour.pricingByAge?.child || 0)
+                            ).toLocaleString("vi-VN")}{" "}
+                            đ
+                          </span>
+                        </div>
+                      )}
+                      {infants > 0 && (
+                        <div className="flex justify-between">
+                          <span>
+                            Em bé ({infants} x{" "}
+                            {tour.pricingByAge?.infant.toLocaleString("vi-VN")}{" "}
+                            đ)
+                          </span>
+                          <span className="font-medium">
+                            {(
+                              infants * (tour.pricingByAge?.infant || 0)
+                            ).toLocaleString("vi-VN")}{" "}
+                            đ
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Subtotal */}
+                      <div className="flex justify-between border-t pt-2">
+                        <span>Tạm tính:</span>
+                        <span className="font-medium">
+                          {subtotal.toLocaleString("vi-VN")} đ
+                        </span>
+                      </div>
+
+                      {/* Discount */}
+                      {appliedDiscount && discountAmount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Giảm giá ({appliedDiscount.code}):</span>
+                          <span className="font-medium">
+                            -{discountAmount.toLocaleString("vi-VN")} đ
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Final Total */}
+                      <div className="border-t pt-2 flex justify-between text-lg font-bold text-green-600">
+                        <span>Tổng tiền:</span>
+                        <span>{finalTotal.toLocaleString("vi-VN")} đ</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

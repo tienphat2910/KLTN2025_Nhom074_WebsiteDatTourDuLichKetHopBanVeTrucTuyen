@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
 import { userService } from "@/services/userService";
+import { tourService } from "@/services/tourService";
 import Link from "next/link";
 
 interface StatsCardProps {
@@ -77,6 +78,8 @@ function StatsCard({
 export function DashboardOverview() {
   const [userStats, setUserStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [tourStats, setTourStats] = useState<any>(null);
+  const [isLoadingTourStats, setIsLoadingTourStats] = useState(true);
 
   // Load user statistics
   const loadUserStats = async () => {
@@ -115,50 +118,82 @@ export function DashboardOverview() {
     }
   };
 
+  // Load tour statistics
+  const loadTourStats = async () => {
+    try {
+      setIsLoadingTourStats(true);
+      // Get total tours count by fetching with limit 1 to get pagination info
+      const response = await tourService.getTours({ limit: 1 });
+
+      if (response.success && response.data) {
+        setTourStats({
+          total: response.data.pagination.totalTours
+        });
+      } else {
+        console.error("Failed to load tour stats:", response.message);
+        setTourStats({
+          total: 0
+        });
+      }
+    } catch (error) {
+      console.error("Load tour stats error:", error);
+      setTourStats({
+        total: 0
+      });
+    } finally {
+      setIsLoadingTourStats(false);
+    }
+  };
+
   useEffect(() => {
     loadUserStats();
+    loadTourStats();
   }, []);
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">
-          Welcome back, Admin!
+          Chào mừng trở lại, Quản trị viên!
         </h2>
         <p className="text-muted-foreground">
-          Here's what's happening with LuTrip today.
+          Đây là những gì đang diễn ra với LuTrip hôm nay.
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Total Users"
+          title="Tổng người dùng"
           value={
             isLoadingStats ? "..." : (userStats?.total || 0).toLocaleString()
           }
-          description="Active registered users"
+          description="Người dùng đang hoạt động"
           icon={Users}
           trend={{ value: "+12.5%", isPositive: true }}
         />
         <StatsCard
-          title="Total Tours"
-          value="1,234"
-          description="Available tour packages"
+          title="Tổng tour"
+          value={
+            isLoadingTourStats
+              ? "..."
+              : (tourStats?.total || 0).toLocaleString()
+          }
+          description="Gói tour có sẵn"
           icon={Package}
           trend={{ value: "+8.2%", isPositive: true }}
         />
         <StatsCard
-          title="Flight Bookings"
+          title="Đặt vé máy bay"
           value="856"
-          description="This month"
+          description="Tháng này"
           icon={Plane}
           trend={{ value: "+23.1%", isPositive: true }}
         />
         <StatsCard
-          title="Revenue"
+          title="Doanh thu"
           value="$54,231"
-          description="This month"
+          description="Tháng này"
           icon={DollarSign}
           trend={{ value: "-2.4%", isPositive: false }}
         />
@@ -169,8 +204,8 @@ export function DashboardOverview() {
         {/* Recent Bookings */}
         <Card className="col-span-2">
           <CardHeader>
-            <CardTitle>Recent Bookings</CardTitle>
-            <CardDescription>Latest booking activities</CardDescription>
+            <CardTitle>Đặt chỗ gần đây</CardTitle>
+            <CardDescription>Hoạt động đặt chỗ mới nhất</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -233,7 +268,11 @@ export function DashboardOverview() {
                       }
                       className="text-xs"
                     >
-                      {booking.status}
+                      {booking.status === "confirmed"
+                        ? "Đã xác nhận"
+                        : booking.status === "pending"
+                        ? "Đang chờ"
+                        : "Hoàn thành"}
                     </Badge>
                   </div>
                 </div>
@@ -241,7 +280,7 @@ export function DashboardOverview() {
             </div>
             <Separator className="my-4" />
             <Button variant="outline" className="w-full">
-              View all bookings
+              Xem tất cả đặt chỗ
             </Button>
           </CardContent>
         </Card>
@@ -249,31 +288,31 @@ export function DashboardOverview() {
         {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common admin tasks</CardDescription>
+            <CardTitle>Thao tác nhanh</CardTitle>
+            <CardDescription>Các tác vụ quản trị thường dùng</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <Button className="w-full justify-start" variant="outline">
                 <Package className="mr-2 h-4 w-4" />
-                Add New Tour
+                Thêm tour mới
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <Plane className="mr-2 h-4 w-4" />
-                Manage Flights
+                Quản lý chuyến bay
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <MapPin className="mr-2 h-4 w-4" />
-                Add Destination
+                Thêm điểm đến
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <Activity className="mr-2 h-4 w-4" />
-                Create Activity
+                Tạo hoạt động
               </Button>
               <Link href="/admin/users">
                 <Button className="w-full justify-start" variant="outline">
                   <Users className="mr-2 h-4 w-4" />
-                  User Management
+                  Quản lý người dùng
                 </Button>
               </Link>
             </div>
@@ -283,8 +322,8 @@ export function DashboardOverview() {
         {/* Popular Destinations */}
         <Card>
           <CardHeader>
-            <CardTitle>Popular Destinations</CardTitle>
-            <CardDescription>Most booked this month</CardDescription>
+            <CardTitle>Điểm đến phổ biến</CardTitle>
+            <CardDescription>Được đặt nhiều nhất trong tháng</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -306,7 +345,7 @@ export function DashboardOverview() {
                     <div>
                       <p className="text-sm font-medium">{destination.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {destination.bookings} bookings
+                        {destination.bookings} lượt đặt
                       </p>
                     </div>
                   </div>
@@ -322,34 +361,34 @@ export function DashboardOverview() {
         {/* Recent Activities */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
-            <CardDescription>System activity log</CardDescription>
+            <CardTitle>Hoạt động gần đây</CardTitle>
+            <CardDescription>Nhật ký hoạt động hệ thống</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {[
                 {
-                  action: "New user registration",
+                  action: "Đăng ký người dùng mới",
                   user: "john.doe@email.com",
-                  time: "5 mins ago",
+                  time: "5 phút trước",
                   type: "user"
                 },
                 {
-                  action: "Tour booking confirmed",
+                  action: "Xác nhận đặt tour",
                   user: "admin",
-                  time: "12 mins ago",
+                  time: "12 phút trước",
                   type: "booking"
                 },
                 {
-                  action: "Flight added to system",
+                  action: "Thêm chuyến bay vào hệ thống",
                   user: "admin",
-                  time: "1 hour ago",
+                  time: "1 giờ trước",
                   type: "system"
                 },
                 {
-                  action: "Payment processed",
+                  action: "Xử lý thanh toán",
                   user: "mary.jane@email.com",
-                  time: "2 hours ago",
+                  time: "2 giờ trước",
                   type: "payment"
                 }
               ].map((activity, index) => (
@@ -368,7 +407,7 @@ export function DashboardOverview() {
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">{activity.action}</p>
                     <p className="text-xs text-muted-foreground">
-                      by {activity.user}
+                      bởi {activity.user}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {activity.time}

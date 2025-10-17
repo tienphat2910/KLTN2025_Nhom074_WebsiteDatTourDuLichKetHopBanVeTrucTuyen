@@ -669,7 +669,7 @@ router.delete('/:id', async (req, res) => {
  *               image:
  *                 type: string
  *                 format: binary
- *                 description: Destination image file (max 5MB, formats: JPG, PNG, WEBP)
+ *                 description: "Destination image file (max 5MB, formats: JPG, PNG, WEBP)"
  *     responses:
  *       200:
  *         description: Image uploaded successfully
