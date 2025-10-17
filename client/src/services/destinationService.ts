@@ -5,14 +5,23 @@ const API_BASE_URL = env.API_BASE_URL;
 export interface Destination {
   _id: string;
   name: string;
-  country: string;
+  country?: string;
   description: string;
   image: string;
   popular: boolean;
   slug: string;
-  region: "Miền Bắc" | "Miền Trung" | "Miền Nam";
+  region: "Miền Bắc" | "Miền Trung" | "Miền Nam" | "Tây Nguyên";
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface DestinationFormData {
+  name: string;
+  country?: string;
+  description: string;
+  image: string;
+  popular: boolean;
+  region: "Miền Bắc" | "Miền Trung" | "Miền Nam" | "Tây Nguyên";
 }
 
 export interface DestinationsResponse {
@@ -34,6 +43,21 @@ export interface DestinationResponse {
   success: boolean;
   message: string;
   data: Destination;
+}
+
+export interface DestinationStatsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total: number;
+    popular: number;
+    byRegion: {
+      "Miền Bắc": number;
+      "Miền Trung": number;
+      "Miền Nam": number;
+      "Tây Nguyên": number;
+    };
+  };
 }
 
 export const destinationService = {
@@ -79,6 +103,99 @@ export const destinationService = {
     }
   },
 
+  // Get destination statistics
+  getDestinationStats: async (): Promise<DestinationStatsResponse> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/destinations/stats`);
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Get destination stats error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server",
+        data: {
+          total: 0,
+          popular: 0,
+          byRegion: {
+            "Miền Bắc": 0,
+            "Miền Trung": 0,
+            "Miền Nam": 0,
+            "Tây Nguyên": 0
+          }
+        }
+      };
+    }
+  },
+
+  // Create new destination
+  createDestination: async (
+    destinationData: DestinationFormData
+  ): Promise<DestinationResponse> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/destinations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(destinationData)
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Create destination error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server",
+        data: {} as Destination
+      };
+    }
+  },
+
+  // Update destination
+  updateDestination: async (
+    id: string,
+    destinationData: DestinationFormData
+  ): Promise<DestinationResponse> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/destinations/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(destinationData)
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Update destination error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server",
+        data: {} as Destination
+      };
+    }
+  },
+
+  // Delete destination
+  deleteDestination: async (
+    id: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/destinations/${id}`, {
+        method: "DELETE"
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Delete destination error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
   // Get popular destinations
   getPopularDestinations: async (
     limit?: number
@@ -116,20 +233,33 @@ export const destinationService = {
     }
   },
 
-  // Get destination by slug
-  getDestinationBySlug: async (slug: string): Promise<DestinationResponse> => {
+  // Upload destination image
+  uploadDestinationImage: async (
+    file: File
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data?: { url: string; public_id: string };
+  }> => {
     try {
-      console.log("Fetching destination by slug:", slug);
-      const response = await fetch(`${API_BASE_URL}/destinations/slug/${slug}`);
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch(
+        `${API_BASE_URL}/destinations/upload-image`,
+        {
+          method: "POST",
+          body: formData
+        }
+      );
+
       const result = await response.json();
-      console.log("Destination service response:", result);
       return result;
     } catch (error) {
-      console.error("Get destination by slug error:", error);
+      console.error("Upload destination image error:", error);
       return {
         success: false,
-        message: "Lỗi kết nối server",
-        data: {} as Destination
+        message: "Lỗi kết nối server"
       };
     }
   }

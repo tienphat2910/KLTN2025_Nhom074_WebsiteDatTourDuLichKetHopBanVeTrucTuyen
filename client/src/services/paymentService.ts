@@ -1,5 +1,18 @@
 import { env } from "../config/env";
 
+// Helper function to get the correct token based on user role
+const getToken = (): string | null => {
+  // First try admin token
+  const adminToken = localStorage.getItem("lutrip_admin_token");
+  if (adminToken) return adminToken;
+
+  // Then try regular token
+  const regularToken = localStorage.getItem("lutrip_token");
+  if (regularToken) return regularToken;
+
+  return null;
+};
+
 export interface MoMoPaymentRequest {
   amount: number;
   orderInfo: string;
@@ -47,7 +60,7 @@ class PaymentService {
     paymentData: MoMoPaymentRequest
   ): Promise<MoMoPaymentResponse> {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
 
       const response = await fetch(`${this.baseURL}/payment/momo`, {
         method: "POST",
@@ -76,7 +89,7 @@ class PaymentService {
    */
   async checkMoMoPaymentStatus(orderId: string): Promise<MoMoStatusResponse> {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
 
       const response = await fetch(
         `${this.baseURL}/payment/momo/check-status`,

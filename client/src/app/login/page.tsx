@@ -83,8 +83,22 @@ export default function Login() {
           duration: 3000
         });
 
-        // Redirect to the original page or home
-        const targetPath = redirectPath || "/";
+        // Redirect based on user role
+        let targetPath = redirectPath;
+        if (!targetPath) {
+          switch (result.data.user.role) {
+            case "admin":
+              targetPath = "/admin";
+              break;
+            case "staff":
+              targetPath = "/staff";
+              break;
+            case "user":
+            default:
+              targetPath = "/";
+              break;
+          }
+        }
         router.push(decodeURIComponent(targetPath));
       } else {
         setError(

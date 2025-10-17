@@ -2,6 +2,19 @@ import { env } from "@/config/env";
 
 const API_BASE_URL = env.API_BASE_URL;
 
+// Helper function to get the correct token based on user role
+const getToken = (): string | null => {
+  // First try admin token
+  const adminToken = localStorage.getItem("lutrip_admin_token");
+  if (adminToken) return adminToken;
+
+  // Then try regular token
+  const regularToken = localStorage.getItem("lutrip_token");
+  if (regularToken) return regularToken;
+
+  return null;
+};
+
 interface PassengerInfo {
   fullName: string;
   phone?: string;
@@ -34,7 +47,7 @@ export const bookingTourService = {
   createBookingTour: async (payload: BookingTourPayload) => {
     try {
       // Check if user is authenticated
-      const token = localStorage.getItem("lutrip_token");
+      const token = getToken();
       if (!token) {
         return { success: false, message: "Vui lòng đăng nhập để đặt tour" };
       }
@@ -71,7 +84,9 @@ export const bookingTourService = {
         // Handle authentication errors specifically
         if (bookingRes.status === 401) {
           localStorage.removeItem("lutrip_token");
+          localStorage.removeItem("lutrip_admin_token");
           localStorage.removeItem("lutrip_user");
+          localStorage.removeItem("lutrip_admin_user");
           return {
             success: false,
             message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",

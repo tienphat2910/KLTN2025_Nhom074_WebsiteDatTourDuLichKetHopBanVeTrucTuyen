@@ -13,8 +13,6 @@ const destinationSchema = new mongoose.Schema({
     },
     country: {
         type: String,
-        required: [true, 'Quốc gia là bắt buộc'],
-        default: 'Việt Nam',
         trim: true
     },
     description: {
@@ -27,7 +25,8 @@ const destinationSchema = new mongoose.Schema({
         required: [true, 'Hình ảnh là bắt buộc'],
         validate: {
             validator: function (v) {
-                return /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(v);
+                // Accept both HTTP URLs and local URLs
+                return /^https?:\/\/.+/.test(v) || /^\/uploads\/.+/.test(v) || /^http:\/\/localhost:\d+\/uploads\/.+/.test(v);
             },
             message: 'URL hình ảnh không hợp lệ'
         }
@@ -51,7 +50,7 @@ const destinationSchema = new mongoose.Schema({
     },
     region: {
         type: String,
-        enum: ['Miền Bắc', 'Miền Trung', 'Miền Nam'],
+        enum: ['Miền Bắc', 'Miền Trung', 'Miền Nam', 'Tây Nguyên'],
         required: [true, 'Vùng miền là bắt buộc']
     }
 }, {

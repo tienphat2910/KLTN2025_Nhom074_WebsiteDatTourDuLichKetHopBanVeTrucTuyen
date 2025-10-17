@@ -11,6 +11,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
@@ -29,6 +32,8 @@ app.use('/api/bookingtours', require('./routes/bookingtours'));
 app.use('/api/booking', require('./routes/booking'));
 app.use('/api/bookingflights', require('./routes/bookingflights'));
 app.use('/api/payment/momo', require('./routes/payment'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/discounts', require('./routes/discounts'));
 
 
 // Kết nối MongoDB
