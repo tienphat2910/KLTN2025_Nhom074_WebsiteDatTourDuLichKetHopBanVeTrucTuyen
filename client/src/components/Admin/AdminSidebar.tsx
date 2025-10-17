@@ -16,13 +16,21 @@ import {
   Activity,
   Menu,
   X,
-  Percent
+  Percent,
+  LogOut
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 
 const sidebarItems = [
@@ -89,7 +97,7 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ className }: AdminSidebarProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -134,36 +142,55 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
 
       {/* Footer */}
       <div className="p-4">
-        <div className="flex items-center space-x-3 rounded-lg bg-muted/50 p-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium overflow-hidden">
-            {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.fullName || "User Avatar"}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <>
-                {user?.fullName
-                  ? user.fullName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
-                  : "AD"}
-              </>
-            )}
-          </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center space-x-3 rounded-lg bg-muted/50 p-3 cursor-pointer hover:bg-muted transition-colors">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium overflow-hidden">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.fullName || "User Avatar"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <>
+                    {user?.fullName
+                      ? user.fullName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                      : "AD"}
+                  </>
+                )}
+              </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">
-              {user?.fullName || "Admin User"}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.email || "admin@lutrip.com"}
-            </p>
-          </div>
-        </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">
+                  {user?.fullName || "Admin User"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user?.email || "admin@lutrip.com"}
+                </p>
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium">
+                {user?.fullName || "Admin User"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {user?.email || "admin@lutrip.com"}
+              </p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Đăng xuất</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

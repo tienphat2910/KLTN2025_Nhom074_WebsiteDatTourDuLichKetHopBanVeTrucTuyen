@@ -3,6 +3,8 @@ const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { uploadAvatar } = require('../utils/cloudinaryUpload'); // Updated import
 const { createFirebaseUser, signInFirebaseUser, sendFirebaseEmailVerification } = require('../utils/firebaseAuth');
+const { generateOTP, sendOTPEmail } = require('../utils/emailService');
+const { validateEmail } = require('../utils/emailValidation');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const router = express.Router();
@@ -18,7 +20,7 @@ const router = express.Router();
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Register a new user with Firebase email verification
+ *     summary: Register a new user with OTP email verification
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -44,7 +46,7 @@ const router = express.Router();
  *                 example: "Nguyen Van A"
  *     responses:
  *       201:
- *         description: Registration successful, verification email sent
+ *         description: Registration successful, OTP sent to email
  */
 router.post('/register', async (req, res) => {
     try {
@@ -55,6 +57,15 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Email, mật khẩu và họ tên là bắt buộc'
+            });
+        }
+
+        // Validate email format and domain
+        const emailValidation = await validateEmail(email);
+        if (!emailValidation.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: emailValidation.error || 'Email không hợp lệ'
             });
         }
 
@@ -76,6 +87,10 @@ router.post('/register', async (req, res) => {
             });
         }
 
+        // Generate OTP
+        const otp = generateOTP();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
         // Create or update user in MongoDB
         let user;
         if (existingUser) {
@@ -83,37 +98,190 @@ router.post('/register', async (req, res) => {
             user.password = password;
             user.fullName = fullName;
             user.firebaseUid = firebaseResult.uid;
+            user.verificationCode = otp;
+            user.verificationCodeExpires = otpExpires;
+            user.isVerified = false;
         } else {
             user = new User({
                 email,
                 password,
                 fullName,
                 firebaseUid: firebaseResult.uid,
-                isVerified: false
+                isVerified: false,
+                verificationCode: otp,
+                verificationCodeExpires: otpExpires
             });
         }
 
         await user.save();
 
-        // Send Firebase verification email
-        const emailResult = await sendFirebaseEmailVerification(firebaseResult.user);
-        if (!emailResult.success) {
-            return res.status(500).json({
-                success: false,
-                message: 'Lỗi gửi email xác thực: ' + emailResult.error
-            });
-        }
+        // Send OTP via email
+        await sendOTPEmail(email, otp, 'verification');
 
         res.status(201).json({
             success: true,
-            message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
+            message: 'Đăng ký thành công! Vui lòng kiểm tra email để lấy mã OTP.',
             data: {
-                message: 'Email xác thực đã được gửi đến ' + email,
-                email: email
+                email: email,
+                message: 'Mã OTP đã được gửi đến email của bạn'
             }
         });
     } catch (error) {
         console.error('Register error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server, vui lòng thử lại sau'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Verify email with OTP code
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
+ */
+router.post('/verify-email', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email và mã OTP là bắt buộc'
+            });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Người dùng không tồn tại'
+            });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email đã được xác thực'
+            });
+        }
+
+        // Check OTP
+        if (!user.isOTPValid(otp, 'verification')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mã OTP không đúng hoặc đã hết hạn'
+            });
+        }
+
+        // Update user
+        user.isVerified = true;
+        user.status = 'active';
+        user.clearOTP('verification');
+        await user.save();
+
+        // Generate token
+        const token = generateToken(user._id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Xác thực email thành công',
+            data: {
+                user: user.toJSON(),
+                token
+            }
+        });
+    } catch (error) {
+        console.error('Verify email error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server, vui lòng thử lại sau'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/resend-otp:
+ *   post:
+ *     summary: Resend OTP code
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ */
+router.post('/resend-otp', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email là bắt buộc'
+            });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Người dùng không tồn tại'
+            });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email đã được xác thực'
+            });
+        }
+
+        // Generate new OTP
+        const otp = generateOTP();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        user.verificationCode = otp;
+        user.verificationCodeExpires = otpExpires;
+        await user.save();
+
+        // Send OTP via email
+        await sendOTPEmail(email, otp, 'verification');
+
+        res.status(200).json({
+            success: true,
+            message: 'Mã OTP mới đã được gửi đến email của bạn'
+        });
+    } catch (error) {
+        console.error('Resend OTP error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi server, vui lòng thử lại sau'
@@ -199,30 +367,16 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // Sign in with Firebase to check email verification
-        const firebaseResult = await signInFirebaseUser(email, password);
-        if (!firebaseResult.success) {
-            return res.status(401).json({
-                success: false,
-                message: 'Lỗi đăng nhập Firebase: ' + firebaseResult.error
-            });
-        }
-
-        // Check if email is verified in Firebase
-        if (!firebaseResult.emailVerified) {
-            // Send verification email again
-            await sendFirebaseEmailVerification(firebaseResult.user);
-            return res.status(401).json({
-                success: false,
-                message: 'Email chưa được xác thực. Chúng tôi đã gửi lại email xác thực cho bạn.',
-                code: 'EMAIL_NOT_VERIFIED'
-            });
-        }
-
-        // Update user verification status in MongoDB if needed
+        // Check if email is verified in MongoDB
         if (!user.isVerified) {
-            user.isVerified = true;
-            await user.save();
+            return res.status(401).json({
+                success: false,
+                message: 'Email chưa được xác thực. Vui lòng kiểm tra email để lấy mã OTP.',
+                code: 'EMAIL_NOT_VERIFIED',
+                data: {
+                    email: user.email
+                }
+            });
         }
 
         // Update last login

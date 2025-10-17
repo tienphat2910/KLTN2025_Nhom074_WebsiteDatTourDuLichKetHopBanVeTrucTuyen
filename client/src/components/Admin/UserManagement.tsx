@@ -14,7 +14,10 @@ import {
   Phone,
   Calendar,
   AlertCircle,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -55,6 +58,7 @@ import { UserModal } from "./UserModal";
 import { User, UserFormData, UserRole, UserStatus } from "@/types/user";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
+import { useSocket } from "@/hooks/useSocket";
 
 // Mock data for users
 const mockUsers: User[] = [
@@ -159,11 +163,18 @@ export function UserManagement() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const { socketService } = useSocket();
 
   // Load users data
-  const loadUsers = async (page = 1) => {
+  const loadUsers = async (page = 1, showRefreshing = false) => {
     try {
-      setIsLoading(true);
+      if (showRefreshing) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
       const response = await userService.getUsers({
@@ -208,13 +219,18 @@ export function UserManagement() {
       setUsers([]);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   // Load user statistics
-  const loadStats = async () => {
+  const loadStats = async (showRefreshing = false) => {
     try {
-      setIsLoadingStats(true);
+      if (showRefreshing) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoadingStats(true);
+      }
       const response = await userService.getUserStats();
 
       if (response.success && response.data) {
@@ -226,6 +242,7 @@ export function UserManagement() {
       console.error("Load stats error:", error);
     } finally {
       setIsLoadingStats(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -237,6 +254,95 @@ export function UserManagement() {
   useEffect(() => {
     loadStats();
   }, []);
+
+  // Set up socket connection and real-time updates
+  useEffect(() => {
+    // Set up socket connection status
+    const handleConnected = () => setIsConnected(true);
+    const handleDisconnected = () => setIsConnected(false);
+
+    socketService.on("connected", handleConnected);
+    socketService.on("disconnected", handleDisconnected);
+
+    // Set initial connection status
+    setIsConnected(socketService.isConnected());
+
+    // Set up real-time updates for user management
+    const handleUserRegistered = (data: any) => {
+      // Refresh user list and stats when new user registers
+      loadUsers(currentPage, true);
+      loadStats(true);
+      // Show notification
+      toast.success("Người dùng mới đăng ký!", {
+        description: `${
+          data?.user?.fullName || "Người dùng mới"
+        } đã tạo tài khoản`,
+        duration: 5000,
+        action: {
+          label: "Xem",
+          onClick: () => {
+            // Scroll to the new user or refresh the list
+            loadUsers(1, true);
+          }
+        }
+      });
+    };
+
+    const handleUserStatusChanged = (data: any) => {
+      // Refresh user list and stats when user status changes
+      loadUsers(currentPage, true);
+      loadStats(true);
+      // Show notification
+      const statusText =
+        data.newStatus === "banned"
+          ? "bị cấm"
+          : data.newStatus === "active"
+          ? "được kích hoạt"
+          : "bị vô hiệu hóa";
+      toast.info("Trạng thái người dùng thay đổi", {
+        description: `Người dùng ${data.userId} đã ${statusText}`,
+        duration: 4000
+      });
+    };
+
+    const handleUserDeleted = (data: any) => {
+      // Refresh user list and stats when user is deleted
+      loadUsers(currentPage, true);
+      loadStats(true);
+      // Show notification
+      toast.warning("Người dùng đã bị xóa", {
+        description: `Tài khoản người dùng ${data.userId} đã được xóa khỏi hệ thống`,
+        duration: 4000
+      });
+    };
+
+    const handleUserUpdated = (data: any) => {
+      // Refresh user list when user is updated
+      loadUsers(currentPage, true);
+      // Show notification
+      toast.info("Thông tin người dùng đã được cập nhật", {
+        description: `Thông tin của ${
+          data?.user?.fullName || "người dùng"
+        } đã thay đổi`,
+        duration: 3000
+      });
+    };
+
+    socketService.on("user_registered", handleUserRegistered);
+    socketService.on("user_status_changed", handleUserStatusChanged);
+    socketService.on("user_deleted", handleUserDeleted);
+    socketService.on("user_updated", handleUserUpdated);
+
+    // Cleanup listeners
+    return () => {
+      socketService.off("connected", handleConnected);
+      socketService.off("disconnected", handleDisconnected);
+      socketService.off("user_registered", handleUserRegistered);
+      socketService.off("user_status_changed", handleUserStatusChanged);
+      socketService.off("user_deleted", handleUserDeleted);
+      socketService.off("user_updated", handleUserUpdated);
+    };
+  }, [currentPage]);
 
   // Handle search with debounce
   const handleSearch = (value: string) => {
@@ -259,8 +365,8 @@ export function UserManagement() {
           response = await userService.banUser(userId);
           if (response.success) {
             toast.success("Đã cấm người dùng thành công");
-            loadUsers(currentPage);
-            loadStats();
+            loadUsers(currentPage, true);
+            loadStats(true);
           } else {
             toast.error(response.message || "Không thể cấm người dùng");
           }
@@ -269,20 +375,44 @@ export function UserManagement() {
           response = await userService.unbanUser(userId);
           if (response.success) {
             toast.success("Đã bỏ cấm người dùng thành công");
-            loadUsers(currentPage);
-            loadStats();
+            loadUsers(currentPage, true);
+            loadStats(true);
           } else {
             toast.error(response.message || "Không thể bỏ cấm người dùng");
           }
           break;
         case "delete":
+          // Find the user to check their role
+          const userToDelete = users.find((u) => u.id === userId);
+          if (!userToDelete) {
+            toast.error("Không tìm thấy người dùng");
+            return;
+          }
+
+          // Prevent deleting admin accounts or self
+          const currentUser = JSON.parse(
+            localStorage.getItem("lutrip_admin_user") || "{}"
+          );
+          if (userToDelete.role === "admin") {
+            toast.error("Không thể xóa tài khoản quản trị viên");
+            return;
+          }
+          if (currentUser._id === userId) {
+            toast.error("Không thể xóa tài khoản của chính mình");
+            return;
+          }
+
           // Show confirmation dialog
-          if (window.confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
+          if (
+            window.confirm(
+              "Bạn có chắc chắn muốn xóa người dùng này? Hành động này không thể hoàn tác."
+            )
+          ) {
             response = await userService.deleteUser(userId);
             if (response.success) {
               toast.success("Đã xóa người dùng thành công");
-              loadUsers(currentPage);
-              loadStats();
+              loadUsers(currentPage, true);
+              loadStats(true);
             } else {
               toast.error(response.message || "Không thể xóa người dùng");
             }
@@ -312,8 +442,8 @@ export function UserManagement() {
         const response = await userService.updateUser(editingUser.id, userData);
         if (response.success) {
           toast.success("Cập nhật người dùng thành công");
-          loadUsers(currentPage);
-          loadStats();
+          loadUsers(currentPage, true);
+          loadStats(true);
         } else {
           toast.error(response.message || "Không thể cập nhật người dùng");
         }
@@ -337,23 +467,54 @@ export function UserManagement() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Quản lý người dùng
-          </h2>
-          <p className="text-muted-foreground">
-            Quản lý tài khoản và quyền hạn người dùng trong hệ thống
-          </p>
+      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div className="flex items-center space-x-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Quản lý người dùng
+            </h2>
+            <p className="text-muted-foreground">
+              Quản lý tài khoản và quyền hạn người dùng trong hệ thống
+            </p>
+          </div>
+          {isRefreshing && (
+            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+          )}
         </div>
-        <Button onClick={handleAddUser}>
-          <Plus className="mr-2 h-4 w-4" />
-          Thêm người dùng
-        </Button>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? "bg-green-500" : "bg-red-500"
+              }`}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? "Real-time" : "Offline"}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              loadUsers(currentPage, true);
+              loadStats(true);
+            }}
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Làm mới
+          </Button>
+          <Button onClick={handleAddUser} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            Thêm người dùng
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -362,7 +523,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingStats ? "..." : stats.total || 0}
+              {isLoadingStats || isRefreshing ? "..." : stats.total || 0}
             </div>
           </CardContent>
         </Card>
@@ -374,7 +535,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingStats ? "..." : stats.active || 0}
+              {isLoadingStats || isRefreshing ? "..." : stats.active || 0}
             </div>
           </CardContent>
         </Card>
@@ -384,7 +545,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingStats ? "..." : stats.banned || 0}
+              {isLoadingStats || isRefreshing ? "..." : stats.banned || 0}
             </div>
           </CardContent>
         </Card>
@@ -394,7 +555,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingStats ? "..." : stats.admins || 0}
+              {isLoadingStats || isRefreshing ? "..." : stats.admins || 0}
             </div>
           </CardContent>
         </Card>
@@ -409,7 +570,7 @@ export function UserManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4 mb-4">
+          <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-4 mb-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -421,169 +582,417 @@ export function UserManagement() {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="active">Hoạt động</SelectItem>
-                <SelectItem value="inactive">Không hoạt động</SelectItem>
-                <SelectItem value="banned">Bị cấm</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Vai trò" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả vai trò</SelectItem>
-                <SelectItem value="user">Người dùng</SelectItem>
-                <SelectItem value="admin">Quản trị viên</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="active">Hoạt động</SelectItem>
+                  <SelectItem value="inactive">Không hoạt động</SelectItem>
+                  <SelectItem value="banned">Bị cấm</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Vai trò" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả vai trò</SelectItem>
+                  <SelectItem value="user">Người dùng</SelectItem>
+                  <SelectItem value="admin">Quản trị viên</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Users Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Người dùng</TableHead>
-                  <TableHead>Liên hệ</TableHead>
-                  <TableHead>Vai trò</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Thống kê</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead>Lần cuối online</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user: User) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback>
-                            {user.name
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            ID: {user.id}
-                          </div>
+          <div className="rounded-md border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Người dùng</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Liên hệ
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Vai trò
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Trạng thái
+                    </TableHead>
+                    <TableHead className="hidden xl:table-cell">
+                      Thống kê
+                    </TableHead>
+                    <TableHead className="hidden xl:table-cell">
+                      Ngày tạo
+                    </TableHead>
+                    <TableHead className="hidden 2xl:table-cell">
+                      Lần cuối online
+                    </TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading || isRefreshing ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                          {isRefreshing ? "Đang cập nhật..." : "Đang tải..."}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <Mail className="mr-1 h-3 w-3" />
+                      </TableCell>
+                    </TableRow>
+                  ) : users.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <div className="flex flex-col items-center space-y-2">
+                          <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                          <p className="text-muted-foreground">
+                            {error || "Không tìm thấy người dùng nào"}
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    users.map((user: User) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar} />
+                              <AvatarFallback>
+                                {user.name
+                                  .split(" ")
+                                  .map((n: string) => n[0])
+                                  .join("")
+                                  .slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate">
+                                {user.name}
+                              </div>
+                              <div className="text-sm text-muted-foreground truncate">
+                                {user.email}
+                              </div>
+                              <div className="text-xs text-muted-foreground sm:hidden">
+                                {user.phone}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="space-y-1">
+                            <div className="flex items-center text-sm">
+                              <Mail className="mr-1 h-3 w-3" />
+                              <span className="truncate">{user.email}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Phone className="mr-1 h-3 w-3" />
+                              {user.phone}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge
+                            variant={
+                              user.role === "admin" ? "default" : "secondary"
+                            }
+                          >
+                            {roleLabels[user.role as UserRole]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <Badge
+                            variant={statusColors[user.status as UserStatus]}
+                          >
+                            {statusLabels[user.status as UserStatus]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden xl:table-cell">
+                          <div className="space-y-1">
+                            <div className="text-sm">
+                              {user.totalBookings} đặt chỗ
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatCurrency(user.totalSpent)}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden xl:table-cell">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {new Date(user.createdAt).toLocaleDateString(
+                              "vi-VN"
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden 2xl:table-cell">
+                          <div className="text-sm">
+                            {user.lastLogin
+                              ? new Date(user.lastLogin).toLocaleDateString(
+                                  "vi-VN"
+                                )
+                              : "Chưa đăng nhập"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Mở menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => handleEditUser(user)}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Chỉnh sửa
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {user.status === "banned" ? (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUserAction("unban", user.id)
+                                  }
+                                  className="text-green-600"
+                                >
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Bỏ cấm
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUserAction("ban", user.id)
+                                  }
+                                  className="text-orange-600"
+                                >
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Cấm người dùng
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleUserAction("delete", user.id)
+                                }
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Xóa
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="flex-1 text-sm text-muted-foreground">
+                Hiển thị {users.length} trong tổng số {totalUsers} người dùng
+              </div>
+              <div className="flex items-center space-x-6 lg:space-x-8">
+                <div className="flex items-center space-x-2">
+                  <p className="text-sm font-medium">Trang</p>
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage <= 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center space-x-1">
+                      {Array.from(
+                        { length: Math.min(5, totalPages) },
+                        (_, i) => {
+                          const pageNumber =
+                            Math.max(
+                              1,
+                              Math.min(totalPages - 4, currentPage - 2)
+                            ) + i;
+                          if (pageNumber > totalPages) return null;
+                          return (
+                            <Button
+                              key={pageNumber}
+                              variant={
+                                currentPage === pageNumber
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="h-8 w-8 p-0"
+                              onClick={() => handlePageChange(pageNumber)}
+                            >
+                              {pageNumber}
+                            </Button>
+                          );
+                        }
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Card View */}
+          <div className="block sm:hidden space-y-4">
+            {isLoading || isRefreshing ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                {isRefreshing ? "Đang cập nhật..." : "Đang tải..."}
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="flex flex-col items-center space-y-2">
+                  <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    {error || "Không tìm thấy người dùng nào"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              users.map((user: User) => (
+                <Card key={user.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback>
+                          {user.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{user.name}</div>
+                        <div className="text-sm text-muted-foreground truncate">
                           {user.email}
                         </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Phone className="mr-1 h-3 w-3" />
+                        <div className="text-xs text-muted-foreground">
                           {user.phone}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          user.role === "admin" ? "default" : "secondary"
-                        }
-                      >
-                        {roleLabels[user.role as UserRole]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusColors[user.status as UserStatus]}>
-                        {statusLabels[user.status as UserStatus]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm">
-                          {user.totalBookings} đặt chỗ
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatCurrency(user.totalSpent)}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm">
-                        <Calendar className="mr-1 h-3 w-3" />
-                        {new Date(user.createdAt).toLocaleDateString("vi-VN")}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {new Date(user.lastLogin).toLocaleDateString("vi-VN")}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Mở menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() => handleEditUser(user)}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Mở menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Chỉnh sửa
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <div className="px-2 py-1">
+                          <Badge
+                            variant={
+                              user.role === "admin" ? "default" : "secondary"
+                            }
+                            className="text-xs"
                           >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Chỉnh sửa
+                            {roleLabels[user.role as UserRole]}
+                          </Badge>
+                          <Badge
+                            variant={statusColors[user.status as UserStatus]}
+                            className="text-xs ml-2"
+                          >
+                            {statusLabels[user.status as UserStatus]}
+                          </Badge>
+                        </div>
+                        <DropdownMenuSeparator />
+                        {user.status === "banned" ? (
+                          <DropdownMenuItem
+                            onClick={() => handleUserAction("unban", user.id)}
+                            className="text-green-600"
+                          >
+                            <UserCheck className="mr-2 h-4 w-4" />
+                            Bỏ cấm
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {user.status === "banned" ? (
-                            <DropdownMenuItem
-                              onClick={() => handleUserAction("unban", user.id)}
-                              className="text-green-600"
-                            >
-                              <UserCheck className="mr-2 h-4 w-4" />
-                              Bỏ cấm
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() => handleUserAction("ban", user.id)}
-                              className="text-orange-600"
-                            >
-                              <UserX className="mr-2 h-4 w-4" />
-                              Cấm người dùng
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Xóa
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() => handleUserAction("ban", user.id)}
+                            className="text-orange-600"
+                          >
+                            <UserX className="mr-2 h-4 w-4" />
+                            Cấm người dùng
                           </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleUserAction("delete", user.id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Xóa
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Đặt chỗ:</span>
+                        <span className="ml-1 font-medium">
+                          {user.totalBookings}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Chi tiêu:</span>
+                        <span className="ml-1 font-medium">
+                          {formatCurrency(user.totalSpent)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Ngày tạo:</span>
+                        <span className="ml-1">
+                          {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Lần cuối:</span>
+                        <span className="ml-1">
+                          {user.lastLogin
+                            ? new Date(user.lastLogin).toLocaleDateString(
+                                "vi-VN"
+                              )
+                            : "Chưa đăng nhập"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
-
-          {users.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Không tìm thấy người dùng nào
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 

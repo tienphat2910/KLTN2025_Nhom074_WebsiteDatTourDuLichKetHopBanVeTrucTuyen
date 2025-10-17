@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ import { Tour, ToursResponse } from "@/services/tourService";
 import { TourModal } from "@/components/Admin/TourModal";
 import { tourService } from "@/services/tourService";
 import { toast } from "sonner";
+import { useSocket } from "@/hooks/useSocket";
 
 export function TourManagement() {
   const [tours, setTours] = useState<Tour[]>([]);
@@ -69,11 +71,18 @@ export function TourManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const { socketService } = useSocket();
 
   // Load tours data
-  const loadTours = async (page = 1) => {
+  const loadTours = async (page = 1, showRefreshing = false) => {
     try {
-      setIsLoading(true);
+      if (showRefreshing) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
       const response = await tourService.getTours({
@@ -120,6 +129,7 @@ export function TourManagement() {
       setTours([]);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -127,6 +137,72 @@ export function TourManagement() {
   useEffect(() => {
     loadTours(1);
   }, [searchTerm, activeFilter, featuredFilter]);
+
+  // Set up socket connection and real-time updates
+  useEffect(() => {
+    // Set up socket connection status
+    const handleConnected = () => setIsConnected(true);
+    const handleDisconnected = () => setIsConnected(false);
+
+    socketService.on("connected", handleConnected);
+    socketService.on("disconnected", handleDisconnected);
+
+    // Set initial connection status
+    setIsConnected(socketService.isConnected());
+
+    // Set up real-time updates for tour management
+    const handleTourCreated = (data: any) => {
+      // Refresh tour list when new tour is created
+      loadTours(currentPage, true);
+      // Show notification
+      toast.success("Tour mới được tạo!", {
+        description: `${
+          data?.tour?.title || "Tour mới"
+        } đã được thêm vào hệ thống`,
+        duration: 5000,
+        action: {
+          label: "Xem",
+          onClick: () => {
+            // Scroll to the new tour or refresh the list
+            loadTours(1, true);
+          }
+        }
+      });
+    };
+
+    const handleTourUpdated = (data: any) => {
+      // Refresh tour list when tour is updated
+      loadTours(currentPage, true);
+      // Show notification
+      toast.info("Tour đã được cập nhật", {
+        description: `Thông tin của ${data?.tour?.title || "tour"} đã thay đổi`,
+        duration: 3000
+      });
+    };
+
+    const handleTourDeleted = (data: any) => {
+      // Refresh tour list when tour is deleted
+      loadTours(currentPage, true);
+      // Show notification
+      toast.warning("Tour đã bị ẩn", {
+        description: `Tour ${data.tourId} đã được ẩn khỏi hệ thống`,
+        duration: 4000
+      });
+    };
+
+    socketService.on("tour_created", handleTourCreated);
+    socketService.on("tour_updated", handleTourUpdated);
+    socketService.on("tour_deleted", handleTourDeleted);
+
+    // Cleanup listeners
+    return () => {
+      socketService.off("connected", handleConnected);
+      socketService.off("disconnected", handleDisconnected);
+      socketService.off("tour_created", handleTourCreated);
+      socketService.off("tour_updated", handleTourUpdated);
+      socketService.off("tour_deleted", handleTourDeleted);
+    };
+  }, [currentPage]);
 
   // Handle search with debounce
   const handleSearch = (value: string) => {
@@ -182,7 +258,7 @@ export function TourManagement() {
                   ? "Đã ẩn tour thành công"
                   : "Đã hiện tour thành công"
               );
-              loadTours(currentPage);
+              loadTours(currentPage, true);
             } else {
               toast.error(
                 response.message || "Không thể cập nhật trạng thái tour"
@@ -202,7 +278,7 @@ export function TourManagement() {
                   ? "Đã bỏ đánh dấu nổi bật"
                   : "Đã đánh dấu nổi bật"
               );
-              loadTours(currentPage);
+              loadTours(currentPage, true);
             } else {
               toast.error(
                 response.message || "Không thể cập nhật trạng thái nổi bật"
@@ -218,7 +294,7 @@ export function TourManagement() {
             });
             if (response.success) {
               toast.success("Đã ẩn tour thành công");
-              loadTours(currentPage);
+              loadTours(currentPage, true);
             } else {
               toast.error(response.message || "Không thể ẩn tour");
             }
@@ -253,7 +329,7 @@ export function TourManagement() {
         );
         if (response.success) {
           toast.success("Cập nhật tour thành công");
-          loadTours(currentPage);
+          loadTours(currentPage, true);
         } else {
           toast.error(response.message || "Không thể cập nhật tour");
         }
@@ -262,7 +338,7 @@ export function TourManagement() {
         const response = await tourService.createTour(tourData);
         if (response.success) {
           toast.success("Tạo tour mới thành công");
-          loadTours(currentPage);
+          loadTours(currentPage, true);
         } else {
           toast.error(response.message || "Không thể tạo tour");
         }
@@ -318,17 +394,47 @@ export function TourManagement() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Quản lý tour</h2>
-          <p className="text-muted-foreground">
-            Tạo và quản lý các tour du lịch
-          </p>
+      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div className="flex items-center space-x-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Quản lý tour</h2>
+            <p className="text-muted-foreground">
+              Tạo và quản lý các tour du lịch
+            </p>
+          </div>
+          {isRefreshing && (
+            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+          )}
         </div>
-        <Button onClick={handleAddTour}>
-          <Plus className="mr-2 h-4 w-4" />
-          Tạo tour mới
-        </Button>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? "bg-green-500" : "bg-red-500"
+              }`}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isConnected ? "Real-time" : "Offline"}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              loadTours(currentPage, true);
+            }}
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Làm mới
+          </Button>
+          <Button onClick={handleAddTour}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tạo tour mới
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -340,7 +446,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading ? "..." : totalTours}
+              {isLoading || isRefreshing ? "..." : totalTours}
             </div>
           </CardContent>
         </Card>
@@ -353,7 +459,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading
+              {isLoading || isRefreshing
                 ? "..."
                 : tours.filter((t) => {
                     const status = getTourStatus(t);
@@ -373,7 +479,9 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading ? "..." : tours.filter((t) => t.isFeatured).length}
+              {isLoading || isRefreshing
+                ? "..."
+                : tours.filter((t) => t.isFeatured).length}
             </div>
           </CardContent>
         </Card>
@@ -384,7 +492,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading
+              {isLoading || isRefreshing
                 ? "..."
                 : tours.reduce((total, t) => total + t.seats, 0)}
             </div>
@@ -449,11 +557,13 @@ export function TourManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isLoading || isRefreshing ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      <p className="mt-2 text-muted-foreground">Đang tải...</p>
+                      <p className="mt-2 text-muted-foreground">
+                        {isRefreshing ? "Đang cập nhật..." : "Đang tải..."}
+                      </p>
                     </TableCell>
                   </TableRow>
                 ) : tours.length === 0 ? (
@@ -581,7 +691,7 @@ export function TourManagement() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && !isLoading && (
+          {totalPages > 1 && !isLoading && !isRefreshing && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
                 Hiển thị {(currentPage - 1) * 10 + 1}-
