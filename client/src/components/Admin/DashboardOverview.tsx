@@ -1,34 +1,49 @@
-"use client"
+"use client";
 
-import { 
-  Users, 
-  Package, 
-  Plane, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Users,
+  Package,
+  Plane,
+  DollarSign,
+  TrendingUp,
   Calendar,
   MapPin,
   Activity,
   ArrowUpRight,
   ArrowDownRight
-} from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { useState, useEffect } from "react";
+import { userService } from "@/services/userService";
+import Link from "next/link";
 
 interface StatsCardProps {
-  title: string
-  value: string
-  description: string
-  icon: any
+  title: string;
+  value: string;
+  description: string;
+  icon: any;
   trend?: {
-    value: string
-    isPositive: boolean
-  }
+    value: string;
+    isPositive: boolean;
+  };
 }
 
-function StatsCard({ title, value, description, icon: Icon, trend }: StatsCardProps) {
+function StatsCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  trend
+}: StatsCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -40,7 +55,11 @@ function StatsCard({ title, value, description, icon: Icon, trend }: StatsCardPr
         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
           <span>{description}</span>
           {trend && (
-            <div className={`flex items-center ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+            <div
+              className={`flex items-center ${
+                trend.isPositive ? "text-green-600" : "text-red-600"
+              }`}
+            >
               {trend.isPositive ? (
                 <ArrowUpRight className="h-3 w-3" />
               ) : (
@@ -52,15 +71,60 @@ function StatsCard({ title, value, description, icon: Icon, trend }: StatsCardPr
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export function DashboardOverview() {
+  const [userStats, setUserStats] = useState<any>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Load user statistics
+  const loadUserStats = async () => {
+    try {
+      setIsLoadingStats(true);
+      const response = await userService.getUserStats();
+
+      if (response.success && response.data) {
+        setUserStats(response.data);
+      } else {
+        console.error("Failed to load user stats:", response.message);
+        // Set default values if API fails
+        setUserStats({
+          total: 0,
+          active: 0,
+          inactive: 0,
+          banned: 0,
+          admins: 0,
+          totalBookings: 0,
+          totalSpent: 0
+        });
+      }
+    } catch (error) {
+      console.error("Load user stats error:", error);
+      setUserStats({
+        total: 0,
+        active: 0,
+        inactive: 0,
+        banned: 0,
+        admins: 0,
+        totalBookings: 0,
+        totalSpent: 0
+      });
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUserStats();
+  }, []);
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Welcome back, Admin!</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Welcome back, Admin!
+        </h2>
         <p className="text-muted-foreground">
           Here's what's happening with LuTrip today.
         </p>
@@ -70,7 +134,9 @@ export function DashboardOverview() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Users"
-          value="12,543"
+          value={
+            isLoadingStats ? "..." : (userStats?.total || 0).toLocaleString()
+          }
           description="Active registered users"
           icon={Users}
           trend={{ value: "+12.5%", isPositive: true }}
@@ -118,7 +184,7 @@ export function DashboardOverview() {
                   time: "2 hours ago"
                 },
                 {
-                  id: "FLT002", 
+                  id: "FLT002",
                   customer: "Tran Thi B",
                   service: "SGN → HAN Flight",
                   amount: "$150",
@@ -142,18 +208,28 @@ export function DashboardOverview() {
                   time: "8 hours ago"
                 }
               ].map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between">
+                <div
+                  key={booking.id}
+                  className="flex items-center justify-between"
+                >
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{booking.customer}</p>
-                    <p className="text-xs text-muted-foreground">{booking.service}</p>
-                    <p className="text-xs text-muted-foreground">{booking.time}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {booking.service}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {booking.time}
+                    </p>
                   </div>
                   <div className="text-right space-y-1">
                     <p className="text-sm font-medium">{booking.amount}</p>
-                    <Badge 
+                    <Badge
                       variant={
-                        booking.status === "confirmed" ? "default" :
-                        booking.status === "pending" ? "secondary" : "outline"
+                        booking.status === "confirmed"
+                          ? "default"
+                          : booking.status === "pending"
+                          ? "secondary"
+                          : "outline"
                       }
                       className="text-xs"
                     >
@@ -194,10 +270,12 @@ export function DashboardOverview() {
                 <Activity className="mr-2 h-4 w-4" />
                 Create Activity
               </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Users className="mr-2 h-4 w-4" />
-                User Management
-              </Button>
+              <Link href="/admin/users">
+                <Button className="w-full justify-start" variant="outline">
+                  <Users className="mr-2 h-4 w-4" />
+                  User Management
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -217,14 +295,19 @@ export function DashboardOverview() {
                 { name: "Sapa", bookings: 134, trend: "+5%" },
                 { name: "Da Nang", bookings: 98, trend: "+12%" }
               ].map((destination, index) => (
-                <div key={destination.name} className="flex items-center justify-between">
+                <div
+                  key={destination.name}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center space-x-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
                       {index + 1}
                     </div>
                     <div>
                       <p className="text-sm font-medium">{destination.name}</p>
-                      <p className="text-xs text-muted-foreground">{destination.bookings} bookings</p>
+                      <p className="text-xs text-muted-foreground">
+                        {destination.bookings} bookings
+                      </p>
                     </div>
                   </div>
                   <Badge variant="secondary" className="text-xs">
@@ -254,7 +337,7 @@ export function DashboardOverview() {
                 {
                   action: "Tour booking confirmed",
                   user: "admin",
-                  time: "12 mins ago", 
+                  time: "12 mins ago",
                   type: "booking"
                 },
                 {
@@ -271,15 +354,25 @@ export function DashboardOverview() {
                 }
               ].map((activity, index) => (
                 <div key={index} className="flex items-start space-x-3">
-                  <div className={`h-2 w-2 rounded-full mt-2 ${
-                    activity.type === "user" ? "bg-blue-500" :
-                    activity.type === "booking" ? "bg-green-500" :
-                    activity.type === "payment" ? "bg-yellow-500" : "bg-gray-500"
-                  }`}></div>
+                  <div
+                    className={`h-2 w-2 rounded-full mt-2 ${
+                      activity.type === "user"
+                        ? "bg-blue-500"
+                        : activity.type === "booking"
+                        ? "bg-green-500"
+                        : activity.type === "payment"
+                        ? "bg-yellow-500"
+                        : "bg-gray-500"
+                    }`}
+                  ></div>
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">{activity.action}</p>
-                    <p className="text-xs text-muted-foreground">by {activity.user}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    <p className="text-xs text-muted-foreground">
+                      by {activity.user}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {activity.time}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -288,5 +381,5 @@ export function DashboardOverview() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

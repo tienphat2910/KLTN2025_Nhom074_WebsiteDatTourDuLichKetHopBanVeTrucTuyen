@@ -29,6 +29,7 @@ app.use('/api/bookingtours', require('./routes/bookingtours'));
 app.use('/api/booking', require('./routes/booking'));
 app.use('/api/bookingflights', require('./routes/bookingflights'));
 app.use('/api/payment/momo', require('./routes/payment'));
+app.use('/api/users', require('./routes/users'));
 
 
 // Kết nối MongoDB
