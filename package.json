@@ -4,5 +4,8 @@
   },
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\""
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.1"
   }
 }

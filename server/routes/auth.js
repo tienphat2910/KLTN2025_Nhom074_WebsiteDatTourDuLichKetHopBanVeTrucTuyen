@@ -7,6 +7,7 @@ const { generateOTP, sendOTPEmail } = require('../utils/emailService');
 const { validateEmail } = require('../utils/emailValidation');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
 const auth = require('../middleware/auth');
+const { notifyUserRegistered } = require('../utils/socketHandler');
 const router = express.Router();
 
 /**
@@ -117,6 +118,9 @@ router.post('/register', async (req, res) => {
 
         // Send OTP via email
         await sendOTPEmail(email, otp, 'verification');
+
+        // Notify admins about new user registration
+        notifyUserRegistered(user);
 
         res.status(201).json({
             success: true,

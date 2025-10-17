@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Booking = require('../models/Booking');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
+const { notifyUserStatusChanged } = require('../utils/socketHandler');
 const router = express.Router();
 
 /**
@@ -432,6 +433,9 @@ router.post('/:id/ban', admin, async (req, res) => {
             });
         }
 
+        // Notify admins about user status change
+        notifyUserStatusChanged(user._id, user.status, 'banned', req.user.fullName);
+
         res.json({
             success: true,
             message: 'Đã cấm người dùng thành công',
@@ -487,6 +491,9 @@ router.post('/:id/unban', admin, async (req, res) => {
                 message: 'Không tìm thấy người dùng'
             });
         }
+
+        // Notify admins about user status change
+        notifyUserStatusChanged(user._id, user.status, 'active', req.user.fullName);
 
         res.json({
             success: true,
