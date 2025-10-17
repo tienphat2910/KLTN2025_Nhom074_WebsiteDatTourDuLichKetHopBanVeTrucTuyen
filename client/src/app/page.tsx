@@ -9,6 +9,7 @@ import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
+import { env } from "@/config/env";
 
 const services = [
   {
@@ -113,11 +114,7 @@ export default function Home() {
   useEffect(() => {
     setIsLoadingActivities(true);
     axios
-      .get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        }/api/activities?popular=true&limit=3`
-      )
+      .get(`${env.API_BASE_URL}/activities?popular=true&limit=3`)
       .then((res) => {
         if (res.data.success) {
           setPopularActivities(res.data.data);

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { env } from "@/config/env";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -28,20 +29,12 @@ export default function Activity() {
   useEffect(() => {
     setIsVisible(true);
     axios
-      .get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        }/api/activities`
-      )
+      .get(`${env.API_BASE_URL}/activities`)
       .then((res) => {
         if (res.data.success) setActivities(res.data.data);
       });
     axios
-      .get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        }/api/destinations`
-      )
+      .get(`${env.API_BASE_URL}/destinations`)
       .then((res) => {
         if (res.data.success) {
           // Đảm bảo lấy đúng mảng

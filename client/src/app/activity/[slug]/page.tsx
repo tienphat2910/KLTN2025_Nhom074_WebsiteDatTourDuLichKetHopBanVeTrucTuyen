@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import axios from "axios";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { env } from "@/config/env";
 
 function formatVND(amount: number) {
   return amount?.toLocaleString("vi-VN") + "đ";
@@ -18,11 +19,7 @@ export default function ActivityDetail() {
   useEffect(() => {
     if (!slug) return;
     axios
-      .get(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        }/api/activities/slug/${slug}`
-      )
+      .get(`${env.API_BASE_URL}/activities/slug/${slug}`)
       .then((res) => {
         if (res.data.success) setActivity(res.data.data);
         setLoading(false);
