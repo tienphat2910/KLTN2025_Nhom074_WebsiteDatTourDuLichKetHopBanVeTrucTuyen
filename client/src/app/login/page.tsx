@@ -101,10 +101,23 @@ export default function Login() {
         }
         router.push(decodeURIComponent(targetPath));
       } else {
-        setError(
-          result.message ||
-            "Đăng nhập không thành công - Thiếu thông tin bắt buộc"
-        );
+        // Check if error is EMAIL_NOT_VERIFIED
+        if (result.code === "EMAIL_NOT_VERIFIED") {
+          toast.error("Email chưa được xác thực", {
+            description: "Đang chuyển đến trang xác thực...",
+            duration: 2000
+          });
+          setTimeout(() => {
+            router.push(
+              `/verify-email?email=${encodeURIComponent(formData.email)}`
+            );
+          }, 1000);
+        } else {
+          setError(
+            result.message ||
+              "Đăng nhập không thành công - Thiếu thông tin bắt buộc"
+          );
+        }
       }
     } catch (error) {
       console.error("Login error:", error);

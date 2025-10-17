@@ -57,13 +57,16 @@ export default function Register() {
       });
 
       if (result.success) {
-        setSuccess(result.message);
-        setEmailSent(true);
-        setUserEmail(formData.email);
         toast.success("Đăng ký thành công!", {
-          description: "Vui lòng kiểm tra email để xác thực tài khoản.",
-          duration: 4000
+          description: "Đang chuyển đến trang xác thực...",
+          duration: 2000
         });
+        // Redirect to verify-email page with email parameter
+        setTimeout(() => {
+          router.push(
+            `/verify-email?email=${encodeURIComponent(formData.email)}`
+          );
+        }, 1000);
       } else {
         setError(result.message);
       }
