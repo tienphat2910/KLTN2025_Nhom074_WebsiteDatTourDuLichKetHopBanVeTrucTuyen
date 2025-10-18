@@ -18,6 +18,7 @@ class SocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private isUsingMock = false;
+  private listenersSetup = false; // Track if listeners are already set up
 
   // Event listeners
   private listeners: { [event: string]: Function[] } = {};
@@ -89,15 +90,28 @@ class SocketService {
       this.socket = null;
     }
     this.listeners = {};
+    this.listenersSetup = false; // Reset flag when disconnecting
   }
 
   private setupEventListeners() {
     if (!this.socket) return;
 
+    // Prevent setting up listeners multiple times
+    if (this.listenersSetup) {
+      console.log("⚠️ [socketService] Listeners already set up, skipping...");
+      return;
+    }
+
+    console.log("🔧 Setting up socket event listeners...");
+    this.listenersSetup = true;
+
     this.socket.on("connect", () => {
       console.log("Socket connected:", this.socket?.id);
-      this.reconnectAttempts = 0;
-      this.emit("connected");
+      // Wait a bit for socket ID to be set
+      setTimeout(() => {
+        console.log("Socket ID after delay:", this.socket?.id);
+        this.emit("connected");
+      }, 100);
     });
 
     this.socket.on("disconnect", (reason: any) => {
@@ -112,26 +126,53 @@ class SocketService {
 
     // Admin specific events
     this.socket.on("user_registered", (data: any) => {
+      console.log("📩 [socketService] Received user_registered from server");
       this.emit("user_registered", data);
     });
 
     this.socket.on("booking_created", (data: any) => {
+      console.log(
+        "📩 [socketService] Received booking_created from server:",
+        data?.booking?._id
+      );
       this.emit("booking_created", data);
     });
 
+    this.socket.on("booking_updated", (data: any) => {
+      console.log(
+        "📩 [socketService] Received booking_updated from server:",
+        data?.booking?._id
+      );
+      this.emit("booking_updated", data);
+    });
+
+    this.socket.on("booking_cancelled", (data: any) => {
+      console.log(
+        "📩 [socketService] Received booking_cancelled from server:",
+        data?.booking?._id
+      );
+      this.emit("booking_cancelled", data);
+    });
+
     this.socket.on("payment_completed", (data: any) => {
+      console.log("📩 [socketService] Received payment_completed from server");
       this.emit("payment_completed", data);
     });
 
     this.socket.on("user_status_changed", (data: any) => {
+      console.log(
+        "📩 [socketService] Received user_status_changed from server"
+      );
       this.emit("user_status_changed", data);
     });
 
     this.socket.on("new_notification", (data: any) => {
+      console.log("📩 [socketService] Received new_notification from server");
       this.emit("new_notification", data);
     });
 
     this.socket.on("system_alert", (data: any) => {
+      console.log("📩 [socketService] Received system_alert from server");
       this.emit("system_alert", data);
     });
   }
@@ -174,6 +215,9 @@ class SocketService {
 
   private emit(event: string, ...args: any[]) {
     if (this.listeners[event]) {
+      console.log(
+        `🔔 [socketService] Emitting ${event} to ${this.listeners[event].length} listeners`
+      );
       this.listeners[event].forEach((callback) => {
         try {
           callback(...args);
@@ -181,6 +225,8 @@ class SocketService {
           console.error(`Error in ${event} callback:`, error);
         }
       });
+    } else {
+      console.log(`⚠️ [socketService] No listeners for event: ${event}`);
     }
   }
 

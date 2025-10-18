@@ -131,21 +131,91 @@ const notifyUserRegistered = (userData) => {
 };
 
 const notifyBookingCreated = (bookingData) => {
-    emitToAdmins('booking_created', {
+    console.log('📢 [socketHandler] notifyBookingCreated called for booking:', bookingData._id);
+
+    // Extract user info if populated
+    const userInfo = bookingData.userId && typeof bookingData.userId === 'object'
+        ? {
+            _id: bookingData.userId._id,
+            fullName: bookingData.userId.fullName,
+            email: bookingData.userId.email,
+            phone: bookingData.userId.phone
+        }
+        : null;
+
+    const eventData = {
         booking: {
             _id: bookingData._id,
             userId: bookingData.userId,
-            type: bookingData.type,
+            user: userInfo, // Add user info
+            bookingType: bookingData.bookingType, // Use bookingType instead of type
             totalPrice: bookingData.totalPrice,
             status: bookingData.status,
             createdAt: bookingData.createdAt
         },
         timestamp: new Date()
-    });
+    };
 
-    // Also notify the user who made the booking
-    emitToUser(bookingData.userId, 'booking_confirmed', {
+    console.log('📤 [socketHandler] Emitting booking_created to admin_room:', eventData.booking._id);
+    emitToAdmins('booking_created', eventData);
+
+    // Also notify the user who made the booking (use userId._id if populated)
+    const userIdToNotify = typeof bookingData.userId === 'object'
+        ? bookingData.userId._id
+        : bookingData.userId;
+
+    emitToUser(userIdToNotify, 'booking_confirmed', {
         booking: bookingData,
+        timestamp: new Date()
+    });
+};
+
+const notifyBookingUpdated = (bookingData) => {
+    // Extract user info if populated
+    const userInfo = bookingData.userId && typeof bookingData.userId === 'object'
+        ? {
+            _id: bookingData.userId._id,
+            fullName: bookingData.userId.fullName,
+            email: bookingData.userId.email,
+            phone: bookingData.userId.phone
+        }
+        : null;
+
+    emitToAdmins('booking_updated', {
+        booking: {
+            _id: bookingData._id,
+            userId: bookingData.userId,
+            user: userInfo,
+            bookingType: bookingData.bookingType, // Use bookingType instead of type
+            totalPrice: bookingData.totalPrice,
+            status: bookingData.status,
+            updatedAt: bookingData.updatedAt
+        },
+        timestamp: new Date()
+    });
+};
+
+const notifyBookingCancelled = (bookingData) => {
+    // Extract user info if populated
+    const userInfo = bookingData.userId && typeof bookingData.userId === 'object'
+        ? {
+            _id: bookingData.userId._id,
+            fullName: bookingData.userId.fullName,
+            email: bookingData.userId.email,
+            phone: bookingData.userId.phone
+        }
+        : null;
+
+    emitToAdmins('booking_cancelled', {
+        booking: {
+            _id: bookingData._id,
+            userId: bookingData.userId,
+            user: userInfo,
+            bookingType: bookingData.bookingType, // Use bookingType instead of type
+            totalPrice: bookingData.totalPrice,
+            status: bookingData.status,
+            cancelledAt: new Date()
+        },
         timestamp: new Date()
     });
 };
@@ -187,6 +257,8 @@ module.exports = {
     emitToAll,
     notifyUserRegistered,
     notifyBookingCreated,
+    notifyBookingUpdated,
+    notifyBookingCancelled,
     notifyPaymentCompleted,
     notifyUserStatusChanged,
     notifySystemAlert

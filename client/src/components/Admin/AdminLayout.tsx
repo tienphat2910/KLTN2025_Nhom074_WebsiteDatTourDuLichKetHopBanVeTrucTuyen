@@ -51,10 +51,32 @@ export function AdminLayout({
     const token = localStorage.getItem("lutrip_admin_token");
     if (token) {
       const connectSocket = async () => {
-        await socketService.connect(token);
+        try {
+          await socketService.connect(token);
 
-        // Join admin room
-        socketService.joinAdminRoom();
+          // Wait for connection to be established
+          const waitForConnection = () => {
+            return new Promise<void>((resolve) => {
+              if (socketService.isConnected()) {
+                resolve();
+              } else {
+                const checkConnection = () => {
+                  if (socketService.isConnected()) {
+                    resolve();
+                  } else {
+                    setTimeout(checkConnection, 100);
+                  }
+                };
+                checkConnection();
+              }
+            });
+          };
+
+          await waitForConnection();
+          socketService.joinAdminRoom();
+        } catch (error) {
+          console.error("Failed to connect socket:", error);
+        }
       };
 
       connectSocket();

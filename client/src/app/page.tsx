@@ -117,7 +117,11 @@ export default function Home() {
       .get(`${env.API_BASE_URL}/activities?popular=true&limit=3`)
       .then((res) => {
         if (res.data.success) {
-          setPopularActivities(res.data.data);
+          // Handle both array and object with activities property
+          const activitiesData = Array.isArray(res.data.data)
+            ? res.data.data
+            : res.data.data?.activities || [];
+          setPopularActivities(activitiesData);
         } else {
           setPopularActivities([]);
         }
@@ -660,7 +664,7 @@ export default function Home() {
                 text="Đang tải địa điểm vui chơi..."
               />
             </div>
-          ) : popularActivities.length === 0 ? (
+          ) : (popularActivities || []).length === 0 ? (
             <div className="text-center py-12 bg-white/10 backdrop-blur-sm rounded-xl">
               <p className="text-white text-lg">
                 Không tìm thấy địa điểm vui chơi phổ biến
@@ -668,8 +672,8 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-8">
-              {popularActivities
-                .filter((place) => place.popular)
+              {(popularActivities || [])
+                .filter((place) => place && place.popular)
                 .map((place) => (
                   <Link
                     key={place._id}
