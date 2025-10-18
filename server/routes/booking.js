@@ -1,6 +1,8 @@
 const express = require('express');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 const auth = require('../middleware/auth'); // Add auth middleware import
+const { notifyBookingCreated } = require('../utils/socketHandler');
 const router = express.Router();
 
 // Create booking - Require authentication
@@ -18,7 +20,15 @@ router.post('/', auth, async (req, res) => {
         const booking = new Booking(bookingData);
         await booking.save();
 
+        // Populate user info for notification
+        const populatedBooking = await Booking.findById(booking._id)
+            .populate('userId', 'fullName email phone');
+
         console.log('Booking created successfully:', booking);
+
+        // Notify admins about new booking
+        notifyBookingCreated(populatedBooking);
+
         res.status(201).json({ success: true, data: booking });
     } catch (error) {
         console.error('Booking creation error:', error);

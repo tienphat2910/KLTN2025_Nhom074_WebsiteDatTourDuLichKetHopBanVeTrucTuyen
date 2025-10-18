@@ -332,7 +332,7 @@ export default function BookingTourPage() {
 
       if (res.success) {
         toast.success("Đặt tour thành công!");
-        router.push("/profile/bookings");
+        router.push("/profile/booking");
       } else {
         if (res.requireAuth) {
           router.push(
