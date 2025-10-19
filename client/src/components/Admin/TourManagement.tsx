@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/select";
 import { Tour, ToursResponse } from "@/services/tourService";
 import { TourModal } from "@/components/Admin/TourModal";
+import { AddTourModal } from "@/components/Admin/AddTourModal";
 import { tourService } from "@/services/tourService";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/useSocket";
@@ -70,6 +71,7 @@ export function TourManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -316,7 +318,7 @@ export function TourManagement() {
 
   const handleAddTour = () => {
     setEditingTour(null);
-    setIsModalOpen(true);
+    setIsAddModalOpen(true);
   };
 
   const handleSaveTour = async (tourData: Partial<Tour>) => {
@@ -387,8 +389,10 @@ export function TourManagement() {
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const nights = diffDays - 1;
-    return `${diffDays}N${nights}Đ`;
+    // Số ngày = diffDays + 1 (vì tính cả ngày bắt đầu và ngày kết thúc)
+    const totalDays = diffDays + 1;
+    const nights = diffDays;
+    return `${totalDays}N${nights}Đ`;
   };
 
   return (
@@ -616,7 +620,8 @@ export function TourManagement() {
                             {formatDate(tour.startDate)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {getDuration(tour.startDate, tour.endDate)}
+                            {tour.duration ||
+                              getDuration(tour.startDate, tour.endDate)}
                           </div>
                         </div>
                       </TableCell>
@@ -763,6 +768,13 @@ export function TourManagement() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         tour={editingTour}
+        onSave={handleSaveTour}
+      />
+
+      {/* Add Tour Modal */}
+      <AddTourModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
         onSave={handleSaveTour}
       />
     </div>
