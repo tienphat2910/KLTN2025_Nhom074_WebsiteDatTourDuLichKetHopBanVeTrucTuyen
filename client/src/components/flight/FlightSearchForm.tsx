@@ -7,7 +7,6 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 
 interface Props {
-  flights: Flight[];
   isRoundTrip: boolean;
   setIsRoundTrip: (v: boolean) => void;
   selectedDeparture: string;
@@ -26,7 +25,6 @@ interface Props {
 }
 
 export default function FlightSearchForm({
-  flights,
   isRoundTrip,
   setIsRoundTrip,
   selectedDeparture,
@@ -57,11 +55,26 @@ export default function FlightSearchForm({
   const classPopupRef = useRef<HTMLDivElement>(null);
   const [seatClassLabel, setSeatClassLabel] = useState("Phổ thông");
 
+  // State để track responsive
+  const [isMobile, setIsMobile] = useState(false);
+
   // Popup chọn ngày
   const [showDepartureDatePicker, setShowDepartureDatePicker] = useState(false);
   const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
   const departureDatePickerRef = useRef<HTMLDivElement>(null);
   const returnDatePickerRef = useRef<HTMLDivElement>(null);
+
+  // Detect mobile screen
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+
+    return () => window.removeEventListener("resize", checkIsMobile);
+  }, []);
 
   // Đóng popup khi click ngoài
   useEffect(() => {
@@ -718,8 +731,8 @@ export default function FlightSearchForm({
             {showDepartureDatePicker && (
               <div
                 ref={departureDatePickerRef}
-                className="absolute left-0 top-[110%] z-50 bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-4 text-black"
-                style={{ width: 420, background: "#fff" }}
+                className="fixed md:absolute left-1/2 md:left-0 top-1/2 md:top-[110%] transform -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 z-[9999] bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-4 text-black max-w-[95vw] md:max-w-none overflow-auto max-h-[80vh]"
+                style={{ width: "min(420px, 95vw)", background: "#fff" }}
               >
                 <DayPicker
                   mode="single"
@@ -731,7 +744,7 @@ export default function FlightSearchForm({
                     }
                   }}
                   locale={vi}
-                  numberOfMonths={2}
+                  numberOfMonths={isMobile ? 1 : 2}
                   fromDate={new Date()}
                   disabled={{ before: new Date() }}
                   modifiersClassNames={{
@@ -780,8 +793,8 @@ export default function FlightSearchForm({
             {showReturnDatePicker && (
               <div
                 ref={returnDatePickerRef}
-                className="absolute left-0 top-[90%] z-50 bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-3 text-black"
-                style={{ width: 420, background: "#fff" }}
+                className="fixed md:absolute left-1/2 md:left-0 top-1/2 md:top-[90%] transform -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 z-[9999] bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-3 text-black max-w-[95vw] md:max-w-none overflow-auto max-h-[80vh]"
+                style={{ width: "min(420px, 95vw)", background: "#fff" }}
               >
                 <DayPicker
                   mode="single"
@@ -793,7 +806,7 @@ export default function FlightSearchForm({
                     }
                   }}
                   locale={vi}
-                  numberOfMonths={2}
+                  numberOfMonths={isMobile ? 1 : 2}
                   fromDate={
                     departureDate
                       ? addDays(new Date(departureDate), 0)

@@ -17,25 +17,25 @@ const getToken = (): string | null => {
 
 export interface PassengerInfo {
   fullName: string;
-  phone?: string;
+  phoneNumber?: string;
   email?: string;
-  gender: string;
+  gender: "Nam" | "Nữ";
   dateOfBirth: string;
-  cccd?: string;
-  type: "adult" | "child" | "infant";
+  identityNumber?: string;
+  seatNumber?: string;
+  nationality?: string;
 }
 
 export interface BookingFlightPayload {
   flightId: string;
-  numAdults: number;
-  numChildren: number;
-  numInfants: number;
-  priceByClass: {
-    economy: number;
-    business: number;
-  };
-  classType: "economy" | "business";
-  subtotal: number;
+  flightCode: string;
+  flightClassId: string;
+  numTickets: number;
+  pricePerTicket: number;
+  totalFlightPrice: number;
+  discountAmount?: number;
+  finalTotal?: number;
+  discountCode?: string;
   status?: string;
   passengers?: PassengerInfo[];
   note?: string;
@@ -53,13 +53,16 @@ export const bookingFlightService = {
           message: "Vui lòng đăng nhập để đặt vé máy bay"
         };
       }
-      if (!payload.flightId || payload.subtotal <= 0) {
+      if (!payload.flightId || payload.totalFlightPrice <= 0) {
         return { success: false, message: "Thông tin đặt vé không hợp lệ" };
       }
       // 1. Create booking
       const bookingPayload: any = {
         bookingDate: new Date().toISOString(),
-        totalPrice: Math.max(1, Math.round(payload.subtotal)),
+        totalPrice: Math.max(
+          1,
+          Math.round(payload.finalTotal || payload.totalFlightPrice)
+        ),
         status: "pending",
         bookingType: "flight"
       };

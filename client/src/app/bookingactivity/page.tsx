@@ -9,7 +9,17 @@ import { bookingActivityService } from "@/services/bookingActivityService";
 import { discountService } from "@/services/discountService";
 import { paymentService } from "@/services/paymentService";
 import { toast } from "sonner";
-import { Calendar, Users, MapPin, Clock, DollarSign, Tag, CreditCard, Wallet, Building2 } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  MapPin,
+  Clock,
+  DollarSign,
+  Tag,
+  CreditCard,
+  Wallet,
+  Building2
+} from "lucide-react";
 import { env } from "@/config/env";
 
 interface ParticipantInfo {
@@ -142,7 +152,9 @@ export default function BookingActivityPage() {
     );
   };
 
-  const getParticipantTypeLabel = (type: "adult" | "child" | "baby" | "senior") => {
+  const getParticipantTypeLabel = (
+    type: "adult" | "child" | "baby" | "senior"
+  ) => {
     switch (type) {
       case "adult":
         return "Người lớn";
@@ -322,7 +334,10 @@ export default function BookingActivityPage() {
               momoOrderId: momoResponse.data.orderId
             };
 
-            localStorage.setItem("pendingActivityBooking", JSON.stringify(bookingData));
+            localStorage.setItem(
+              "pendingActivityBooking",
+              JSON.stringify(bookingData)
+            );
             toast.success("Đang chuyển hướng đến trang thanh toán MoMo...");
             paymentService.redirectToMoMoPayment(momoResponse.data.payUrl);
             return;
@@ -417,28 +432,37 @@ export default function BookingActivityPage() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6">
-            <h1 className="text-2xl font-bold mb-2">Đặt hoạt động: {activity.name}</h1>
+            <h1 className="text-2xl font-bold mb-2">
+              Đặt hoạt động: {activity.name}
+            </h1>
             <div className="flex items-center text-blue-100">
               <MapPin className="w-4 h-4 mr-2" />
-              {activity.location?.name || activity.location?.address || "Chưa có địa chỉ"}
+              {activity.location?.name ||
+                activity.location?.address ||
+                "Chưa có địa chỉ"}
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6">
             {/* Activity Info */}
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
-              <h2 className="font-semibold text-lg mb-3 text-blue-900">Thông tin hoạt động</h2>
+              <h2 className="font-semibold text-lg mb-3 text-blue-900">
+                Thông tin hoạt động
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center">
                   <Users className="w-4 h-4 mr-2 text-blue-600" />
                   <span>
-                    {adults} người lớn, {children} trẻ em, {babies} em bé, {seniors} người cao tuổi
+                    {adults} người lớn, {children} trẻ em, {babies} em bé,{" "}
+                    {seniors} người cao tuổi
                   </span>
                 </div>
                 {activity.operating_hours?.mon_to_sat && (
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-2 text-blue-600" />
-                    <span>Giờ hoạt động: {activity.operating_hours.mon_to_sat}</span>
+                    <span>
+                      Giờ hoạt động: {activity.operating_hours.mon_to_sat}
+                    </span>
                   </div>
                 )}
               </div>
@@ -455,7 +479,7 @@ export default function BookingActivityPage() {
                   type="date"
                   value={scheduledDate}
                   onChange={(e) => setScheduledDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={new Date().toISOString().split("T")[0]}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -557,7 +581,11 @@ export default function BookingActivityPage() {
                         type="date"
                         value={participant.dateOfBirth}
                         onChange={(e) =>
-                          updateParticipant(index, "dateOfBirth", e.target.value)
+                          updateParticipant(
+                            index,
+                            "dateOfBirth",
+                            e.target.value
+                          )
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -615,7 +643,9 @@ export default function BookingActivityPage() {
                     <Wallet className="w-6 h-6 text-green-600" />
                     <div>
                       <div className="font-medium">Tiền mặt</div>
-                      <div className="text-xs text-gray-500">Thanh toán khi nhận</div>
+                      <div className="text-xs text-gray-500">
+                        Thanh toán khi nhận
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -666,7 +696,9 @@ export default function BookingActivityPage() {
                   <input
                     type="text"
                     value={discountCode}
-                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setDiscountCode(e.target.value.toUpperCase())
+                    }
                     placeholder="Nhập mã giảm giá"
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -684,11 +716,14 @@ export default function BookingActivityPage() {
                   <div className="flex items-center space-x-2">
                     <Tag className="w-5 h-5 text-green-600" />
                     <div>
-                      <div className="font-medium text-green-900">{appliedDiscount.code}</div>
+                      <div className="font-medium text-green-900">
+                        {appliedDiscount.code}
+                      </div>
                       <div className="text-sm text-green-700">
-                        Giảm {appliedDiscount.discountType === 'percentage' 
-                          ? `${appliedDiscount.value}%` 
-                          : `${appliedDiscount.value.toLocaleString('vi-VN')}đ`}
+                        Giảm{" "}
+                        {appliedDiscount.discountType === "percentage"
+                          ? `${appliedDiscount.value}%`
+                          : `${appliedDiscount.value.toLocaleString("vi-VN")}đ`}
                       </div>
                     </div>
                   </div>
@@ -705,31 +740,77 @@ export default function BookingActivityPage() {
 
             {/* Price Summary */}
             <div className="bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-lg border border-blue-200 mb-6">
-              <h2 className="text-lg font-semibold mb-4 text-gray-800">Chi tiết giá</h2>
-              
+              <h2 className="text-lg font-semibold mb-4 text-gray-800">
+                Chi tiết giá
+              </h2>
+
               <div className="space-y-3 mb-4">
                 {adults > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span>Người lớn ({adults} x {(activity.price?.retail?.adult || 0).toLocaleString('vi-VN')}đ)</span>
-                    <span className="font-medium">{(adults * (activity.price?.retail?.adult || 0)).toLocaleString('vi-VN')}đ</span>
+                    <span>
+                      Người lớn ({adults} x{" "}
+                      {(activity.price?.retail?.adult || 0).toLocaleString(
+                        "vi-VN"
+                      )}
+                      đ)
+                    </span>
+                    <span className="font-medium">
+                      {(
+                        adults * (activity.price?.retail?.adult || 0)
+                      ).toLocaleString("vi-VN")}
+                      đ
+                    </span>
                   </div>
                 )}
                 {children > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span>Trẻ em ({children} x {(activity.price?.retail?.child || 0).toLocaleString('vi-VN')}đ)</span>
-                    <span className="font-medium">{(children * (activity.price?.retail?.child || 0)).toLocaleString('vi-VN')}đ</span>
+                    <span>
+                      Trẻ em ({children} x{" "}
+                      {(activity.price?.retail?.child || 0).toLocaleString(
+                        "vi-VN"
+                      )}
+                      đ)
+                    </span>
+                    <span className="font-medium">
+                      {(
+                        children * (activity.price?.retail?.child || 0)
+                      ).toLocaleString("vi-VN")}
+                      đ
+                    </span>
                   </div>
                 )}
                 {babies > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span>Em bé ({babies} x {(activity.price?.retail?.baby || 0).toLocaleString('vi-VN')}đ)</span>
-                    <span className="font-medium">{(babies * (activity.price?.retail?.baby || 0)).toLocaleString('vi-VN')}đ</span>
+                    <span>
+                      Em bé ({babies} x{" "}
+                      {(activity.price?.retail?.baby || 0).toLocaleString(
+                        "vi-VN"
+                      )}
+                      đ)
+                    </span>
+                    <span className="font-medium">
+                      {(
+                        babies * (activity.price?.retail?.baby || 0)
+                      ).toLocaleString("vi-VN")}
+                      đ
+                    </span>
                   </div>
                 )}
                 {seniors > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span>Người cao tuổi ({seniors} x {(activity.price?.retail?.senior || 0).toLocaleString('vi-VN')}đ)</span>
-                    <span className="font-medium">{(seniors * (activity.price?.retail?.senior || 0)).toLocaleString('vi-VN')}đ</span>
+                    <span>
+                      Người cao tuổi ({seniors} x{" "}
+                      {(activity.price?.retail?.senior || 0).toLocaleString(
+                        "vi-VN"
+                      )}
+                      đ)
+                    </span>
+                    <span className="font-medium">
+                      {(
+                        seniors * (activity.price?.retail?.senior || 0)
+                      ).toLocaleString("vi-VN")}
+                      đ
+                    </span>
                   </div>
                 )}
               </div>
@@ -737,19 +818,23 @@ export default function BookingActivityPage() {
               <div className="border-t border-blue-200 pt-3 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Tạm tính:</span>
-                  <span className="font-medium">{subtotal.toLocaleString('vi-VN')}đ</span>
+                  <span className="font-medium">
+                    {subtotal.toLocaleString("vi-VN")}đ
+                  </span>
                 </div>
 
                 {appliedDiscount && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Giảm giá:</span>
-                    <span className="font-medium">-{discountAmount.toLocaleString('vi-VN')}đ</span>
+                    <span className="font-medium">
+                      -{discountAmount.toLocaleString("vi-VN")}đ
+                    </span>
                   </div>
                 )}
 
                 <div className="flex justify-between text-lg font-bold text-blue-900 pt-2 border-t border-blue-200">
                   <span>Tổng cộng:</span>
-                  <span>{finalTotal.toLocaleString('vi-VN')}đ</span>
+                  <span>{finalTotal.toLocaleString("vi-VN")}đ</span>
                 </div>
               </div>
             </div>

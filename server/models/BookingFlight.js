@@ -1,46 +1,5 @@
 const mongoose = require('mongoose');
 
-const passengerSchema = new mongoose.Schema({
-    fullName: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    phone: {
-        type: String,
-        trim: true
-    },
-    email: {
-        type: String,
-        trim: true
-    },
-    gender: {
-        type: String,
-        required: true,
-        enum: ['Nam', 'Nữ']
-    },
-    dateOfBirth: {
-        type: Date,
-        required: true
-    },
-    cccd: {
-        type: String,
-        trim: true,
-        validate: {
-            validator: function (v) {
-                // If provided, should be 9 or 12 digits
-                return !v || /^\d{9}$|^\d{12}$/.test(v);
-            },
-            message: 'CCCD/CMND phải có 9 hoặc 12 số'
-        }
-    },
-    type: {
-        type: String,
-        required: true,
-        enum: ['adult', 'child', 'infant']
-    }
-});
-
 const bookingFlightSchema = new mongoose.Schema({
     bookingId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -52,39 +11,28 @@ const bookingFlightSchema = new mongoose.Schema({
         ref: 'Flight',
         required: true
     },
-    numAdults: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    numChildren: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    numInfants: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    priceByClass: {
-        economy: {
-            type: Number,
-            required: true,
-            min: 0
-        },
-        business: {
-            type: Number,
-            required: true,
-            min: 0
-        }
-    },
-    classType: {
+    flightCode: {
         type: String,
         required: true,
-        enum: ['economy', 'business']
+        uppercase: true,
+        trim: true
     },
-    subtotal: {
+    flightClassId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'FlightClass',
+        required: true
+    },
+    numTickets: {
+        type: Number,
+        required: true,
+        min: 1
+    },
+    pricePerTicket: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    totalFlightPrice: {
         type: Number,
         required: true,
         min: 0
@@ -94,7 +42,6 @@ const bookingFlightSchema = new mongoose.Schema({
         default: 'pending',
         enum: ['pending', 'confirmed', 'cancelled', 'completed']
     },
-    passengers: [passengerSchema],
     note: {
         type: String,
         trim: true
@@ -102,11 +49,89 @@ const bookingFlightSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['cash', 'momo', 'bank_transfer'],
-        default: 'cash'
+        enum: ['momo', 'bank_transfer']
+    },
+    discountCode: {
+        type: String,
+        trim: true,
+        uppercase: true
+    },
+    discountAmount: {
+        type: Number,
+        default: 0,
+        min: 0
     }
 }, {
     timestamps: true
 });
+
+// Index for faster queries
+bookingFlightSchema.index({ bookingId: 1 });
+bookingFlightSchema.index({ flightId: 1 });
+bookingFlightSchema.index({ flightClassId: 1 });
+bookingFlightSchema.index({ flightCode: 1 });
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     BookingFlight:
+ *       type: object
+ *       required:
+ *         - bookingId
+ *         - flightId
+ *         - flightCode
+ *         - flightClassId
+ *         - numTickets
+ *         - pricePerTicket
+ *         - totalFlightPrice
+ *       properties:
+ *         _id:
+ *           type: string
+ *         bookingId:
+ *           type: string
+ *           description: ID của booking
+ *         flightId:
+ *           type: string
+ *           description: ID của chuyến bay
+ *         flightCode:
+ *           type: string
+ *           description: Mã chuyến bay
+ *         flightClassId:
+ *           type: string
+ *           description: ID của hạng vé
+ *         numTickets:
+ *           type: number
+ *           description: Số lượng vé
+ *         pricePerTicket:
+ *           type: number
+ *           description: Giá mỗi vé
+ *         totalFlightPrice:
+ *           type: number
+ *           description: Tổng giá vé
+ *         status:
+ *           type: string
+ *           enum: [pending, confirmed, cancelled, completed]
+ *           description: Trạng thái
+ *         note:
+ *           type: string
+ *           description: Ghi chú
+ *         paymentMethod:
+ *           type: string
+ *           enum: [momo, bank_transfer]
+ *           description: Phương thức thanh toán
+ *         discountCode:
+ *           type: string
+ *           description: Mã giảm giá
+ *         discountAmount:
+ *           type: number
+ *           description: Số tiền giảm giá
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ */
 
 module.exports = mongoose.model('BookingFlight', bookingFlightSchema);

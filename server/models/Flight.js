@@ -1,42 +1,63 @@
 const mongoose = require('mongoose');
 
 const flightSchema = new mongoose.Schema({
-    flightNumber: { type: String, required: true },
-    airline: { type: String, required: true },
-    departureAirport: {
-        code: String,
-        name: String,
-        city: String
+    flightCode: {
+        type: String,
+        required: true,
+        unique: true,
+        uppercase: true,
+        trim: true
     },
-    arrivalAirport: {
-        code: String,
-        name: String,
-        city: String
+    airlineId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Airline',
+        required: true
     },
-    departureTime: { type: Date, required: true },
-    arrivalTime: { type: Date, required: true },
-    durationMinutes: { type: Number, required: true },
+    departureAirportId: {
+        type: mongoose.Schema.Types.String,
+        ref: 'Airport',
+        required: true
+    },
+    arrivalAirportId: {
+        type: mongoose.Schema.Types.String,
+        ref: 'Airport',
+        required: true
+    },
+    departureTime: {
+        type: Date,
+        required: true,
+        description: 'Thời gian khởi hành đầy đủ'
+    },
+    arrivalTime: {
+        type: Date,
+        required: true,
+        description: 'Thời gian đến đầy đủ'
+    },
+    durationMinutes: {
+        type: Number,
+        required: true
+    },
+    basePrice: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    availableSeats: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    status: {
+        type: String,
+        enum: ['active', 'inactive', 'cancelled'],
+        default: 'active'
+    },
     aircraft: {
         model: String,
         registration: String
-    },
-    seatInfo: {
-        totalSeats: Number,
-        availableSeats: Number,
-        classes: {
-            economy: {
-                price: Number,
-                available: Number
-            },
-            business: {
-                price: Number,
-                available: Number
-            }
-        }
-    },
-    status: { type: String, default: "Đang lên lịch" },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    }
+}, {
+    timestamps: true
 });
 
 /**
@@ -45,39 +66,56 @@ const flightSchema = new mongoose.Schema({
  *   schemas:
  *     Flight:
  *       type: object
+ *       required:
+ *         - flightCode
+ *         - airlineId
+ *         - departureAirportId
+ *         - arrivalAirportId
+ *         - departureTime
+ *         - arrivalTime
+ *         - durationMinutes
+ *         - basePrice
+ *         - availableSeats
  *       properties:
  *         _id:
  *           type: string
- *         flightNumber:
+ *         flightCode:
  *           type: string
- *         airline:
+ *           description: Mã chuyến bay
+ *           example: VN123
+ *         airlineId:
  *           type: string
- *         departureAirport:
- *           type: object
- *           properties:
- *             code:
- *               type: string
- *             name:
- *               type: string
- *             city:
- *               type: string
- *         arrivalAirport:
- *           type: object
- *           properties:
- *             code:
- *               type: string
- *             name:
- *               type: string
- *             city:
- *               type: string
+ *           description: ID hãng hàng không
+ *         departureAirportId:
+ *           type: string
+ *           description: ID sân bay khởi hành
+ *         arrivalAirportId:
+ *           type: string
+ *           description: ID sân bay đến
  *         departureTime:
  *           type: string
  *           format: date-time
+ *           description: Thời gian khởi hành đầy đủ
+ *           example: "2025-10-20T08:30:00Z"
  *         arrivalTime:
  *           type: string
  *           format: date-time
+ *           description: Thời gian đến đầy đủ
+ *           example: "2025-10-20T10:45:00Z"
  *         durationMinutes:
  *           type: number
+ *           description: Thời gian bay (phút)
+ *           example: 135
+ *         basePrice:
+ *           type: number
+ *           description: Giá cơ bản
+ *           example: 1500000
+ *         availableSeats:
+ *           type: number
+ *           description: Số ghế khả dụng
+ *         status:
+ *           type: string
+ *           enum: [active, inactive, cancelled]
  *         aircraft:
  *           type: object
  *           properties:
@@ -85,32 +123,6 @@ const flightSchema = new mongoose.Schema({
  *               type: string
  *             registration:
  *               type: string
- *         seatInfo:
- *           type: object
- *           properties:
- *             totalSeats:
- *               type: number
- *             availableSeats:
- *               type: number
- *             classes:
- *               type: object
- *               properties:
- *                 economy:
- *                   type: object
- *                   properties:
- *                     price:
- *                       type: number
- *                     available:
- *                       type: number
- *                 business:
- *                   type: object
- *                   properties:
- *                     price:
- *                       type: number
- *                     available:
- *                       type: number
- *         status:
- *           type: string
  *         createdAt:
  *           type: string
  *           format: date-time
