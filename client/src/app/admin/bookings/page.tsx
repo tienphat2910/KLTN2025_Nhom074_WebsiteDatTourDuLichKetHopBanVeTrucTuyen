@@ -2,103 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import { AdminLayout } from "@/components/Admin";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Calendar,
-  MapPin,
-  Plane,
-  Mountain,
-  Clock,
-  DollarSign,
-  X,
-  CheckCircle,
-  AlertCircle,
-  Search,
-  Filter,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
-  Users,
-  Receipt,
-  TrendingUp,
-  Activity,
-  Loader2
-} from "lucide-react";
 import { BookingDetailModal } from "@/components/Booking/BookingDetailModal";
 import { Booking, bookingService } from "@/services/bookingService";
 import { socketService } from "@/services/socketService";
 import { toast } from "sonner";
 import { env } from "@/config/env";
-
-const statusConfig = {
-  pending: {
-    label: "Chờ xác nhận",
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    icon: Clock
-  },
-  confirmed: {
-    label: "Đã xác nhận",
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-    icon: CheckCircle
-  },
-  cancelled: {
-    label: "Đã hủy",
-    color: "bg-red-100 text-red-800 border-red-200",
-    icon: X
-  },
-  completed: {
-    label: "Hoàn thành",
-    color: "bg-green-100 text-green-800 border-green-200",
-    icon: CheckCircle
-  }
-};
-
-const bookingTypeConfig = {
-  tour: {
-    label: "Tour du lịch",
-    icon: Mountain,
-    color: "text-blue-600",
-    bgColor: "bg-blue-50"
-  },
-  activity: {
-    label: "Hoạt động",
-    icon: MapPin,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50"
-  },
-  flight: {
-    label: "Chuyến bay",
-    icon: Plane,
-    color: "text-green-600",
-    bgColor: "bg-green-50"
-  }
-};
+import { BookingStats } from "@/components/Admin/BookingStats";
+import { BookingActions } from "@/components/Admin/BookingActions";
+import { BookingFilters } from "@/components/Admin/BookingFilters";
+import { BookingTable } from "@/components/Admin/BookingTable";
+import { BookingPagination } from "@/components/Admin/BookingPagination";
+import { formatCurrency, formatDate } from "@/components/Admin/bookingUtils";
 
 export default function AdminBookingPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -621,23 +535,6 @@ export default function AdminBookingPage() {
     loadStats();
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND"
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
       const response = await bookingService.updateBookingStatus(
@@ -1060,443 +957,50 @@ export default function AdminBookingPage() {
     >
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Quản lý Booking
-              </h2>
-              <Badge
-                variant={isSocketConnected ? "default" : "secondary"}
-                className={`flex items-center gap-1 ${
-                  isSocketConnected
-                    ? "bg-green-100 text-green-700 border-green-200"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    isSocketConnected
-                      ? "bg-green-500 animate-pulse"
-                      : "bg-gray-400"
-                  }`}
-                ></span>
-                {isSocketConnected ? "Real-time" : "Offline"}
-              </Badge>
-            </div>
-            <p className="text-gray-600 mt-1">
-              Quản lý tất cả các đơn đặt chỗ trong hệ thống
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={loadStats}
-            >
-              <Activity className="h-4 w-4" />
-              Refresh Stats
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={handleExportExcel}
-            >
-              <Download className="h-4 w-4" />
-              Xuất Excel
-            </Button>
-            <Button
-              className="flex items-center gap-2"
-              onClick={handleGenerateReport}
-            >
-              <TrendingUp className="h-4 w-4" />
-              Báo cáo
-            </Button>
-          </div>
-        </div>
+        <BookingActions
+          isSocketConnected={isSocketConnected}
+          onRefreshStats={loadStats}
+          onExportExcel={handleExportExcel}
+          onGenerateReport={handleGenerateReport}
+        />
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Receipt className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Tổng booking</p>
-                  <p className="text-2xl font-bold">{stats.totalBookings}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Chờ xác nhận</p>
-                  <p className="text-2xl font-bold">{stats.pendingBookings}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Đã xác nhận</p>
-                  <p className="text-2xl font-bold">
-                    {stats.confirmedBookings}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Activity className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Hoàn thành</p>
-                  <p className="text-2xl font-bold">
-                    {stats.completedBookings}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <X className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Đã hủy</p>
-                  <p className="text-2xl font-bold">
-                    {stats.cancelledBookings}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Doanh thu</p>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(stats.totalRevenue)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <BookingStats stats={stats} />
 
         {/* Filters and Search */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Bộ lọc và tìm kiếm
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Tìm theo ID booking hoặc user..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Lọc theo trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="pending">Chờ xác nhận</SelectItem>
-                  <SelectItem value="confirmed">Đã xác nhận</SelectItem>
-                  <SelectItem value="completed">Hoàn thành</SelectItem>
-                  <SelectItem value="cancelled">Đã hủy</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Lọc theo loại" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả loại</SelectItem>
-                  <SelectItem value="tour">Tour du lịch</SelectItem>
-                  <SelectItem value="activity">Hoạt động</SelectItem>
-                  <SelectItem value="flight">Chuyến bay</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
-                  setTypeFilter("all");
-                }}
-              >
-                Xóa bộ lọc
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <BookingFilters
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          typeFilter={typeFilter}
+          onSearchTermChange={setSearchTerm}
+          onStatusFilterChange={setStatusFilter}
+          onTypeFilterChange={setTypeFilter}
+          onClearFilters={() => {
+            setSearchTerm("");
+            setStatusFilter("all");
+            setTypeFilter("all");
+          }}
+        />
 
         {/* Bookings Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Danh sách Booking ({filteredBookings.length})</CardTitle>
-            <CardDescription>
-              Quản lý và theo dõi tất cả các đơn đặt chỗ
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin mr-2" />
-                <span>Đang tải...</span>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID Booking</TableHead>
-                      <TableHead>Loại</TableHead>
-                      <TableHead>Trạng thái</TableHead>
-                      <TableHead>Ngày đặt</TableHead>
-                      <TableHead>Tổng tiền</TableHead>
-                      <TableHead>Khách hàng</TableHead>
-                      <TableHead>Cập nhật</TableHead>
-                      <TableHead className="text-right">Thao tác</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBookings.map((booking) => {
-                      const typeConfig = bookingTypeConfig[booking.bookingType];
-                      const statusInfo = statusConfig[booking.status];
-                      const TypeIcon = typeConfig.icon;
-                      const StatusIcon = statusInfo.icon;
+        <BookingTable
+          bookings={filteredBookings}
+          isLoading={isLoading}
+          onStatusChange={handleStatusChange}
+          onDeleteBooking={handleDeleteBooking}
+        />
 
-                      return (
-                        <TableRow key={booking._id}>
-                          <TableCell className="font-mono text-sm">
-                            {booking._id.slice(-8).toUpperCase()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`p-1 rounded ${typeConfig.bgColor}`}
-                              >
-                                <TypeIcon
-                                  className={`h-3 w-3 ${typeConfig.color}`}
-                                />
-                              </div>
-                              <span className="text-sm">
-                                {typeConfig.label}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={statusInfo.color}>
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {statusInfo.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {formatDate(booking.bookingDate)}
-                          </TableCell>
-                          <TableCell className="font-semibold text-green-600">
-                            {formatCurrency(booking.totalPrice)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div className="font-medium">
-                                {booking.user?.fullName || "Khách hàng"}
-                              </div>
-                              <div className="text-gray-500 text-xs">
-                                {booking.user?.email ||
-                                  (typeof booking.userId === "string"
-                                    ? `ID: ${booking.userId
-                                        .slice(-8)
-                                        .toUpperCase()}`
-                                    : "N/A")}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-500">
-                            {formatDate(booking.updatedAt)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 justify-end">
-                              <BookingDetailModal booking={booking} />
-
-                              <Select
-                                value={booking.status}
-                                onValueChange={(value) =>
-                                  handleStatusChange(booking._id, value)
-                                }
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="pending">
-                                    Chờ xác nhận
-                                  </SelectItem>
-                                  <SelectItem value="confirmed">
-                                    Xác nhận
-                                  </SelectItem>
-                                  <SelectItem value="completed">
-                                    Hoàn thành
-                                  </SelectItem>
-                                  <SelectItem value="cancelled">Hủy</SelectItem>
-                                </SelectContent>
-                              </Select>
-
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteBooking(booking._id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {filteredBookings.length === 0 && !isLoading && (
-              <div className="text-center py-12">
-                <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Không tìm thấy booking nào
-                </h3>
-                <p className="text-gray-600">
-                  Thử điều chỉnh bộ lọc hoặc tìm kiếm khác
-                </p>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {!isLoading && totalBookings > 0 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t">
-                <div className="text-sm text-gray-600">
-                  Hiển thị {(currentPage - 1) * 10 + 1} -{" "}
-                  {Math.min(currentPage * 10, totalBookings)} trong tổng số{" "}
-                  {totalBookings} booking
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const status =
-                        statusFilter === "all" ? undefined : statusFilter;
-                      const type =
-                        typeFilter === "all" ? undefined : typeFilter;
-                      loadBookings(currentPage - 1, status, type);
-                    }}
-                    disabled={currentPage === 1}
-                  >
-                    Trước
-                  </Button>
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                        (page) => {
-                          // Show first page, last page, current page and 2 pages around current
-                          if (
-                            page === 1 ||
-                            page === totalPages ||
-                            (page >= currentPage - 1 && page <= currentPage + 1)
-                          ) {
-                            return (
-                              <Button
-                                key={page}
-                                variant={
-                                  page === currentPage ? "default" : "outline"
-                                }
-                                size="sm"
-                                onClick={() => {
-                                  const status =
-                                    statusFilter === "all"
-                                      ? undefined
-                                      : statusFilter;
-                                  const type =
-                                    typeFilter === "all"
-                                      ? undefined
-                                      : typeFilter;
-                                  loadBookings(page, status, type);
-                                }}
-                                className="min-w-[40px]"
-                              >
-                                {page}
-                              </Button>
-                            );
-                          } else if (
-                            page === currentPage - 2 ||
-                            page === currentPage + 2
-                          ) {
-                            return <span key={page}>...</span>;
-                          }
-                          return null;
-                        }
-                      )}
-                    </div>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const status =
-                        statusFilter === "all" ? undefined : statusFilter;
-                      const type =
-                        typeFilter === "all" ? undefined : typeFilter;
-                      loadBookings(currentPage + 1, status, type);
-                    }}
-                    disabled={currentPage === totalPages}
-                  >
-                    Sau
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Pagination */}
+        <BookingPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalBookings={totalBookings}
+          onPageChange={(page) => {
+            const status = statusFilter === "all" ? undefined : statusFilter;
+            const type = typeFilter === "all" ? undefined : typeFilter;
+            loadBookings(page, status, type);
+          }}
+        />
       </div>
     </AdminLayout>
   );

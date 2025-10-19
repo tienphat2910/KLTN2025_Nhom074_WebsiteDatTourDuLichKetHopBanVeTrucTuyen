@@ -10,3 +10,8 @@ export { TourManagement } from "./TourManagement";
 export { TourModal } from "./TourModal";
 export { ActivityManagement } from "./ActivityManagement";
 export { ActivityModal } from "./ActivityModal";
+export { BookingStats } from "./BookingStats";
+export { BookingActions } from "./BookingActions";
+export { BookingFilters } from "./BookingFilters";
+export { BookingTable } from "./BookingTable";
+export { BookingPagination } from "./BookingPagination";
