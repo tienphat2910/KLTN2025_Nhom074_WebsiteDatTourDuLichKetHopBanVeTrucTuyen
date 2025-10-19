@@ -54,7 +54,6 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Tour, ToursResponse } from "@/services/tourService";
-import { TourModal } from "@/components/Admin/TourModal";
 import { AddTourModal } from "@/components/Admin/AddTourModal";
 import { tourService } from "@/services/tourService";
 import { toast } from "sonner";
@@ -71,7 +70,6 @@ export function TourManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -318,17 +316,14 @@ export function TourManagement() {
 
   const handleAddTour = () => {
     setEditingTour(null);
-    setIsAddModalOpen(true);
+    setIsModalOpen(true);
   };
 
-  const handleSaveTour = async (tourData: Partial<Tour>) => {
+  const handleSaveTour = async (tourData: Partial<Tour> & { _id?: string }) => {
     try {
-      if (editingTour) {
+      if (tourData._id) {
         // Update existing tour
-        const response = await tourService.updateTour(
-          editingTour._id,
-          tourData
-        );
+        const response = await tourService.updateTour(tourData._id, tourData);
         if (response.success) {
           toast.success("Cập nhật tour thành công");
           loadTours(currentPage, true);
@@ -392,7 +387,7 @@ export function TourManagement() {
     // Số ngày = diffDays + 1 (vì tính cả ngày bắt đầu và ngày kết thúc)
     const totalDays = diffDays + 1;
     const nights = diffDays;
-    return `${totalDays}N${nights}Đ`;
+    return `${totalDays} Ngày ${nights} đêm`;
   };
 
   return (
@@ -763,20 +758,73 @@ export function TourManagement() {
         </CardContent>
       </Card>
 
-      {/* Tour Modal */}
-      <TourModal
+      {/* Add/Edit Tour Modal */}
+      <AddTourModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         tour={editingTour}
         onSave={handleSaveTour}
       />
-
-      {/* Add Tour Modal */}
-      <AddTourModal
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onSave={handleSaveTour}
-      />
     </div>
   );
 }
+
+// Helper functions
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+};
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND"
+  }).format(amount);
+};
+
+const getDuration = (startDate: string, endDate: string): string => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const totalDays = diffDays + 1;
+  const nights = diffDays;
+  return `${totalDays} Ngày ${nights} đêm`;
+};
+
+const getTourStatus = (tour: Tour): string => {
+  const now = new Date();
+  const startDate = new Date(tour.startDate);
+  const endDate = new Date(tour.endDate);
+
+  if (tour.isActive === false) return "inactive";
+  if (endDate < now) return "expired";
+  if (tour.availableSeats <= 0) return "full";
+  if (startDate > now) return "upcoming";
+  return "active";
+};
+
+const getStatusBadge = (tour: Tour) => {
+  const status = getTourStatus(tour);
+
+  switch (status) {
+    case "active":
+      return (
+        <Badge className="bg-green-100 text-green-800">Đang hoạt động</Badge>
+      );
+    case "upcoming":
+      return <Badge className="bg-blue-100 text-blue-800">Sắp diễn ra</Badge>;
+    case "expired":
+      return <Badge className="bg-gray-100 text-gray-800">Đã kết thúc</Badge>;
+    case "full":
+      return <Badge className="bg-red-100 text-red-800">Hết chỗ</Badge>;
+    case "inactive":
+      return <Badge className="bg-gray-100 text-gray-800">Đã ẩn</Badge>;
+    default:
+      return <Badge variant="secondary">Không xác định</Badge>;
+  }
+};

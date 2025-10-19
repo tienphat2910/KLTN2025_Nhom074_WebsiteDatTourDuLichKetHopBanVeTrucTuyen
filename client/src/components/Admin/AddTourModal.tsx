@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { destinationService, Destination } from "@/services/destinationService";
-import { tourService } from "@/services/tourService";
+import { tourService, Tour } from "@/services/tourService";
 import { toast } from "sonner";
 import { Upload, X, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,16 +59,17 @@ interface TourFormData {
 interface AddTourModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (tour: Partial<TourFormData>) => void;
+  onSave: (tour: Partial<TourFormData> & { _id?: string }) => void;
+  tour?: Tour | null; // Tour from API for editing
 }
 
 const DURATION_OPTIONS = [
-  { value: "2N1Đ", label: "2 ngày 1 đêm", days: 2 },
-  { value: "3N2Đ", label: "3 ngày 2 đêm", days: 3 },
-  { value: "4N3Đ", label: "4 ngày 3 đêm", days: 4 },
-  { value: "5N4Đ", label: "5 ngày 4 đêm", days: 5 },
-  { value: "6N5Đ", label: "6 ngày 5 đêm", days: 6 },
-  { value: "7N6Đ", label: "7 ngày 6 đêm", days: 7 }
+  { value: "3 Ngày 2 đêm", label: "3 Ngày 2 đêm", days: 3 },
+  { value: "4 Ngày 3 đêm", label: "4 Ngày 3 đêm", days: 4 },
+  { value: "5 Ngày 4 đêm", label: "5 Ngày 4 đêm", days: 5 },
+  { value: "6 Ngày 5 đêm", label: "6 Ngày 5 đêm", days: 6 },
+  { value: "7 Ngày 6 đêm", label: "7 Ngày 6 đêm", days: 7 },
+  { value: "2 Ngày 1 đêm", label: "2 Ngày 1 đêm", days: 2 }
 ];
 
 const CATEGORY_OPTIONS = [
@@ -83,10 +84,12 @@ const CATEGORY_OPTIONS = [
 export function AddTourModal({
   open,
   onOpenChange,
-  onSave
+  onSave,
+  tour
 }: AddTourModalProps) {
   const [currentTab, setCurrentTab] = useState("basic");
   const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [isLoadingTourData, setIsLoadingTourData] = useState(false);
   const [formData, setFormData] = useState<TourFormData>({
     title: "",
     description: "",
@@ -135,8 +138,75 @@ export function AddTourModal({
     loadDestinations();
   }, []);
 
+  // Load tour data when editing
+  useEffect(() => {
+    if (tour && open) {
+      setIsLoadingTourData(true);
+
+      // Handle destinationId - it might be a string or an object with _id
+      const destinationId =
+        typeof tour.destinationId === "string"
+          ? tour.destinationId
+          : (tour.destinationId as any)?._id || "";
+
+      // Calculate duration if not provided
+      let duration = tour.duration || "";
+      if (!duration && tour.startDate && tour.endDate) {
+        const start = new Date(tour.startDate);
+        const end = new Date(tour.endDate);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const totalDays = diffDays + 1;
+        const nights = diffDays;
+        duration = `${totalDays} Ngày ${nights} đêm`;
+
+        console.log("📅 Calculated duration from dates:", duration);
+      } // Populate form with existing tour data
+      setFormData({
+        title: tour.title || "",
+        description: tour.description || "",
+        destinationId: destinationId,
+        departureLocation: {
+          name: tour.departureLocation?.name || "",
+          code: tour.departureLocation?.code || "",
+          fullName: tour.departureLocation?.fullName || "",
+          region: tour.departureLocation?.region || ""
+        },
+        itinerary: tour.itinerary || {},
+        startDate: tour.startDate
+          ? new Date(tour.startDate).toISOString().split("T")[0]
+          : "",
+        endDate: tour.endDate
+          ? new Date(tour.endDate).toISOString().split("T")[0]
+          : "",
+        duration: duration,
+        price: tour.price || 0,
+        discount: tour.discount || 0,
+        pricingByAge: {
+          adult: tour.pricingByAge?.adult || 0,
+          child: tour.pricingByAge?.child || 0,
+          infant: tour.pricingByAge?.infant || 0
+        },
+        seats: tour.seats || 0,
+        images: tour.images || [],
+        isFeatured: tour.isFeatured || false,
+        category: tour.category || "family",
+        isActive: tour.isActive !== undefined ? tour.isActive : true
+      });
+      setCurrentTab("basic");
+
+      // Allow itinerary updates after data is loaded
+      setTimeout(() => setIsLoadingTourData(false), 100);
+    } else if (!open) {
+      setIsLoadingTourData(false);
+    }
+  }, [tour, open]);
+
   // Calculate end date when start date or duration changes
   useEffect(() => {
+    // Don't auto-update itinerary when loading tour data
+    if (isLoadingTourData) return;
+
     if (formData.startDate && formData.duration) {
       const durationOption = DURATION_OPTIONS.find(
         (opt) => opt.value === formData.duration
@@ -151,24 +221,31 @@ export function AddTourModal({
           endDate: endDate.toISOString().split("T")[0]
         }));
 
-        // Initialize itinerary days
-        const itinerary: Record<
-          string,
-          { title: string; description: string }
-        > = {};
-        for (let i = 1; i <= durationOption.days; i++) {
-          itinerary[`day${i}`] = {
-            title: `Ngày ${i}: `,
-            description: ""
-          };
+        // Only initialize itinerary if it's empty
+        const existingDays = Object.keys(formData.itinerary || {}).length;
+        if (existingDays === 0) {
+          const itinerary: Record<
+            string,
+            { title: string; description: string }
+          > = {};
+
+          // Create empty itinerary for new tours
+          for (let i = 1; i <= durationOption.days; i++) {
+            const dayKey = `day${i}`;
+            itinerary[dayKey] = {
+              title: `Ngày ${i}: `,
+              description: ""
+            };
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            itinerary
+          }));
         }
-        setFormData((prev) => ({
-          ...prev,
-          itinerary
-        }));
       }
     }
-  }, [formData.startDate, formData.duration]);
+  }, [formData.startDate, formData.duration, isLoadingTourData]);
 
   const handleInputChange = (field: keyof TourFormData, value: any) => {
     setFormData((prev) => ({
@@ -420,11 +497,17 @@ export function AddTourModal({
         cleanDepartureLocation.region = formData.departureLocation.region;
       }
 
-      const tourData = {
+      const tourData: any = {
         ...formData,
         departureLocation: cleanDepartureLocation,
         availableSeats: formData.seats
       };
+
+      // Add tour ID if editing
+      if (tour?._id) {
+        tourData._id = tour._id;
+      }
+
       onSave(tourData);
       handleReset();
       onOpenChange(false);
@@ -477,9 +560,11 @@ export function AddTourModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Tạo tour mới</DialogTitle>
+          <DialogTitle>{tour ? "Chỉnh sửa tour" : "Tạo tour mới"}</DialogTitle>
           <DialogDescription>
-            Điền đầy đủ thông tin để tạo tour du lịch mới
+            {tour
+              ? "Cập nhật thông tin tour du lịch"
+              : "Điền đầy đủ thông tin để tạo tour du lịch mới"}
           </DialogDescription>
         </DialogHeader>
 
@@ -654,6 +739,18 @@ export function AddTourModal({
                       <SelectValue placeholder="Chọn thời gian" />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* Show current duration if not in standard options */}
+                      {formData.duration &&
+                        !DURATION_OPTIONS.find(
+                          (opt) => opt.value === formData.duration
+                        ) && (
+                          <SelectItem
+                            key={formData.duration}
+                            value={formData.duration}
+                          >
+                            {formData.duration} (Hiện tại)
+                          </SelectItem>
+                        )}
                       {DURATION_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
@@ -980,7 +1077,9 @@ export function AddTourModal({
             {currentTab !== "images" ? (
               <Button onClick={handleNextTab}>Tiếp theo</Button>
             ) : (
-              <Button onClick={handleSave}>Tạo tour</Button>
+              <Button onClick={handleSave}>
+                {tour ? "Cập nhật tour" : "Tạo tour"}
+              </Button>
             )}
           </div>
         </DialogFooter>

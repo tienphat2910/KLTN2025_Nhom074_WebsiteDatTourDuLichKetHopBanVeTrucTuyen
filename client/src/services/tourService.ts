@@ -392,10 +392,10 @@ export const tourService = {
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    // Số ngày thực tế = diffDays + 1 (bao gồm cả ngày bắt đầu và kết thúc)
+    // Số ngày thực tế = diffDays + 1 (bao gồm cả ngày bắt đầu và ngày kết thúc)
     const totalDays = diffDays + 1;
     const nights = diffDays;
-    return `${totalDays}N${nights}Đ`;
+    return `${totalDays} Ngày ${nights} đêm`;
   },
 
   // Format date display
