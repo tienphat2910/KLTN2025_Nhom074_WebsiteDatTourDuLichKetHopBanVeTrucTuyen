@@ -12,7 +12,6 @@ import {
   Users,
   MapPin,
   Star,
-  Loader2,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -62,7 +61,6 @@ import { useSocket } from "@/hooks/useSocket";
 export function TourManagement() {
   const [tours, setTours] = useState<Tour[]>([]);
   const [totalTours, setTotalTours] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -80,8 +78,6 @@ export function TourManagement() {
     try {
       if (showRefreshing) {
         setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
       }
       setError(null);
 
@@ -128,7 +124,6 @@ export function TourManagement() {
       setError("Có lỗi xảy ra khi tải dữ liệu");
       setTours([]);
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
   };
@@ -445,7 +440,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing ? "..." : totalTours}
+              {isRefreshing ? "..." : totalTours}
             </div>
           </CardContent>
         </Card>
@@ -458,7 +453,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing
+              {isRefreshing
                 ? "..."
                 : tours.filter((t) => {
                     const status = getTourStatus(t);
@@ -478,9 +473,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing
-                ? "..."
-                : tours.filter((t) => t.isFeatured).length}
+              {isRefreshing ? "..." : tours.filter((t) => t.isFeatured).length}
             </div>
           </CardContent>
         </Card>
@@ -491,7 +484,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing
+              {isRefreshing
                 ? "..."
                 : tours.reduce((total, t) => total + t.seats, 0)}
             </div>
@@ -557,12 +550,11 @@ export function TourManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading || isRefreshing ? (
+                {isRefreshing ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                       <p className="mt-2 text-muted-foreground">
-                        {isRefreshing ? "Đang cập nhật..." : "Đang tải..."}
+                        Đang cập nhật...
                       </p>
                     </TableCell>
                   </TableRow>
@@ -695,7 +687,7 @@ export function TourManagement() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && !isLoading && !isRefreshing && (
+          {totalPages > 1 && !isRefreshing && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
                 Hiển thị {(currentPage - 1) * 10 + 1}-

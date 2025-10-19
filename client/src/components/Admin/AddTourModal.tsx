@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { destinationService, Destination } from "@/services/destinationService";
 import { tourService, Tour } from "@/services/tourService";
 import { toast } from "sonner";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { env } from "@/config/env";
 
@@ -119,7 +119,6 @@ export function AddTourModal({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imageUrl, setImageUrl] = useState("");
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{
     current: number;
     total: number;
@@ -343,7 +342,6 @@ export function AddTourModal({
       return;
     }
 
-    setUploadingImage(true);
     setUploadProgress({ current: 0, total: filesArray.length });
 
     try {
@@ -387,7 +385,6 @@ export function AddTourModal({
           : "Lỗi khi tải ảnh lên. Vui lòng thử lại!"
       );
     } finally {
-      setUploadingImage(false);
       setUploadProgress(null);
     }
   };
@@ -975,19 +972,8 @@ export function AddTourModal({
                     accept="image/*"
                     multiple
                     onChange={handleImageUpload}
-                    disabled={uploadingImage}
                     className="flex-1"
                   />
-                  {uploadingImage && (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {uploadProgress && (
-                        <span className="text-sm text-muted-foreground">
-                          {uploadProgress.current}/{uploadProgress.total}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
                 {uploadProgress && (
                   <div className="w-full bg-gray-200 rounded-full h-2">
