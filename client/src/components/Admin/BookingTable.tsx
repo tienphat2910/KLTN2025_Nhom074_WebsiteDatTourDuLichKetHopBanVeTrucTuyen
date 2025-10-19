@@ -24,6 +24,9 @@ import {
 } from "@/components/ui/select";
 import { Receipt, Loader2, Trash2 } from "lucide-react";
 import { BookingDetailModal } from "@/components/Booking/BookingDetailModal";
+import { FlightBookingDetailModal } from "@/components/Admin/FlightBookingDetailModal";
+import { TourBookingDetailModal } from "@/components/Admin/TourBookingDetailModal";
+import { ActivityBookingDetailModal } from "@/components/Admin/ActivityBookingDetailModal";
 import { Booking } from "@/services/bookingService";
 import { statusConfig, bookingTypeConfig } from "./bookingConstants";
 import { formatCurrency, formatDate } from "./bookingUtils";
@@ -157,7 +160,15 @@ export function BookingTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 justify-end">
-                        <BookingDetailModal booking={booking} />
+                        {booking.bookingType === "flight" ? (
+                          <FlightBookingDetailModal booking={booking} />
+                        ) : booking.bookingType === "tour" ? (
+                          <TourBookingDetailModal booking={booking} />
+                        ) : booking.bookingType === "activity" ? (
+                          <ActivityBookingDetailModal booking={booking} />
+                        ) : (
+                          <BookingDetailModal booking={booking} />
+                        )}
 
                         <Select
                           value={booking.status}

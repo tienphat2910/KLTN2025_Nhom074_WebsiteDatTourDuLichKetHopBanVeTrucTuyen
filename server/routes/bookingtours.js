@@ -243,4 +243,78 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// Get tour booking details by booking ID (for frontend modal)
+router.get('/booking/:bookingId/details', async (req, res) => {
+    try {
+        // Find all booking tours for this booking
+        const bookingTours = await BookingTour.find({ bookingId: req.params.bookingId })
+            .populate({
+                path: 'tourId',
+                populate: {
+                    path: 'destinationId',
+                    model: 'Destination'
+                }
+            })
+            .populate('bookingId');
+
+        if (!bookingTours || bookingTours.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin tour' });
+        }
+
+        // For now, return the first tour booking (assuming single tour per booking)
+        const bookingTour = bookingTours[0];
+
+        // Transform the data to match frontend expectations
+        const tourBookingDetail = {
+            _id: bookingTour._id,
+            bookingId: bookingTour.bookingId,
+            tourId: {
+                _id: bookingTour.tourId._id,
+                title: bookingTour.tourId.title,
+                slug: bookingTour.tourId.slug,
+                description: bookingTour.tourId.description,
+                destination: bookingTour.tourId.destinationId ? {
+                    _id: bookingTour.tourId.destinationId._id,
+                    name: bookingTour.tourId.destinationId.name,
+                    region: bookingTour.tourId.destinationId.region,
+                    image: bookingTour.tourId.destinationId.image
+                } : null,
+                departureLocation: bookingTour.tourId.departureLocation,
+                startDate: bookingTour.tourId.startDate,
+                endDate: bookingTour.tourId.endDate,
+                duration: bookingTour.tourId.duration,
+                images: bookingTour.tourId.images
+            },
+            numAdults: bookingTour.numAdults,
+            numChildren: bookingTour.numChildren,
+            numInfants: bookingTour.numInfants,
+            priceByAge: bookingTour.priceByAge,
+            subtotal: bookingTour.subtotal,
+            status: bookingTour.status,
+            note: bookingTour.note,
+            paymentMethod: bookingTour.paymentMethod,
+            passengers: bookingTour.passengers.map(passenger => ({
+                _id: passenger._id,
+                fullName: passenger.fullName,
+                phone: passenger.phone,
+                email: passenger.email,
+                gender: passenger.gender,
+                dateOfBirth: passenger.dateOfBirth,
+                cccd: passenger.cccd,
+                type: passenger.type
+            })),
+            createdAt: bookingTour.createdAt,
+            updatedAt: bookingTour.updatedAt
+        };
+
+        res.json({
+            success: true,
+            data: tourBookingDetail
+        });
+    } catch (error) {
+        console.error('Get tour booking details error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;

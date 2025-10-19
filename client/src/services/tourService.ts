@@ -91,6 +91,62 @@ export interface TourResponse {
   data: Tour;
 }
 
+export interface TourBookingDetail {
+  _id: string;
+  bookingId: string;
+  tourId: {
+    _id: string;
+    title: string;
+    slug: string;
+    description: string;
+    destination: {
+      _id: string;
+      name: string;
+      region: string;
+      image?: string;
+    } | null;
+    departureLocation: {
+      name: string;
+      region: string;
+      code?: string;
+    };
+    startDate: string;
+    endDate: string;
+    duration: string;
+    images?: string[];
+  };
+  numAdults: number;
+  numChildren: number;
+  numInfants: number;
+  priceByAge: {
+    adult: number;
+    child: number;
+    infant: number;
+  };
+  subtotal: number;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  note?: string;
+  paymentMethod: "cash" | "momo" | "bank_transfer";
+  passengers: Array<{
+    _id: string;
+    fullName: string;
+    phone?: string;
+    email?: string;
+    gender: "Nam" | "Nữ";
+    dateOfBirth: string;
+    cccd?: string;
+    type: "adult" | "child" | "infant";
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourBookingResponse {
+  success: boolean;
+  data: TourBookingDetail;
+  message?: string;
+}
+
 export const tourService = {
   // Get all tours with pagination and filters
   getTours: async (params?: {
@@ -468,6 +524,52 @@ export const tourService = {
       return {
         success: false,
         message: "Lỗi khi tải ảnh lên"
+      };
+    }
+  },
+
+  // Get tour booking details by booking ID
+  getTourBookingDetails: async (
+    bookingId: string
+  ): Promise<TourBookingResponse> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        return {
+          success: false,
+          data: {} as TourBookingDetail,
+          message: "Vui lòng đăng nhập"
+        };
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/bookingtours/booking/${bookingId}/details`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          data: {} as TourBookingDetail,
+          message: result.message || "Không thể tải thông tin tour"
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Get tour booking details error:", error);
+      return {
+        success: false,
+        data: {} as TourBookingDetail,
+        message: "Lỗi kết nối server"
       };
     }
   }

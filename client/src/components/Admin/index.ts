@@ -15,3 +15,6 @@ export { BookingActions } from "./BookingActions";
 export { BookingFilters } from "./BookingFilters";
 export { BookingTable } from "./BookingTable";
 export { BookingPagination } from "./BookingPagination";
+export { FlightBookingDetailModal } from "./FlightBookingDetailModal";
+export { TourBookingDetailModal } from "./TourBookingDetailModal";
+export { ActivityBookingDetailModal } from "./ActivityBookingDetailModal";

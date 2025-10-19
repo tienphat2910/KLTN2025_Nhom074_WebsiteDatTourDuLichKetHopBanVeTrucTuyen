@@ -200,4 +200,100 @@ router.get('/:id/passengers', async (req, res) => {
     }
 });
 
+// Get flight booking details by booking ID (for frontend modal)
+router.get('/booking/:bookingId/details', async (req, res) => {
+    try {
+        // Find all booking flights for this booking
+        const bookingFlights = await BookingFlight.find({ bookingId: req.params.bookingId })
+            .populate({
+                path: 'flightId',
+                populate: [
+                    { path: 'airlineId', model: 'Airline' },
+                    { path: 'departureAirportId', model: 'Airport' },
+                    { path: 'arrivalAirportId', model: 'Airport' }
+                ]
+            })
+            .populate('flightClassId')
+            .populate('bookingId');
+
+        if (!bookingFlights || bookingFlights.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chuyến bay' });
+        }
+
+        // For now, return the first flight booking (assuming single flight per booking)
+        // In the future, this could return multiple flights
+        const bookingFlight = bookingFlights[0];
+
+        // Get passengers for this booking flight
+        const passengers = await FlightPassenger.find({ bookingFlightId: bookingFlight._id });
+
+        // Transform the data to match frontend expectations
+        const flightBookingDetail = {
+            _id: bookingFlight._id,
+            bookingId: bookingFlight.bookingId,
+            flightId: {
+                _id: bookingFlight.flightId._id,
+                flightCode: bookingFlight.flightCode,
+                airline: bookingFlight.flightId.airlineId ? {
+                    _id: bookingFlight.flightId.airlineId._id,
+                    name: bookingFlight.flightId.airlineId.name,
+                    code: bookingFlight.flightId.airlineId.code,
+                    logo: bookingFlight.flightId.airlineId.logo
+                } : null,
+                departureAirport: bookingFlight.flightId.departureAirportId ? {
+                    _id: bookingFlight.flightId.departureAirportId._id,
+                    name: bookingFlight.flightId.departureAirportId.name,
+                    code: bookingFlight.flightId.departureAirportId.iata,
+                    city: bookingFlight.flightId.departureAirportId.city,
+                    country: "Việt Nam" // Default for now
+                } : null,
+                arrivalAirport: bookingFlight.flightId.arrivalAirportId ? {
+                    _id: bookingFlight.flightId.arrivalAirportId._id,
+                    name: bookingFlight.flightId.arrivalAirportId.name,
+                    code: bookingFlight.flightId.arrivalAirportId.iata,
+                    city: bookingFlight.flightId.arrivalAirportId.city,
+                    country: "Việt Nam" // Default for now
+                } : null,
+                departureTime: bookingFlight.flightId.departureTime,
+                arrivalTime: bookingFlight.flightId.arrivalTime,
+                duration: `${Math.floor(bookingFlight.flightId.durationMinutes / 60)}h ${bookingFlight.flightId.durationMinutes % 60}m`,
+                aircraft: bookingFlight.flightId.aircraft?.model || null
+            },
+            flightClassId: {
+                _id: bookingFlight.flightClassId._id,
+                name: bookingFlight.flightClassId.className,
+                code: bookingFlight.flightClassId.className,
+                description: `Hạng ${bookingFlight.flightClassId.className} - Hành lý: ${bookingFlight.flightClassId.cabinBaggage}kg xách tay, ${bookingFlight.flightClassId.baggageAllowance}kg ký gửi`,
+                amenities: bookingFlight.flightClassId.amenities || []
+            },
+            numTickets: bookingFlight.numTickets,
+            pricePerTicket: bookingFlight.pricePerTicket,
+            totalFlightPrice: bookingFlight.totalFlightPrice,
+            status: bookingFlight.status,
+            note: bookingFlight.note,
+            paymentMethod: bookingFlight.paymentMethod,
+            discountCode: bookingFlight.discountCode,
+            discountAmount: bookingFlight.discountAmount,
+            passengers: passengers.map(passenger => ({
+                _id: passenger._id,
+                fullName: passenger.fullName,
+                dateOfBirth: passenger.dateOfBirth,
+                gender: passenger.gender,
+                passportNumber: passenger.passportNumber,
+                seatNumber: passenger.seatNumber
+            })),
+            createdAt: bookingFlight.createdAt,
+            updatedAt: bookingFlight.updatedAt
+        };
+
+        res.json({
+            success: true,
+            data: flightBookingDetail
+        });
+    } catch (error) {
+        console.error('Get flight booking details error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;
