@@ -31,7 +31,20 @@ export default function Activity() {
     axios
       .get(`${env.API_BASE_URL}/activities`)
       .then((res) => {
-        if (res.data.success) setActivities(res.data.data);
+        if (res.data.success) {
+          // Đảm bảo activities luôn là array
+          if (Array.isArray(res.data.data)) {
+            setActivities(res.data.data);
+          } else if (Array.isArray(res.data.data.activities)) {
+            setActivities(res.data.data.activities);
+          } else {
+            setActivities([]);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching activities:", err);
+        setActivities([]);
       });
     axios
       .get(`${env.API_BASE_URL}/destinations`)
@@ -46,6 +59,10 @@ export default function Activity() {
             setDestinations([]);
           }
         }
+      })
+      .catch((err) => {
+        console.error("Error fetching destinations:", err);
+        setDestinations([]);
       });
   }, []);
 
@@ -56,24 +73,26 @@ export default function Activity() {
   };
 
   // Lọc theo từ khoá, địa điểm, giá
-  const filteredActivities = activities
-    .filter((activity) => activity.popular)
-    .filter((activity) =>
-      keyword.trim() === ""
-        ? true
-        : ((activity.name || "") + " " + (activity.description || ""))
-            .toLowerCase()
-            .includes(keyword.toLowerCase())
-    )
-    .filter((activity) =>
-      selectedDestination
-        ? activity.destinationId === selectedDestination
-        : true
-    )
-    .filter((activity) => {
-      const price = activity.price?.retail?.adult || 0;
-      return price >= minPrice && price <= maxPrice;
-    });
+  const filteredActivities = Array.isArray(activities)
+    ? activities
+        .filter((activity) => activity.popular)
+        .filter((activity) =>
+          keyword.trim() === ""
+            ? true
+            : ((activity.name || "") + " " + (activity.description || ""))
+                .toLowerCase()
+                .includes(keyword.toLowerCase())
+        )
+        .filter((activity) =>
+          selectedDestination
+            ? activity.destinationId === selectedDestination
+            : true
+        )
+        .filter((activity) => {
+          const price = activity.price?.retail?.adult || 0;
+          return price >= minPrice && price <= maxPrice;
+        })
+    : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
