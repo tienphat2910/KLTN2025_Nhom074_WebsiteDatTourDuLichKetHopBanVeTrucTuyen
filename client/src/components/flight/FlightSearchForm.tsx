@@ -731,7 +731,7 @@ export default function FlightSearchForm({
             {showDepartureDatePicker && (
               <div
                 ref={departureDatePickerRef}
-                className="fixed md:absolute left-1/2 md:left-0 top-1/2 md:top-[110%] transform -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 z-[9999] bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-4 text-black max-w-[95vw] md:max-w-none overflow-auto max-h-[80vh]"
+                className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-4 text-black max-w-[95vw] md:max-w-none overflow-auto max-h-[80vh]"
                 style={{ width: "min(420px, 95vw)", background: "#fff" }}
               >
                 <DayPicker
@@ -793,7 +793,7 @@ export default function FlightSearchForm({
             {showReturnDatePicker && (
               <div
                 ref={returnDatePickerRef}
-                className="fixed md:absolute left-1/2 md:left-0 top-1/2 md:top-[90%] transform -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 z-[9999] bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-3 text-black max-w-[95vw] md:max-w-none overflow-auto max-h-[80vh]"
+                className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] bg-white rounded-2xl border-2 border-sky-400 shadow-2xl p-3 text-black max-w-[95vw] md:max-w-none overflow-auto max-h-[80vh]"
                 style={{ width: "min(420px, 95vw)", background: "#fff" }}
               >
                 <DayPicker
