@@ -1,6 +1,10 @@
 const express = require('express');
 const BookingActivity = require('../models/BookingActivity');
 const Activity = require('../models/Activity');
+const Booking = require('../models/Booking');
+const User = require('../models/User');
+const auth = require('../middleware/auth');
+const { sendActivityBookingEmail } = require('../utils/emailService');
 const router = express.Router();
 
 /**
@@ -59,9 +63,9 @@ const router = express.Router();
  *       404:
  *         description: Không tìm thấy activity
  */
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
     try {
-        const { activityId, numAdults, numChildren, numBabies, numSeniors } = req.body;
+        const { activityId, numAdults, numChildren, numBabies, numSeniors, bookingId } = req.body;
 
         // Calculate total participants
         const totalParticipants = (numAdults || 0) + (numChildren || 0) + (numBabies || 0) + (numSeniors || 0);
@@ -74,7 +78,7 @@ router.post('/', async (req, res) => {
         }
 
         // Find the activity to get pricing information
-        const activity = await Activity.findById(activityId);
+        const activity = await Activity.findById(activityId).populate('destinationId');
         if (!activity) {
             return res.status(404).json({
                 success: false,
@@ -111,6 +115,38 @@ router.post('/', async (req, res) => {
         await bookingActivity.save();
 
         console.log(`✅ Activity booking created for ${totalParticipants} people. Activity: ${activityId}`);
+
+        // Send confirmation email
+        try {
+            const booking = await Booking.findById(bookingId).populate('userId', 'fullName email phone');
+            if (booking && booking.userId) {
+                const user = booking.userId;
+
+                // Prepare activity data with proper field mapping
+                const activityData = {
+                    ...activity.toObject(),
+                    destinationId: activity.destinationId,
+                    destination: activity.destinationId, // Alias for email template
+                };
+
+                await sendActivityBookingEmail(user.email, {
+                    booking: booking,
+                    activityBooking: {
+                        ...bookingActivity.toObject(),
+                        activityId: activityData
+                    },
+                    user: {
+                        fullName: user.fullName,
+                        email: user.email,
+                        phone: user.phone
+                    }
+                });
+                console.log('✅ Activity booking confirmation email sent');
+            }
+        } catch (emailError) {
+            console.error('❌ Email sending failed:', emailError);
+            // Don't fail the booking if email fails
+        }
 
         res.status(201).json({
             success: true,

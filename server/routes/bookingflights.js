@@ -2,6 +2,10 @@ const express = require('express');
 const BookingFlight = require('../models/BookingFlight');
 const FlightPassenger = require('../models/FlightPassenger');
 const FlightClass = require('../models/FlightClass');
+const Booking = require('../models/Booking');
+const User = require('../models/User');
+const auth = require('../middleware/auth');
+const { sendFlightBookingEmail } = require('../utils/emailService');
 const router = express.Router();
 
 /**
@@ -32,9 +36,9 @@ const calculateSeatsOccupied = (passengers) => {
 };
 
 // Create a new booking flight with passengers
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
     try {
-        const { passengers, ...bookingFlightData } = req.body;
+        const { passengers, bookingId, ...bookingFlightData } = req.body;
 
         // Calculate seats to deduct (adults + children, NOT infants)
         const seatsToDeduct = calculateSeatsOccupied(passengers);
@@ -63,7 +67,7 @@ router.post('/', async (req, res) => {
         }
 
         // Create the booking flight
-        const bookingFlight = new BookingFlight(bookingFlightData);
+        const bookingFlight = new BookingFlight({ ...bookingFlightData, bookingId });
         await bookingFlight.save();
 
         // Create passenger records if provided
@@ -74,6 +78,71 @@ router.post('/', async (req, res) => {
                 bookingFlightId: bookingFlight._id
             }));
             createdPassengers = await FlightPassenger.insertMany(passengerDocs);
+        }
+
+        // Send confirmation email
+        try {
+            console.log('🔍 Starting to send flight booking email...');
+            const booking = await Booking.findById(bookingId).populate('userId', 'fullName email phone');
+            console.log('📋 Booking found:', booking ? 'Yes' : 'No');
+            console.log('👤 User found:', booking?.userId ? 'Yes' : 'No');
+
+            if (booking && booking.userId) {
+                const user = booking.userId;
+                const populatedBookingFlight = await BookingFlight.findById(bookingFlight._id)
+                    .populate({
+                        path: 'flightId',
+                        populate: [
+                            { path: 'airlineId', model: 'Airline' },
+                            { path: 'departureAirportId', model: 'Airport' },
+                            { path: 'arrivalAirportId', model: 'Airport' }
+                        ]
+                    })
+                    .populate('flightClassId');
+
+                console.log('✈️ Populated flight booking:', populatedBookingFlight ? 'Yes' : 'No');
+                console.log('📧 Sending email to:', user.email);
+
+                // Map the populated fields to match email template expectations
+                const flightData = populatedBookingFlight.toObject();
+                if (flightData.flightId) {
+                    flightData.flightId.airline = flightData.flightId.airlineId;
+                    flightData.flightId.departureAirport = flightData.flightId.departureAirportId;
+                    flightData.flightId.arrivalAirport = flightData.flightId.arrivalAirportId;
+
+                    // Convert durationMinutes to duration string
+                    const hours = Math.floor(flightData.flightId.durationMinutes / 60);
+                    const minutes = flightData.flightId.durationMinutes % 60;
+                    flightData.flightId.duration = hours > 0
+                        ? `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`
+                        : `${minutes}m`;
+
+                    // Handle aircraft field (it's an object)
+                    if (flightData.flightId.aircraft?.model) {
+                        flightData.flightId.aircraft = flightData.flightId.aircraft.model;
+                    }
+                }
+
+                await sendFlightBookingEmail(user.email, {
+                    booking: booking,
+                    flightBooking: {
+                        ...flightData,
+                        passengers: createdPassengers
+                    },
+                    user: {
+                        fullName: user.fullName,
+                        email: user.email,
+                        phone: user.phone
+                    }
+                });
+                console.log('✅ Flight booking confirmation email sent');
+            } else {
+                console.log('⚠️ Cannot send email - booking or user not found');
+            }
+        } catch (emailError) {
+            console.error('❌ Email sending failed:', emailError);
+            console.error('❌ Email error stack:', emailError.stack);
+            // Don't fail the booking if email fails
         }
 
         res.status(201).json({

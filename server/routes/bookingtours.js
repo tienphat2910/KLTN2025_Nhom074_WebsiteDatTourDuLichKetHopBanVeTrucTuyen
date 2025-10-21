@@ -1,6 +1,10 @@
 const express = require('express');
 const BookingTour = require('../models/BookingTour');
 const Tour = require('../models/Tour');
+const Booking = require('../models/Booking');
+const User = require('../models/User');
+const auth = require('../middleware/auth');
+const { sendTourBookingEmail } = require('../utils/emailService');
 const router = express.Router();
 
 // Check available seats for a tour
@@ -46,9 +50,9 @@ router.get('/check-seats/:tourId', async (req, res) => {
 });
 
 // Create a new booking tour
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
     try {
-        const { tourId, numAdults, numChildren, numInfants } = req.body;
+        const { tourId, numAdults, numChildren, numInfants, bookingId } = req.body;
 
         // Calculate total passengers
         const totalPassengers = (numAdults || 0) + (numChildren || 0) + (numInfants || 0);
@@ -61,7 +65,7 @@ router.post('/', async (req, res) => {
         }
 
         // Find the tour and check available seats
-        const tour = await Tour.findById(tourId);
+        const tour = await Tour.findById(tourId).populate('destinationId');
         if (!tour) {
             return res.status(404).json({
                 success: false,
@@ -89,6 +93,53 @@ router.post('/', async (req, res) => {
         );
 
         console.log(`✅ Booking created. Reduced ${totalPassengers} seats for tour ${tourId}`);
+
+        // Send confirmation email
+        try {
+            const booking = await Booking.findById(bookingId).populate('userId', 'fullName email phone');
+            if (booking && booking.userId) {
+                const user = booking.userId;
+                const populatedBookingTour = await BookingTour.findById(bookingTour._id).populate({
+                    path: 'tourId',
+                    populate: {
+                        path: 'destinationId',
+                        model: 'Destination'
+                    }
+                });
+
+                // Prepare tour data with proper field mapping
+                const tourData = {
+                    ...tour.toObject(),
+                    title: tour.title,
+                    name: tour.title, // Alias for compatibility
+                    duration: tour.duration,
+                    destinationId: tour.destinationId,
+                    destination: tour.destinationId, // Alias for email template
+                    tourGuide: tour.tourGuide
+                };
+
+                await sendTourBookingEmail(user.email, {
+                    booking: booking,
+                    tourBooking: {
+                        ...populatedBookingTour.toObject(),
+                        tourId: tourData,
+                        pricePerAdult: populatedBookingTour.priceByAge?.adult || 0,
+                        pricePerChild: populatedBookingTour.priceByAge?.child || 0,
+                        departureDate: tour.startDate,
+                        paymentMethod: populatedBookingTour.paymentMethod || 'cash'
+                    },
+                    user: {
+                        fullName: user.fullName,
+                        email: user.email,
+                        phone: user.phone
+                    }
+                });
+                console.log('✅ Tour booking confirmation email sent');
+            }
+        } catch (emailError) {
+            console.error('❌ Email sending failed:', emailError);
+            // Don't fail the booking if email fails
+        }
 
         res.status(201).json({ success: true, data: bookingTour });
     } catch (error) {

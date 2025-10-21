@@ -99,7 +99,10 @@ export const bookingFlightService = {
       };
       const res = await fetch(`${API_BASE_URL}/bookingflights`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` // Add authentication header
+        },
         body: JSON.stringify(bookingFlightPayload)
       });
       const result = await res.json();

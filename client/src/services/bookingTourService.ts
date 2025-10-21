@@ -119,7 +119,10 @@ export const bookingTourService = {
 
       const res = await fetch(`${API_BASE_URL}/bookingtours`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` // Add authentication header
+        },
         body: JSON.stringify(bookingTourPayload)
       });
 
