@@ -76,6 +76,8 @@ router.post('/', auth, async (req, res) => {
         tourData.availableSeats = tourData.seats;
         tourData.isActive = tourData.isActive !== undefined ? tourData.isActive : true;
 
+        console.log('📝 Creating tour with data:', JSON.stringify(tourData, null, 2));
+
         const newTour = new Tour(tourData);
         const savedTour = await newTour.save();
 
@@ -88,10 +90,28 @@ router.post('/', auth, async (req, res) => {
             data: savedTour
         });
     } catch (error) {
-        console.error('Create tour error:', error);
+        console.error('❌ Create tour error:', error);
+        console.error('❌ Error details:', error.message);
+        if (error.errors) {
+            console.error('❌ Validation errors:', JSON.stringify(error.errors, null, 2));
+        }
+
+        // Send more detailed error message
+        let errorMessage = error.message || 'Lỗi khi tạo tour mới';
+
+        // If it's a validation error, extract field-specific messages
+        if (error.errors) {
+            const fieldErrors = Object.keys(error.errors).map(field => {
+                return `${field}: ${error.errors[field].message}`;
+            }).join(', ');
+            errorMessage = `Lỗi validation: ${fieldErrors}`;
+        }
+
         res.status(400).json({
             success: false,
-            message: error.message || 'Lỗi khi tạo tour mới'
+            message: errorMessage,
+            error: error.message,
+            details: error.errors
         });
     }
 });
@@ -355,6 +375,113 @@ router.delete('/:id', auth, async (req, res) => {
             message: 'Lỗi khi xóa tour'
         });
     }
+});
+
+/**
+ * @swagger
+ * /api/admin/tours/upload-image:
+ *   post:
+ *     summary: Upload tour image (Admin only)
+ *     tags: [Admin Tours]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *               tourId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *       400:
+ *         description: No image provided
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+router.post('/upload-image', auth, (req, res, next) => {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: 'Truy cập bị từ chối - Chỉ admin mới có quyền này'
+        });
+    }
+
+    // Create multer upload for 'image' field
+    const multer = require('multer');
+    const path = require('path');
+    const { uploadTourImage } = require('../../utils/cloudinaryUpload');
+
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, path.join(__dirname, '../../uploads'));
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+        }
+    });
+
+    const fileFilter = (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Chỉ chấp nhận file ảnh định dạng JPG, PNG, WEBP'), false);
+        }
+    };
+
+    const uploadImage = multer({
+        storage: storage,
+        fileFilter: fileFilter,
+        limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    }).single('image');
+
+    uploadImage(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({
+                success: false,
+                message: err.message
+            });
+        }
+
+        try {
+            if (!req.file) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Vui lòng chọn ảnh để tải lên'
+                });
+            }
+
+            const tourId = req.body.tourId || 'temp';
+            const uploadResult = await uploadTourImage(req.file, tourId);
+
+            res.status(200).json({
+                success: true,
+                message: 'Tải ảnh lên thành công',
+                data: {
+                    url: uploadResult.url,
+                    public_id: uploadResult.public_id
+                }
+            });
+        } catch (error) {
+            console.error('Upload tour image error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi khi tải ảnh lên',
+                error: error.message
+            });
+        }
+    });
 });
 
 module.exports = router;

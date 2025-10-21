@@ -232,10 +232,682 @@ const sendCustomEmail = async (email, subject, htmlContent) => {
     }
 };
 
+// Format currency
+const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount);
+};
+
+// Format date
+const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const formatDateOnly = (dateString) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+};
+
+// Send Tour Booking Confirmation Email
+const sendTourBookingEmail = async (userEmail, bookingData) => {
+    try {
+        const transporter = createTransporter();
+
+        // Debug log
+        console.log('📧 Tour booking email data:', {
+            tourTitle: bookingData.tourBooking.tourId?.title || bookingData.tourBooking.tourId?.name,
+            destination: bookingData.tourBooking.tourId?.destinationId?.name || bookingData.tourBooking.tourId?.destination?.name,
+            duration: bookingData.tourBooking.tourId?.duration,
+            paymentMethod: bookingData.tourBooking.paymentMethod
+        });
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+        .container { max-width: 650px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; color: white; }
+        .header img { width: 100px; margin-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .success-icon { text-align: center; padding: 20px; }
+        .success-icon svg { width: 80px; height: 80px; }
+        .content { padding: 0 30px 30px; color: #333; }
+        .booking-id { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .booking-id strong { color: #667eea; font-size: 18px; }
+        .info-section { margin: 25px 0; }
+        .info-section h3 { color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 8px; margin-bottom: 15px; }
+        .info-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-label { flex: 0 0 40%; color: #666; font-weight: 500; }
+        .info-value { flex: 1; color: #333; }
+        .total-price { background: #f0f9ff; border: 2px solid #667eea; border-radius: 8px; padding: 15px; text-align: center; margin: 20px 0; }
+        .total-price .label { color: #666; font-size: 14px; margin-bottom: 5px; }
+        .total-price .amount { color: #667eea; font-size: 28px; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d1ecf1; color: #0c5460; }
+        .participant-item { background: #f8f9fa; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 3px solid #667eea; }
+        .footer { background: #667eea; text-align: center; color: white; padding: 20px; font-size: 14px; }
+        .footer a { color: #ffd369; text-decoration: none; }
+        @media screen and (max-width: 600px) {
+            .container { margin: 15px; }
+            .content { padding: 0 20px 20px; }
+            .info-row { flex-direction: column; }
+            .info-label { margin-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://res.cloudinary.com/de5rurcwt/image/upload/v1760700010/logo-lutrip_vdnkd3.png" alt="LuTrip Logo" />
+            <h1>LuTrip - Khám phá Việt Nam</h1>
+            <p>Xác nhận đặt tour thành công</p>
+        </div>
+
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+
+        <div class="content">
+            <h2 style="text-align: center; color: #28a745;">Đặt tour thành công!</h2>
+            <p style="text-align: center; color: #666;">Cảm ơn bạn đã đặt tour tại LuTrip. Dưới đây là chi tiết đơn hàng của bạn:</p>
+
+            <div class="booking-id">
+                <div>Mã đặt tour: <strong>#${bookingData.booking._id.toString().slice(-8).toUpperCase()}</strong></div>
+                <div style="margin-top: 8px;">Trạng thái: <span class="status-badge status-${bookingData.booking.status}">${bookingData.booking.status === 'pending' ? 'Chờ xác nhận' : bookingData.booking.status === 'confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}</span></div>
+            </div>
+
+            <div class="info-section">
+                <h3>📍 Thông tin Tour</h3>
+                <div class="info-row">
+                    <div class="info-label">Tên tour:</div>
+                    <div class="info-value"><strong>${bookingData.tourBooking.tourId.title || bookingData.tourBooking.tourId.name || 'N/A'}</strong></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Điểm đến:</div>
+                    <div class="info-value">${bookingData.tourBooking.tourId.destinationId?.name || bookingData.tourBooking.tourId.destination?.name || 'N/A'}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Thời gian:</div>
+                    <div class="info-value">${bookingData.tourBooking.tourId.duration || 'N/A'}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Ngày khởi hành:</div>
+                    <div class="info-value">${formatDateOnly(bookingData.tourBooking.departureDate)}</div>
+                </div>
+                ${bookingData.tourBooking.tourId.tourGuide ? `
+                <div class="info-row">
+                    <div class="info-label">Hướng dẫn viên:</div>
+                    <div class="info-value">${bookingData.tourBooking.tourId.tourGuide}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>👥 Thông tin Khách hàng</h3>
+                <div class="info-row">
+                    <div class="info-label">Họ tên:</div>
+                    <div class="info-value">${bookingData.user.fullName}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Email:</div>
+                    <div class="info-value">${bookingData.user.email}</div>
+                </div>
+                ${bookingData.user.phone ? `
+                <div class="info-row">
+                    <div class="info-label">Số điện thoại:</div>
+                    <div class="info-value">${bookingData.user.phone}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>👨‍👩‍👧‍👦 Danh sách Người tham gia (${bookingData.tourBooking.numAdults + bookingData.tourBooking.numChildren})</h3>
+                <div class="info-row">
+                    <div class="info-label">Người lớn:</div>
+                    <div class="info-value">${bookingData.tourBooking.numAdults} người × ${formatCurrency(bookingData.tourBooking.pricePerAdult)}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Trẻ em:</div>
+                    <div class="info-value">${bookingData.tourBooking.numChildren} người × ${formatCurrency(bookingData.tourBooking.pricePerChild)}</div>
+                </div>
+                ${bookingData.tourBooking.participants && bookingData.tourBooking.participants.length > 0 ? `
+                <div style="margin-top: 15px;">
+                    <strong>Chi tiết người tham gia:</strong>
+                    ${bookingData.tourBooking.participants.map((p, idx) => `
+                    <div class="participant-item">
+                        <strong>${idx + 1}. ${p.fullName}</strong> - ${p.age} tuổi
+                        ${p.note ? `<div style="margin-top: 5px; color: #666; font-size: 13px;">Ghi chú: ${p.note}</div>` : ''}
+                    </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>💰 Thông tin Thanh toán</h3>
+                <div class="info-row">
+                    <div class="info-label">Phương thức:</div>
+                    <div class="info-value">${bookingData.tourBooking.paymentMethod === 'momo' ? 'MoMo' :
+                bookingData.tourBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
+                    bookingData.tourBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
+                        'Chưa xác định'
+            }</div>
+                </div>
+                ${bookingData.tourBooking.note ? `
+                <div class="info-row">
+                    <div class="info-label">Ghi chú:</div>
+                    <div class="info-value">${bookingData.tourBooking.note}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="total-price">
+                <div class="label">Tổng tiền</div>
+                <div class="amount">${formatCurrency(bookingData.booking.totalPrice)}</div>
+            </div>
+
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <strong>📌 Lưu ý quan trọng:</strong>
+                <ul style="margin: 10px 0 0 0; padding-left: 18px; line-height: 1.6;">
+                    <li>Vui lòng mang theo CMND/CCCD khi tham gia tour</li>
+                    <li>Có mặt đúng giờ tại điểm khởi hành</li>
+                    <li>Liên hệ hotline nếu cần hỗ trợ: <strong>1900-xxxx</strong></li>
+                </ul>
+            </div>
+
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="${process.env.CLIENT_URL}/profile/booking" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Xem chi tiết đơn hàng</a>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} LuTrip - Khám phá Việt Nam</p>
+            <p><a href="${process.env.CLIENT_URL}">Truy cập website</a> | <a href="${process.env.CLIENT_URL}/support">Hỗ trợ</a></p>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const mailOptions = {
+            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `✅ Xác nhận đặt tour #${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
+            html: htmlContent
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Tour booking confirmation email sent to: ${userEmail}`);
+        return true;
+    } catch (error) {
+        console.error('Send tour booking email error:', error);
+        return false;
+    }
+};
+
+// Send Activity Booking Confirmation Email
+const sendActivityBookingEmail = async (userEmail, bookingData) => {
+    try {
+        const transporter = createTransporter();
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+        .container { max-width: 650px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 30px 20px; text-align: center; color: white; }
+        .header img { width: 100px; margin-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .success-icon { text-align: center; padding: 20px; }
+        .success-icon svg { width: 80px; height: 80px; }
+        .content { padding: 0 30px 30px; color: #333; }
+        .booking-id { background: #f8f9fa; border-left: 4px solid #f97316; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .booking-id strong { color: #f97316; font-size: 18px; }
+        .info-section { margin: 25px 0; }
+        .info-section h3 { color: #f97316; border-bottom: 2px solid #f97316; padding-bottom: 8px; margin-bottom: 15px; }
+        .info-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-label { flex: 0 0 40%; color: #666; font-weight: 500; }
+        .info-value { flex: 1; color: #333; }
+        .total-price { background: #fff7ed; border: 2px solid #f97316; border-radius: 8px; padding: 15px; text-align: center; margin: 20px 0; }
+        .total-price .label { color: #666; font-size: 14px; margin-bottom: 5px; }
+        .total-price .amount { color: #f97316; font-size: 28px; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d1ecf1; color: #0c5460; }
+        .footer { background: #f97316; text-align: center; color: white; padding: 20px; font-size: 14px; }
+        .footer a { color: #ffd369; text-decoration: none; }
+        @media screen and (max-width: 600px) {
+            .container { margin: 15px; }
+            .content { padding: 0 20px 20px; }
+            .info-row { flex-direction: column; }
+            .info-label { margin-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://res.cloudinary.com/de5rurcwt/image/upload/v1760700010/logo-lutrip_vdnkd3.png" alt="LuTrip Logo" />
+            <h1>LuTrip - Khám phá Việt Nam</h1>
+            <p>Xác nhận đặt hoạt động thành công</p>
+        </div>
+
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+
+        <div class="content">
+            <h2 style="text-align: center; color: #28a745;">Đặt hoạt động thành công!</h2>
+            <p style="text-align: center; color: #666;">Cảm ơn bạn đã đặt hoạt động tại LuTrip. Dưới đây là chi tiết đơn hàng của bạn:</p>
+
+            <div class="booking-id">
+                <div>Mã đặt hoạt động: <strong>#${bookingData.booking._id.toString().slice(-8).toUpperCase()}</strong></div>
+                <div style="margin-top: 8px;">Trạng thái: <span class="status-badge status-${bookingData.activityBooking.status}">${bookingData.activityBooking.status === 'pending' ? 'Chờ xác nhận' : bookingData.activityBooking.status === 'confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}</span></div>
+            </div>
+
+            <div class="info-section">
+                <h3>🎯 Thông tin Hoạt động</h3>
+                <div class="info-row">
+                    <div class="info-label">Tên hoạt động:</div>
+                    <div class="info-value"><strong>${bookingData.activityBooking.activityId.name}</strong></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Địa điểm:</div>
+                    <div class="info-value">${bookingData.activityBooking.activityId.destinationId?.name || bookingData.activityBooking.activityId.destination?.name || 'N/A'}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Ngày tham gia:</div>
+                    <div class="info-value">${formatDateOnly(bookingData.activityBooking.scheduledDate)}</div>
+                </div>
+                ${typeof bookingData.activityBooking.activityId.location === 'object' && bookingData.activityBooking.activityId.location.address ? `
+                <div class="info-row">
+                    <div class="info-label">Địa chỉ:</div>
+                    <div class="info-value">${bookingData.activityBooking.activityId.location.address}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>👥 Thông tin Khách hàng</h3>
+                <div class="info-row">
+                    <div class="info-label">Họ tên:</div>
+                    <div class="info-value">${bookingData.user.fullName}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Email:</div>
+                    <div class="info-value">${bookingData.user.email}</div>
+                </div>
+                ${bookingData.user.phone ? `
+                <div class="info-row">
+                    <div class="info-label">Số điện thoại:</div>
+                    <div class="info-value">${bookingData.user.phone}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>👨‍👩‍👧‍👦 Số lượng Vé</h3>
+                <div class="info-row">
+                    <div class="info-label">Người lớn:</div>
+                    <div class="info-value">${bookingData.activityBooking.numAdults} vé</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Trẻ em:</div>
+                    <div class="info-value">${bookingData.activityBooking.numChildren} vé</div>
+                </div>
+                ${bookingData.activityBooking.numSeniors > 0 ? `
+                <div class="info-row">
+                    <div class="info-label">Người cao tuổi:</div>
+                    <div class="info-value">${bookingData.activityBooking.numSeniors} vé</div>
+                </div>
+                ` : ''}
+                ${bookingData.activityBooking.numBabies > 0 ? `
+                <div class="info-row">
+                    <div class="info-label">Em bé:</div>
+                    <div class="info-value">${bookingData.activityBooking.numBabies} vé</div>
+                </div>
+                ` : ''}
+                <div class="info-row" style="border-top: 2px solid #f97316; margin-top: 10px; padding-top: 10px;">
+                    <div class="info-label"><strong>Tổng số vé:</strong></div>
+                    <div class="info-value"><strong>${bookingData.activityBooking.numAdults + bookingData.activityBooking.numChildren + bookingData.activityBooking.numSeniors + bookingData.activityBooking.numBabies} vé</strong></div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>💰 Thông tin Thanh toán</h3>
+                <div class="info-row">
+                    <div class="info-label">Phương thức:</div>
+                    <div class="info-value">${bookingData.activityBooking.paymentMethod === 'momo' ? 'MoMo' :
+                bookingData.activityBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
+                    bookingData.activityBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
+                        'Chưa xác định'
+            }</div>
+                </div>
+                ${bookingData.activityBooking.price?.retail?.adult > 0 ? `
+                <div class="info-row">
+                    <div class="info-label">Giá người lớn:</div>
+                    <div class="info-value">${formatCurrency(bookingData.activityBooking.price.retail.adult)}</div>
+                </div>
+                ` : ''}
+                ${bookingData.activityBooking.price?.retail?.child > 0 ? `
+                <div class="info-row">
+                    <div class="info-label">Giá trẻ em:</div>
+                    <div class="info-value">${formatCurrency(bookingData.activityBooking.price.retail.child)}</div>
+                </div>
+                ` : ''}
+                ${bookingData.activityBooking.note ? `
+                <div class="info-row">
+                    <div class="info-label">Ghi chú:</div>
+                    <div class="info-value">${bookingData.activityBooking.note}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="total-price">
+                <div class="label">Tổng tiền</div>
+                <div class="amount">${formatCurrency(bookingData.activityBooking.subtotal)}</div>
+            </div>
+
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <strong>📌 Lưu ý quan trọng:</strong>
+                <ul style="margin: 10px 0 0 0; padding-left: 18px; line-height: 1.6;">
+                    <li>Vui lòng mang theo CMND/CCCD và email xác nhận này</li>
+                    <li>Có mặt trước 15 phút để làm thủ tục</li>
+                    <li>Liên hệ hotline nếu cần hỗ trợ: <strong>1900-xxxx</strong></li>
+                </ul>
+            </div>
+
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="${process.env.CLIENT_URL}/profile/booking" style="background: #f97316; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Xem chi tiết đơn hàng</a>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} LuTrip - Khám phá Việt Nam</p>
+            <p><a href="${process.env.CLIENT_URL}">Truy cập website</a> | <a href="${process.env.CLIENT_URL}/support">Hỗ trợ</a></p>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const mailOptions = {
+            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `✅ Xác nhận đặt hoạt động #${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
+            html: htmlContent
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Activity booking confirmation email sent to: ${userEmail}`);
+        return true;
+    } catch (error) {
+        console.error('Send activity booking email error:', error);
+        return false;
+    }
+};
+
+// Send Flight Booking Confirmation Email
+const sendFlightBookingEmail = async (userEmail, bookingData) => {
+    try {
+        const transporter = createTransporter();
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+        .container { max-width: 650px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 20px; text-align: center; color: white; }
+        .header img { width: 100px; margin-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .success-icon { text-align: center; padding: 20px; }
+        .success-icon svg { width: 80px; height: 80px; }
+        .content { padding: 0 30px 30px; color: #333; }
+        .booking-id { background: #f8f9fa; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .booking-id strong { color: #10b981; font-size: 18px; }
+        .flight-route { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+        .flight-route .airports { display: flex; justify-content: space-around; align-items: center; margin: 15px 0; }
+        .flight-route .airport { flex: 1; }
+        .flight-route .airport-code { font-size: 32px; font-weight: bold; color: #10b981; }
+        .flight-route .airport-name { color: #666; font-size: 14px; margin-top: 5px; }
+        .flight-route .arrow { flex: 0 0 60px; color: #10b981; font-size: 24px; }
+        .info-section { margin: 25px 0; }
+        .info-section h3 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 15px; }
+        .info-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-label { flex: 0 0 40%; color: #666; font-weight: 500; }
+        .info-value { flex: 1; color: #333; }
+        .total-price { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 15px; text-align: center; margin: 20px 0; }
+        .total-price .label { color: #666; font-size: 14px; margin-bottom: 5px; }
+        .total-price .amount { color: #10b981; font-size: 28px; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d1ecf1; color: #0c5460; }
+        .passenger-item { background: #f8f9fa; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 3px solid #10b981; }
+        .footer { background: #10b981; text-align: center; color: white; padding: 20px; font-size: 14px; }
+        .footer a { color: #ffd369; text-decoration: none; }
+        @media screen and (max-width: 600px) {
+            .container { margin: 15px; }
+            .content { padding: 0 20px 20px; }
+            .info-row { flex-direction: column; }
+            .info-label { margin-bottom: 5px; }
+            .flight-route .airports { flex-direction: column; }
+            .flight-route .arrow { transform: rotate(90deg); margin: 10px 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://res.cloudinary.com/de5rurcwt/image/upload/v1760700010/logo-lutrip_vdnkd3.png" alt="LuTrip Logo" />
+            <h1>LuTrip - Khám phá Việt Nam</h1>
+            <p>Xác nhận đặt vé máy bay thành công</p>
+        </div>
+
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+
+        <div class="content">
+            <h2 style="text-align: center; color: #28a745;">Đặt vé máy bay thành công!</h2>
+            <p style="text-align: center; color: #666;">Cảm ơn bạn đã đặt vé tại LuTrip. Dưới đây là chi tiết đơn hàng của bạn:</p>
+
+            <div class="booking-id">
+                <div>Mã đặt vé: <strong>#${bookingData.booking._id.toString().slice(-8).toUpperCase()}</strong></div>
+                <div style="margin-top: 8px;">Trạng thái: <span class="status-badge status-${bookingData.flightBooking.status}">${bookingData.flightBooking.status === 'pending' ? 'Chờ xác nhận' : bookingData.flightBooking.status === 'confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}</span></div>
+            </div>
+
+            <div class="flight-route">
+                <div><strong>Thông tin chuyến bay</strong></div>
+                <div class="airports">
+                    <div class="airport">
+                        <div class="airport-code">${bookingData.flightBooking.flightId.departureAirport.iata}</div>
+                        <div class="airport-name">${bookingData.flightBooking.flightId.departureAirport.city}</div>
+                        <div style="margin-top: 10px; font-size: 16px; font-weight: 500;">${formatDate(bookingData.flightBooking.flightId.departureTime)}</div>
+                    </div>
+                    <div class="arrow">✈️</div>
+                    <div class="airport">
+                        <div class="airport-code">${bookingData.flightBooking.flightId.arrivalAirport.iata}</div>
+                        <div class="airport-name">${bookingData.flightBooking.flightId.arrivalAirport.city}</div>
+                        <div style="margin-top: 10px; font-size: 16px; font-weight: 500;">${formatDate(bookingData.flightBooking.flightId.arrivalTime)}</div>
+                    </div>
+                </div>
+                <div style="color: #666; font-size: 14px; margin-top: 10px;">
+                    Thời gian bay: ${bookingData.flightBooking.flightId.duration}
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>✈️ Chi tiết Chuyến bay</h3>
+                <div class="info-row">
+                    <div class="info-label">Số hiệu:</div>
+                    <div class="info-value"><strong>${bookingData.flightBooking.flightId.flightCode}</strong></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Hãng bay:</div>
+                    <div class="info-value">${bookingData.flightBooking.flightId.airline.name}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Hạng vé:</div>
+                    <div class="info-value">${bookingData.flightBooking.flightClassId.className}</div>
+                </div>
+                ${bookingData.flightBooking.flightId.aircraft ? `
+                <div class="info-row">
+                    <div class="info-label">Loại máy bay:</div>
+                    <div class="info-value">${bookingData.flightBooking.flightId.aircraft}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>👥 Thông tin Khách hàng</h3>
+                <div class="info-row">
+                    <div class="info-label">Họ tên:</div>
+                    <div class="info-value">${bookingData.user.fullName}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Email:</div>
+                    <div class="info-value">${bookingData.user.email}</div>
+                </div>
+                ${bookingData.user.phone ? `
+                <div class="info-row">
+                    <div class="info-label">Số điện thoại:</div>
+                    <div class="info-value">${bookingData.user.phone}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>👨‍👩‍👧‍👦 Danh sách Hành khách (${bookingData.flightBooking.passengers?.length || bookingData.flightBooking.numTickets})</h3>
+                <div class="info-row">
+                    <div class="info-label">Số lượng vé:</div>
+                    <div class="info-value">${bookingData.flightBooking.numTickets} vé × ${formatCurrency(bookingData.flightBooking.pricePerTicket)}</div>
+                </div>
+                ${bookingData.flightBooking.passengers && bookingData.flightBooking.passengers.length > 0 ? `
+                <div style="margin-top: 15px;">
+                    <strong>Chi tiết hành khách:</strong>
+                    ${bookingData.flightBooking.passengers.map((p, idx) => `
+                    <div class="passenger-item">
+                        <strong>${idx + 1}. ${p.fullName}</strong>
+                        <div style="margin-top: 5px; color: #666; font-size: 13px;">
+                            Ngày sinh: ${formatDateOnly(p.dateOfBirth)} | Giới tính: ${p.gender === 'male' || p.gender === 'Male' || p.gender === 'Nam' ? 'Nam' : 'Nữ'}
+                            ${p.passportNumber ? ` | Hộ chiếu: ${p.passportNumber}` : ''}
+                            ${p.seatNumber ? ` | Ghế: ${p.seatNumber}` : ''}
+                        </div>
+                    </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="info-section">
+                <h3>💰 Thông tin Thanh toán</h3>
+                <div class="info-row">
+                    <div class="info-label">Phương thức:</div>
+                    <div class="info-value">${bookingData.flightBooking.paymentMethod === 'momo' ? 'MoMo' :
+                bookingData.flightBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
+                    bookingData.flightBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
+                        'Chưa xác định'
+            }</div>
+                </div>
+                ${bookingData.flightBooking.discountAmount > 0 ? `
+                <div class="info-row">
+                    <div class="info-label">Giảm giá:</div>
+                    <div class="info-value" style="color: #dc2626;">-${formatCurrency(bookingData.flightBooking.discountAmount)}</div>
+                </div>
+                ` : ''}
+                ${bookingData.flightBooking.note ? `
+                <div class="info-row">
+                    <div class="info-label">Ghi chú:</div>
+                    <div class="info-value">${bookingData.flightBooking.note}</div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="total-price">
+                <div class="label">Tổng tiền</div>
+                <div class="amount">${formatCurrency(bookingData.flightBooking.totalFlightPrice)}</div>
+            </div>
+
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <strong>📌 Lưu ý quan trọng:</strong>
+                <ul style="margin: 10px 0 0 0; padding-left: 18px; line-height: 1.6;">
+                    <li>Có mặt tại sân bay trước 2 giờ (chuyến quốc tế) hoặc 1.5 giờ (chuyến nội địa)</li>
+                    <li>Mang theo CMND/CCCD hoặc hộ chiếu hợp lệ</li>
+                    <li>In hoặc lưu email xác nhận này để làm thủ tục</li>
+                    <li>Liên hệ hotline nếu cần hỗ trợ: <strong>1900-xxxx</strong></li>
+                </ul>
+            </div>
+
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="${process.env.CLIENT_URL}/profile/booking" style="background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Xem chi tiết đơn hàng</a>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} LuTrip - Khám phá Việt Nam</p>
+            <p><a href="${process.env.CLIENT_URL}">Truy cập website</a> | <a href="${process.env.CLIENT_URL}/support">Hỗ trợ</a></p>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const mailOptions = {
+            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
+            to: userEmail,
+            subject: `✈️ Xác nhận đặt vé máy bay #${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
+            html: htmlContent
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Flight booking confirmation email sent to: ${userEmail}`);
+        return true;
+    } catch (error) {
+        console.error('Send flight booking email error:', error);
+        return false;
+    }
+};
+
 module.exports = {
     generateOTP,
     sendOTPEmail,
     sendFirebaseVerificationEmail,
     sendPasswordResetEmailFirebase,
-    sendCustomEmail
+    sendCustomEmail,
+    sendTourBookingEmail,
+    sendActivityBookingEmail,
+    sendFlightBookingEmail
 };

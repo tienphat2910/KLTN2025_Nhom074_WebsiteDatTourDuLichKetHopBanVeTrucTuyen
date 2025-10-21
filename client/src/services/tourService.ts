@@ -2,6 +2,14 @@ import { env } from "@/config/env";
 
 const API_BASE_URL = env.API_BASE_URL;
 
+// Helper function to get auth token
+const getAuthToken = (): string | null => {
+  return (
+    localStorage.getItem("lutrip_admin_token") ||
+    localStorage.getItem("lutrip_token")
+  );
+};
+
 export interface ItineraryDay {
   title: string;
   description: string;
@@ -81,6 +89,62 @@ export interface TourResponse {
   success: boolean;
   message: string;
   data: Tour;
+}
+
+export interface TourBookingDetail {
+  _id: string;
+  bookingId: string;
+  tourId: {
+    _id: string;
+    title: string;
+    slug: string;
+    description: string;
+    destination: {
+      _id: string;
+      name: string;
+      region: string;
+      image?: string;
+    } | null;
+    departureLocation: {
+      name: string;
+      region: string;
+      code?: string;
+    };
+    startDate: string;
+    endDate: string;
+    duration: string;
+    images?: string[];
+  };
+  numAdults: number;
+  numChildren: number;
+  numInfants: number;
+  priceByAge: {
+    adult: number;
+    child: number;
+    infant: number;
+  };
+  subtotal: number;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  note?: string;
+  paymentMethod: "cash" | "momo" | "bank_transfer";
+  passengers: Array<{
+    _id: string;
+    fullName: string;
+    phone?: string;
+    email?: string;
+    gender: "Nam" | "Nữ";
+    dateOfBirth: string;
+    cccd?: string;
+    type: "adult" | "child" | "infant";
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourBookingResponse {
+  success: boolean;
+  data: TourBookingDetail;
+  message?: string;
 }
 
 export const tourService = {
@@ -216,15 +280,25 @@ export const tourService = {
   // Create new tour (Admin only)
   createTour: async (tourData: Partial<Tour>): Promise<ApiResponse<Tour>> => {
     try {
+      const token = getAuthToken();
+      console.log("📤 Creating tour with data:", tourData);
+
       const response = await fetch(`${API_BASE_URL}/admin/tours`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(tourData)
       });
+
       const result = await response.json();
+      console.log("📥 Create tour response:", result);
+
+      if (!response.ok) {
+        console.error("❌ Create tour failed:", result);
+      }
+
       return result;
     } catch (error) {
       console.error("Create tour error:", error);
@@ -265,11 +339,12 @@ export const tourService = {
     tourData: Partial<Tour>
   ): Promise<ApiResponse<Tour>> => {
     try {
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(tourData)
       });
@@ -287,10 +362,11 @@ export const tourService = {
   // Delete tour (Admin only)
   deleteTour: async (id: string): Promise<ApiResponse<void>> => {
     try {
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
+          Authorization: `Bearer ${token}`
         }
       });
       const result = await response.json();
@@ -313,6 +389,7 @@ export const tourService = {
     isFeatured?: boolean;
   }): Promise<ToursResponse> => {
     try {
+      const token = getAuthToken();
       const queryParams = new URLSearchParams();
 
       if (params?.page) queryParams.append("page", params.page.toString());
@@ -327,7 +404,7 @@ export const tourService = {
         `${API_BASE_URL}/admin/tours?${queryParams}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`
+            Authorization: `Bearer ${token}`
           }
         }
       );
@@ -371,8 +448,10 @@ export const tourService = {
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const nights = diffDays - 1;
-    return `${diffDays}N${nights}Đ`;
+    // Số ngày thực tế = diffDays + 1 (bao gồm cả ngày bắt đầu và ngày kết thúc)
+    const totalDays = diffDays + 1;
+    const nights = diffDays;
+    return `${totalDays} Ngày ${nights} đêm`;
   },
 
   // Format date display
@@ -391,5 +470,107 @@ export const tourService = {
     currentPrice: number
   ): number => {
     return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+  },
+
+  // Upload tour image (Admin only)
+  uploadTourImage: async (
+    file: File,
+    tourId?: string
+  ): Promise<ApiResponse<{ url: string; public_id: string }>> => {
+    try {
+      // Get token from localStorage
+      const token = getAuthToken();
+
+      console.log(
+        "🔑 Token từ localStorage:",
+        token ? "Có token" : "Không có token"
+      );
+      console.log("🔑 Token length:", token?.length);
+      console.log("🔑 Token preview:", token?.substring(0, 20) + "...");
+
+      if (!token) {
+        return {
+          success: false,
+          message: "Vui lòng đăng nhập để tải ảnh lên"
+        };
+      }
+
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("tourId", tourId || "temp");
+
+      console.log(
+        "📤 Uploading to:",
+        `${API_BASE_URL}/admin/tours/upload-image`
+      );
+      console.log("📤 File name:", file.name);
+      console.log("📤 File size:", file.size);
+
+      const response = await fetch(`${API_BASE_URL}/admin/tours/upload-image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      console.log("📥 Response status:", response.status);
+      const result = await response.json();
+      console.log("📥 Response data:", result);
+
+      return result;
+    } catch (error) {
+      console.error("❌ Upload tour image error:", error);
+      return {
+        success: false,
+        message: "Lỗi khi tải ảnh lên"
+      };
+    }
+  },
+
+  // Get tour booking details by booking ID
+  getTourBookingDetails: async (
+    bookingId: string
+  ): Promise<TourBookingResponse> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        return {
+          success: false,
+          data: {} as TourBookingDetail,
+          message: "Vui lòng đăng nhập"
+        };
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/bookingtours/booking/${bookingId}/details`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          data: {} as TourBookingDetail,
+          message: result.message || "Không thể tải thông tin tour"
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Get tour booking details error:", error);
+      return {
+        success: false,
+        data: {} as TourBookingDetail,
+        message: "Lỗi kết nối server"
+      };
+    }
   }
 };

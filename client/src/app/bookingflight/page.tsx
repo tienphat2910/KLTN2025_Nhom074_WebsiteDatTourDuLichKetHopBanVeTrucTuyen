@@ -2,44 +2,48 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { tourService, Tour } from "@/services/tourService";
-import { bookingTourService } from "@/services/bookingTourService";
+import { Flight, flightService } from "@/services/flightService";
+import {
+  bookingFlightService,
+  PassengerInfo
+} from "@/services/bookingFlightService";
 import { paymentService } from "@/services/paymentService";
 import { discountService } from "@/services/discountService";
 import { Discount } from "@/types/discount";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import Header from "@/components/Header/Header";
-import Footer from "@/components/Footer/Footer";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
-interface PassengerInfo {
-  fullName: string;
-  phone?: string;
-  email?: string;
-  gender: string;
-  dateOfBirth: string;
-  cccd?: string;
-  type: "adult" | "child" | "infant";
-}
-
-export default function BookingTourPage() {
+export default function BookingFlightPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isAuthenticated, user, isAuthLoading } = useAuth();
 
-  const tourId = searchParams.get("tourId");
+  const flightId = searchParams.get("flightId");
   const adults = Number(searchParams.get("adults") || 1);
   const children = Number(searchParams.get("children") || 0);
   const infants = Number(searchParams.get("infants") || 0);
+  const seatClass = searchParams.get("seatClass") || "economy";
 
-  const [tour, setTour] = useState<Tour | null>(null);
+  // Add-ons from URL
+  const extraBaggage = Number(searchParams.get("extraBaggage") || 0);
+  const insurance = searchParams.get("insurance") === "true";
+  const prioritySeat = searchParams.get("prioritySeat") === "true";
+
+  // Pricing constants for add-ons
+  const EXTRA_BAGGAGE_PRICE = 200000;
+  const INSURANCE_PRICE = 150000;
+  const PRIORITY_SEAT_PRICE = 100000;
+
+  const [flight, setFlight] = useState<Flight | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Thông tin hành khách
+  // Passenger information
   const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
   const [note, setNote] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<string>(""); // Add payment method state
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
 
   // Discount information
   const [discountCode, setDiscountCode] = useState("");
@@ -49,7 +53,7 @@ export default function BookingTourPage() {
   // Check authentication on mount
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      toast.error("Vui lòng đăng nhập để đặt tour!");
+      toast.error("Vui lòng đăng nhập để đặt vé!");
       router.push(
         `/login?redirect=${encodeURIComponent(
           window.location.pathname + window.location.search
@@ -59,43 +63,42 @@ export default function BookingTourPage() {
     }
   }, [isAuthenticated, isAuthLoading, router]);
 
-  // Initialize passenger info based on number of people
+  // Initialize passenger info
   useEffect(() => {
-    const totalPassengers = adults + children + infants;
     const passengerList: PassengerInfo[] = [];
 
-    // Add adults
+    // Add adults (require CCCD)
     for (let i = 0; i < adults; i++) {
       passengerList.push({
         fullName: i === 0 && user?.fullName ? user.fullName : "",
-        phone: i === 0 && user?.phone ? user.phone : undefined,
+        phoneNumber: i === 0 && user?.phone ? user.phone : undefined,
         email: i === 0 && user?.email ? user.email : undefined,
-        gender: "",
+        gender: "Nam",
         dateOfBirth: "",
-        cccd: "",
-        type: "adult"
+        identityNumber: "", // Required for adults
+        nationality: "Vietnam"
       });
     }
 
-    // Add children
+    // Add children (no CCCD needed)
     for (let i = 0; i < children; i++) {
       passengerList.push({
         fullName: "",
-        gender: "",
+        gender: "Nam",
         dateOfBirth: "",
-        cccd: "",
-        type: "child"
+        identityNumber: undefined, // Not required for children
+        nationality: "Vietnam"
       });
     }
 
-    // Add infants
+    // Add infants (no CCCD needed)
     for (let i = 0; i < infants; i++) {
       passengerList.push({
         fullName: "",
-        gender: "",
+        gender: "Nam",
         dateOfBirth: "",
-        cccd: "",
-        type: "infant"
+        identityNumber: undefined, // Not required for infants
+        nationality: "Vietnam"
       });
     }
 
@@ -103,15 +106,21 @@ export default function BookingTourPage() {
   }, [adults, children, infants, user]);
 
   useEffect(() => {
-    if (tourId) {
-      tourService.getTourById(tourId).then((res) => {
-        if (res.success) setTour(res.data);
-        setLoading(false);
-      });
+    if (flightId) {
+      flightService
+        .getFlightById(flightId)
+        .then((data) => {
+          setFlight(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Error loading flight:", err);
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
-  }, [tourId]);
+  }, [flightId]);
 
   const updatePassenger = (
     index: number,
@@ -194,7 +203,7 @@ export default function BookingTourPage() {
     e.preventDefault();
 
     if (!isAuthenticated) {
-      toast.error("Vui lòng đăng nhập để đặt tour!");
+      toast.error("Vui lòng đăng nhập để đặt vé!");
       router.push(
         `/login?redirect=${encodeURIComponent(
           window.location.pathname + window.location.search
@@ -205,22 +214,36 @@ export default function BookingTourPage() {
 
     // Validate passenger information
     const hasEmptyFields = passengers.some((passenger, index) => {
-      // For first passenger (contact person), check all required fields
+      // First passenger (contact person - always adult)
       if (index === 0) {
         return (
           !passenger.fullName.trim() ||
-          !passenger.phone?.trim() ||
+          !passenger.phoneNumber?.trim() ||
           !passenger.email?.trim() ||
+          !passenger.gender.trim() ||
+          !passenger.dateOfBirth.trim() ||
+          !passenger.identityNumber?.trim()
+        );
+      }
+
+      // Other passengers
+      // Adults need CCCD, but children and infants don't
+      const isAdult = index < adults;
+      if (isAdult) {
+        return (
+          !passenger.fullName.trim() ||
+          !passenger.gender.trim() ||
+          !passenger.dateOfBirth.trim() ||
+          !passenger.identityNumber?.trim()
+        );
+      } else {
+        // Children and infants don't need CCCD
+        return (
+          !passenger.fullName.trim() ||
           !passenger.gender.trim() ||
           !passenger.dateOfBirth.trim()
         );
       }
-      // For other passengers, only check name, gender and date of birth
-      return (
-        !passenger.fullName.trim() ||
-        !passenger.gender.trim() ||
-        !passenger.dateOfBirth.trim()
-      );
     });
 
     if (hasEmptyFields) {
@@ -233,73 +256,129 @@ export default function BookingTourPage() {
       return;
     }
 
-    if (!tour) {
-      toast.error("Không tìm thấy thông tin tour.");
+    if (!flight) {
+      toast.error("Không tìm thấy thông tin chuyến bay.");
       return;
     }
 
-    if (!tour.pricingByAge) {
-      toast.error("Thiếu thông tin giá tour.");
+    if (!flight.classes || flight.classes.length === 0) {
+      toast.error("Thiếu thông tin giá vé.");
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Calculate total amount
-      const subtotal =
-        adults * tour.pricingByAge.adult +
-        children * tour.pricingByAge.child +
-        infants * tour.pricingByAge.infant;
+      // Get selected flight class
+      const selectedClass = flight.classes.find(
+        (c) => c.className.toLowerCase() === seatClass.toLowerCase()
+      );
 
-      const discountAmount = calculateDiscountAmount(subtotal);
-      const finalTotal = calculateFinalTotal(subtotal);
+      if (!selectedClass) {
+        toast.error("Thiếu thông tin giá vé cho hạng ghế.");
+        return;
+      }
+
+      // Calculate total amount with age-based pricing
+      const numTickets = adults + children + infants;
+      const baseTicketPrice = selectedClass.price;
+      const pricePerTicket = baseTicketPrice; // Keep for backend compatibility
+
+      // Age-based pricing:
+      // Adults (12+ years): 100% of ticket price
+      // Children (2-11 years): 90% of ticket price
+      // Infants (under 2 years): 10% of ticket price
+      const adultsTotal = adults * baseTicketPrice;
+      const childrenTotal = children * (baseTicketPrice * 0.9);
+      const infantsTotal = infants * (baseTicketPrice * 0.1);
+      const totalFlightPrice = adultsTotal + childrenTotal + infantsTotal;
+
+      // Calculate add-ons
+      const baggageTotal = extraBaggage * EXTRA_BAGGAGE_PRICE;
+      const insuranceTotal = insurance ? numTickets * INSURANCE_PRICE : 0;
+      const prioritySeatTotal = prioritySeat
+        ? numTickets * PRIORITY_SEAT_PRICE
+        : 0;
+      const addOnsTotal = baggageTotal + insuranceTotal + prioritySeatTotal;
+
+      const subtotalWithAddons = totalFlightPrice + addOnsTotal;
+
+      const discountAmount = calculateDiscountAmount(subtotalWithAddons);
+      const finalTotal = calculateFinalTotal(subtotalWithAddons);
+
+      // Prepare note with add-ons information
+      let bookingNote = note;
+      const addOnsInfo = [];
+      if (extraBaggage > 0) {
+        addOnsInfo.push(
+          `Hành lý thêm: ${extraBaggage} kiện (${baggageTotal.toLocaleString(
+            "vi-VN"
+          )} đ)`
+        );
+      }
+      if (insurance) {
+        addOnsInfo.push(
+          `Bảo hiểm du lịch: ${numTickets} người (${insuranceTotal.toLocaleString(
+            "vi-VN"
+          )} đ)`
+        );
+      }
+      if (prioritySeat) {
+        addOnsInfo.push(
+          `Chỗ ngồi ưu tiên: ${numTickets} người (${prioritySeatTotal.toLocaleString(
+            "vi-VN"
+          )} đ)`
+        );
+      }
+      if (addOnsInfo.length > 0) {
+        bookingNote = `${
+          bookingNote ? bookingNote + "\n\n" : ""
+        }Dịch vụ bổ sung:\n${addOnsInfo.join("\n")}`;
+      }
 
       // If payment method is MoMo, handle MoMo payment flow
       if (paymentMethod === "momo") {
         try {
-          // Create MoMo payment
           const momoResponse = await paymentService.createMoMoPayment({
             amount: finalTotal,
-            orderInfo: `Thanh toán tour: ${tour.title}`,
+            orderInfo: `Thanh toán vé máy bay: ${flight.flightCode}`,
             extraData: JSON.stringify({
-              tourId: tour._id,
-              numAdults: adults,
-              numChildren: children,
-              numInfants: infants,
+              flightId: flight._id,
+              flightCode: flight.flightCode,
+              flightClassId: selectedClass._id,
+              numTickets,
+              pricePerTicket,
+              totalFlightPrice,
               passengers,
-              note,
+              note: bookingNote,
               discountCode: appliedDiscount?.code,
               discountAmount
             })
           });
 
           if (momoResponse.success && momoResponse.data?.payUrl) {
-            // Store booking data temporarily for after payment
             const bookingData = {
-              tourId: tour._id,
-              numAdults: adults,
-              numChildren: children,
-              numInfants: infants,
-              priceByAge: tour.pricingByAge,
-              subtotal: subtotal,
+              flightId: flight._id,
+              flightCode: flight.flightCode,
+              flightClassId: selectedClass._id,
+              numTickets,
+              pricePerTicket,
+              totalFlightPrice,
               discountAmount,
               finalTotal,
               discountCode: appliedDiscount?.code,
               status: "pending",
               passengers,
-              note,
+              note: bookingNote,
               paymentMethod,
               momoOrderId: momoResponse.data.orderId
             };
 
-            // Store in localStorage to retrieve after payment redirect
-            localStorage.setItem("pendingBooking", JSON.stringify(bookingData));
-
-            // Show success message and redirect to MoMo
+            localStorage.setItem(
+              "pendingFlightBooking",
+              JSON.stringify(bookingData)
+            );
             toast.success("Đang chuyển hướng đến trang thanh toán MoMo...");
-
-            // Redirect to MoMo payment page
             paymentService.redirectToMoMoPayment(momoResponse.data.payUrl);
             return;
           } else {
@@ -316,24 +395,24 @@ export default function BookingTourPage() {
       }
 
       // For other payment methods, proceed with normal booking flow
-      const res = await bookingTourService.createBookingTour({
-        tourId: tour._id,
-        numAdults: adults,
-        numChildren: children,
-        numInfants: infants,
-        priceByAge: tour.pricingByAge,
-        subtotal: subtotal,
+      const res = await bookingFlightService.createBookingFlight({
+        flightId: flight._id,
+        flightCode: flight.flightCode,
+        flightClassId: selectedClass._id,
+        numTickets,
+        pricePerTicket,
+        totalFlightPrice,
         discountAmount,
         finalTotal,
         discountCode: appliedDiscount?.code,
         status: "pending",
         passengers,
-        note,
+        note: bookingNote,
         paymentMethod
       });
 
       if (res.success) {
-        toast.success("Đặt tour thành công!");
+        toast.success("Đặt vé thành công!");
         router.push("/profile/booking");
       } else {
         if (res.requireAuth) {
@@ -343,7 +422,7 @@ export default function BookingTourPage() {
             )}`
           );
         } else {
-          toast.error(res.message || "Đặt tour thất bại!");
+          toast.error(res.message || "Đặt vé thất bại!");
         }
       }
     } catch (err) {
@@ -354,7 +433,6 @@ export default function BookingTourPage() {
     }
   };
 
-  // Show loading while checking authentication
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -363,7 +441,6 @@ export default function BookingTourPage() {
     );
   }
 
-  // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -375,49 +452,81 @@ export default function BookingTourPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div>Đang tải thông tin tour...</div>
+        <div>Đang tải thông tin chuyến bay...</div>
       </div>
     );
   }
 
-  if (!tour) {
+  if (!flight) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div>Không tìm thấy tour.</div>
+        <div>Không tìm thấy chuyến bay.</div>
       </div>
     );
   }
 
+  const selectedClass = flight.classes?.find(
+    (c) => c.className.toLowerCase() === seatClass.toLowerCase()
+  );
+  const baseTicketPrice = selectedClass?.price || 0;
+  const numTickets = adults + children + infants;
+
+  // Age-based pricing calculation for display
+  const adultsPrice = baseTicketPrice; // 100%
+  const childrenPrice = baseTicketPrice * 0.9; // 90%
+  const infantsPrice = baseTicketPrice * 0.1; // 10%
+
+  const adultsTotal = adults * adultsPrice;
+  const childrenTotal = children * childrenPrice;
+  const infantsTotal = infants * infantsPrice;
+  const totalFlightPrice = adultsTotal + childrenTotal + infantsTotal;
+
+  // Calculate add-ons for display
+  const baggageTotal = extraBaggage * EXTRA_BAGGAGE_PRICE;
+  const insuranceTotal = insurance ? numTickets * INSURANCE_PRICE : 0;
+  const prioritySeatTotal = prioritySeat ? numTickets * PRIORITY_SEAT_PRICE : 0;
+  const addOnsTotal = baggageTotal + insuranceTotal + prioritySeatTotal;
+
+  const subtotalWithAddons = totalFlightPrice + addOnsTotal;
+  const finalTotal = calculateFinalTotal(subtotalWithAddons);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-blue-100">
       <Header />
-      <div className="py-8">
-        <div className="container mx-auto px-4 max-w-4xl">
+
+      <div className="py-8 px-4 mt-20">
+        <div className="container mx-auto max-w-4xl">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6">
+            <div className="bg-gradient-to-r from-sky-600 to-blue-600 text-white p-6">
               <h1 className="text-2xl font-bold mb-2">
-                Đặt Tour: {tour.title}
+                Đặt vé: {flight.departureAirportId.city} →{" "}
+                {flight.arrivalAirportId.city}
               </h1>
-              <div className="flex items-center text-blue-100">
+              <div className="flex flex-col sm:flex-row sm:items-center text-blue-100 gap-2 text-sm">
                 <span className="mr-4">
-                  👥 {adults + children + infants} khách
+                  👥 {adults + children + infants} hành khách
                 </span>
+                <span className="mr-4">✈️ {flight.flightCode}</span>
+                <span className="mr-4">
+                  🎫 Hạng{" "}
+                  {flight.classes?.find(
+                    (c) => c.className.toLowerCase() === seatClass.toLowerCase()
+                  )?.className ||
+                    (seatClass === "economy"
+                      ? "Phổ thông"
+                      : seatClass === "business"
+                      ? "Thương gia"
+                      : seatClass)}
+                </span>
+                {(extraBaggage > 0 || insurance || prioritySeat) && (
+                  <span className="mr-4">➕ Có dịch vụ bổ sung</span>
+                )}
                 <span>
-                  💰 Tổng:{" "}
-                  {(() => {
-                    const subtotal = tour.pricingByAge
-                      ? adults * tour.pricingByAge.adult +
-                        children * tour.pricingByAge.child +
-                        infants * tour.pricingByAge.infant
-                      : 0;
-                    const finalTotal = calculateFinalTotal(subtotal);
-                    return finalTotal.toLocaleString("vi-VN");
-                  })()}{" "}
-                  đ
+                  💰 Tổng: {finalTotal.toLocaleString("vi-VN")} đ
                   {appliedDiscount && (
-                    <span className="ml-2 text-yellow-300 text-sm">
-                      (Đã áp dụng mã giảm giá)
+                    <span className="ml-2 text-yellow-300 text-xs">
+                      (Đã giảm giá)
                     </span>
                   )}
                 </span>
@@ -428,7 +537,7 @@ export default function BookingTourPage() {
               {/* User Account Info */}
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
                 <h3 className="font-semibold text-blue-800 mb-2">
-                  Thông tin tài khoản đặt tour
+                  Thông tin tài khoản đặt vé
                 </h3>
                 <p className="text-sm text-blue-700">
                   Đăng nhập với: {user?.email}
@@ -443,10 +552,20 @@ export default function BookingTourPage() {
 
                 <div className="space-y-6">
                   {passengers.map((passenger, index) => {
-                    // Count passengers by type up to current index
-                    const passengersOfSameType = passengers
-                      .slice(0, index + 1)
-                      .filter((p) => p.type === passenger.type).length;
+                    // Determine passenger type based on index
+                    let passengerType: "adult" | "child" | "infant" = "adult";
+                    let passengerNumber = index + 1;
+
+                    if (index < adults) {
+                      passengerType = "adult";
+                      passengerNumber = index + 1;
+                    } else if (index < adults + children) {
+                      passengerType = "child";
+                      passengerNumber = index - adults + 1;
+                    } else {
+                      passengerType = "infant";
+                      passengerNumber = index - adults - children + 1;
+                    }
 
                     const isContactPerson = index === 0;
 
@@ -457,8 +576,8 @@ export default function BookingTourPage() {
                       >
                         <div className="flex items-center mb-4">
                           <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                            {getPassengerTypeLabel(passenger.type)}{" "}
-                            {passengersOfSameType}
+                            {getPassengerTypeLabel(passengerType)}{" "}
+                            {passengerNumber}
                           </span>
                           {isContactPerson && (
                             <span className="ml-2 text-xs text-gray-500">
@@ -534,21 +653,28 @@ export default function BookingTourPage() {
                             />
                           </div>
 
-                          {/* CCCD */}
-                          <div className="lg:col-span-1">
-                            <label className="block font-semibold mb-1 text-gray-700">
-                              CCCD/CMND
-                            </label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                              value={passenger.cccd || ""}
-                              onChange={(e) =>
-                                updatePassenger(index, "cccd", e.target.value)
-                              }
-                              placeholder="Nhập số CCCD/CMND"
-                            />
-                          </div>
+                          {/* CCCD - Only for adults */}
+                          {passengerType === "adult" && (
+                            <div className="lg:col-span-1">
+                              <label className="block font-semibold mb-1 text-gray-700">
+                                CCCD/CMND *
+                              </label>
+                              <input
+                                type="text"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
+                                value={passenger.identityNumber || ""}
+                                onChange={(e) =>
+                                  updatePassenger(
+                                    index,
+                                    "identityNumber",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Nhập số CCCD/CMND (9 hoặc 12 số)"
+                                required
+                              />
+                            </div>
+                          )}
 
                           {/* Phone (only for contact person) */}
                           {isContactPerson && (
@@ -559,11 +685,11 @@ export default function BookingTourPage() {
                               <input
                                 type="tel"
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                                value={passenger.phone || ""}
+                                value={passenger.phoneNumber || ""}
                                 onChange={(e) =>
                                   updatePassenger(
                                     index,
-                                    "phone",
+                                    "phoneNumber",
                                     e.target.value
                                   )
                                 }
@@ -696,39 +822,7 @@ export default function BookingTourPage() {
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">
                   Hình thức thanh toán
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Cash Payment */}
-                  <div
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      paymentMethod === "cash"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
-                    onClick={() => setPaymentMethod("cash")}
-                  >
-                    <div className="flex items-center mb-2">
-                      <input
-                        type="radio"
-                        id="cash"
-                        name="paymentMethod"
-                        value="cash"
-                        checked={paymentMethod === "cash"}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="mr-3 text-blue-600"
-                      />
-                      <div className="text-2xl mr-2">💵</div>
-                      <label
-                        htmlFor="cash"
-                        className="font-semibold text-gray-800 cursor-pointer"
-                      >
-                        Tiền mặt
-                      </label>
-                    </div>
-                    <p className="text-sm text-gray-600 ml-8">
-                      Thanh toán bằng tiền mặt khi gặp hướng dẫn viên
-                    </p>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Momo Payment */}
                   <div
                     className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
@@ -813,7 +907,7 @@ export default function BookingTourPage() {
                         <strong>Tên tài khoản:</strong> Nguyễn Tiến Phát
                       </p>
                       <p className="text-xs text-pink-600 mt-2">
-                        * Sau khi đặt tour, bạn sẽ nhận được thông báo với thông
+                        * Sau khi đặt vé, bạn sẽ nhận được thông báo với thông
                         tin chi tiết để thanh toán
                       </p>
                     </div>
@@ -830,8 +924,8 @@ export default function BookingTourPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <p className="mb-1">
-                            <strong>Ngân hàng:</strong> Ngân hàng Thương mại Cổ
-                            phần Tiên Phong
+                            <strong>Ngân hàng:</strong> Ngân hàng TMCP Tiên
+                            Phong
                           </p>
                           <p className="mb-1">
                             <strong>Số tài khoản:</strong> 6886 8686 547
@@ -842,34 +936,15 @@ export default function BookingTourPage() {
                         </div>
                         <div>
                           <p className="mb-1">
-                            <strong>Chi nhánh:</strong> TPBank - Chi nhánh Tp.
-                            Hồ Chí Minh
+                            <strong>Chi nhánh:</strong> TPBank - Chi nhánh
+                            TP.HCM
                           </p>
                           <p className="text-xs text-blue-600 mt-2">
                             * Vui lòng ghi rõ nội dung chuyển khoản theo hướng
-                            dẫn sau khi đặt tour
+                            dẫn sau khi đặt vé
                           </p>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === "cash" && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <h4 className="font-semibold text-green-800 mb-2 flex items-center">
-                      <div className="text-green-600 mr-2">💵</div>
-                      Thanh toán tiền mặt
-                    </h4>
-                    <div className="text-sm text-green-700">
-                      <p className="mb-2">
-                        Quý khách vui lòng thanh toán tiền mặt khi gặp hướng dẫn
-                        viên tại điểm tập trung hoặc tại văn phòng công ty.
-                      </p>
-                      <p className="text-xs text-green-600">
-                        * Chúng tôi sẽ liên hệ với quý khách để xác nhận và
-                        thông báo địa điểm thanh toán cụ thể
-                      </p>
                     </div>
                   </div>
                 )}
@@ -889,97 +964,124 @@ export default function BookingTourPage() {
                 />
               </div>
 
-              {/* Tour Summary */}
+              {/* Flight Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-gray-800 mb-3">
-                  Chi tiết đặt tour
+                  Chi tiết đặt vé
                 </h3>
                 <div className="space-y-2 text-sm text-black">
-                  {(() => {
-                    const subtotal = tour.pricingByAge
-                      ? adults * tour.pricingByAge.adult +
-                        children * tour.pricingByAge.child +
-                        infants * tour.pricingByAge.infant
-                      : 0;
-                    const discountAmount = calculateDiscountAmount(subtotal);
-                    const finalTotal = calculateFinalTotal(subtotal);
+                  <div className="flex justify-between">
+                    <span>Hạng ghế:</span>
+                    <span className="font-medium capitalize">
+                      {flight.classes?.find(
+                        (c) =>
+                          c.className.toLowerCase() === seatClass.toLowerCase()
+                      )?.className ||
+                        (seatClass === "economy"
+                          ? "Phổ thông"
+                          : seatClass === "business"
+                          ? "Thương gia"
+                          : seatClass)}
+                    </span>
+                  </div>
+                  {adults > 0 && (
+                    <div className="flex justify-between">
+                      <span>
+                        Người lớn ({adults} x{" "}
+                        {adultsPrice.toLocaleString("vi-VN")} đ)
+                      </span>
+                      <span className="font-medium">
+                        {adultsTotal.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+                  )}
+                  {children > 0 && (
+                    <div className="flex justify-between">
+                      <span>
+                        Trẻ em 2-11 tuổi ({children} x{" "}
+                        {childrenPrice.toLocaleString("vi-VN")} đ - 90%)
+                      </span>
+                      <span className="font-medium">
+                        {childrenTotal.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+                  )}
+                  {infants > 0 && (
+                    <div className="flex justify-between">
+                      <span>
+                        Em bé dưới 2 tuổi ({infants} x{" "}
+                        {infantsPrice.toLocaleString("vi-VN")} đ - 10%)
+                      </span>
+                      <span className="font-medium">
+                        {infantsTotal.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+                  )}
 
-                    return (
-                      <>
-                        {adults > 0 && (
-                          <div className="flex justify-between">
-                            <span>
-                              Người lớn ({adults} x{" "}
-                              {tour.pricingByAge?.adult.toLocaleString("vi-VN")}{" "}
-                              đ)
-                            </span>
-                            <span className="font-medium">
-                              {(
-                                adults * (tour.pricingByAge?.adult || 0)
-                              ).toLocaleString("vi-VN")}{" "}
-                              đ
-                            </span>
-                          </div>
-                        )}
-                        {children > 0 && (
-                          <div className="flex justify-between">
-                            <span>
-                              Trẻ em ({children} x{" "}
-                              {tour.pricingByAge?.child.toLocaleString("vi-VN")}{" "}
-                              đ)
-                            </span>
-                            <span className="font-medium">
-                              {(
-                                children * (tour.pricingByAge?.child || 0)
-                              ).toLocaleString("vi-VN")}{" "}
-                              đ
-                            </span>
-                          </div>
-                        )}
-                        {infants > 0 && (
-                          <div className="flex justify-between">
-                            <span>
-                              Em bé ({infants} x{" "}
-                              {tour.pricingByAge?.infant.toLocaleString(
-                                "vi-VN"
-                              )}{" "}
-                              đ)
-                            </span>
-                            <span className="font-medium">
-                              {(
-                                infants * (tour.pricingByAge?.infant || 0)
-                              ).toLocaleString("vi-VN")}{" "}
-                              đ
-                            </span>
-                          </div>
-                        )}
+                  {/* Subtotal */}
+                  <div className="flex justify-between border-t pt-2">
+                    <span>Tạm tính vé:</span>
+                    <span className="font-medium">
+                      {totalFlightPrice.toLocaleString("vi-VN")} đ
+                    </span>
+                  </div>
 
-                        {/* Subtotal */}
-                        <div className="flex justify-between border-t pt-2">
-                          <span>Tạm tính:</span>
-                          <span className="font-medium">
-                            {subtotal.toLocaleString("vi-VN")} đ
-                          </span>
-                        </div>
+                  {/* Add-ons */}
+                  {extraBaggage > 0 && (
+                    <div className="flex justify-between">
+                      <span>🧳 Hành lý thêm ({extraBaggage} kiện):</span>
+                      <span className="font-medium">
+                        {baggageTotal.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+                  )}
+                  {insurance && (
+                    <div className="flex justify-between">
+                      <span>🛡️ Bảo hiểm ({numTickets} người):</span>
+                      <span className="font-medium">
+                        {insuranceTotal.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+                  )}
+                  {prioritySeat && (
+                    <div className="flex justify-between">
+                      <span>💺 Chỗ ngồi ưu tiên ({numTickets} người):</span>
+                      <span className="font-medium">
+                        {prioritySeatTotal.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+                  )}
 
-                        {/* Discount */}
-                        {appliedDiscount && discountAmount > 0 && (
-                          <div className="flex justify-between text-green-600">
-                            <span>Giảm giá ({appliedDiscount.code}):</span>
-                            <span className="font-medium">
-                              -{discountAmount.toLocaleString("vi-VN")} đ
-                            </span>
-                          </div>
-                        )}
+                  {/* Subtotal with add-ons */}
+                  {addOnsTotal > 0 && (
+                    <div className="flex justify-between border-t pt-2">
+                      <span>Tổng phụ:</span>
+                      <span className="font-medium">
+                        {subtotalWithAddons.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+                  )}
 
-                        {/* Final Total */}
-                        <div className="border-t pt-2 flex justify-between text-lg font-bold text-green-600">
-                          <span>Tổng tiền:</span>
-                          <span>{finalTotal.toLocaleString("vi-VN")} đ</span>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  {/* Discount */}
+                  {appliedDiscount &&
+                    calculateDiscountAmount(subtotalWithAddons) > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Giảm giá ({appliedDiscount.code}):</span>
+                        <span className="font-medium">
+                          -
+                          {calculateDiscountAmount(
+                            subtotalWithAddons
+                          ).toLocaleString("vi-VN")}{" "}
+                          đ
+                        </span>
+                      </div>
+                    )}
+
+                  {/* Final Total */}
+                  <div className="border-t pt-2 flex justify-between text-lg font-bold text-sky-600">
+                    <span>Tổng tiền:</span>
+                    <span>{finalTotal.toLocaleString("vi-VN")} đ</span>
+                  </div>
                 </div>
               </div>
 
@@ -987,7 +1089,7 @@ export default function BookingTourPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 text-lg"
+                className="w-full bg-gradient-to-r from-sky-600 to-blue-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 text-lg"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center">
@@ -1014,13 +1116,14 @@ export default function BookingTourPage() {
                     Đang xử lý...
                   </span>
                 ) : (
-                  "Xác nhận đặt tour"
+                  "Xác nhận đặt vé"
                 )}
               </button>
             </form>
           </div>
         </div>
       </div>
+
       <Footer />
     </div>
   );

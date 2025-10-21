@@ -24,12 +24,19 @@ router.post('/', auth, async (req, res) => {
         const populatedBooking = await Booking.findById(booking._id)
             .populate('userId', 'fullName email phone');
 
+        // Transform data to have 'user' field for frontend compatibility
+        const bookingObj = populatedBooking.toObject();
+        const transformedBooking = {
+            ...bookingObj,
+            user: bookingObj.userId // Add 'user' field as alias for populated userId
+        };
+
         console.log('Booking created successfully:', booking);
 
         // Notify admins about new booking
-        notifyBookingCreated(populatedBooking);
+        notifyBookingCreated(transformedBooking);
 
-        res.status(201).json({ success: true, data: booking });
+        res.status(201).json({ success: true, data: transformedBooking });
     } catch (error) {
         console.error('Booking creation error:', error);
         res.status(400).json({
@@ -46,8 +53,19 @@ router.post('/', auth, async (req, res) => {
 // Get all bookings - Require authentication, only return user's bookings
 router.get('/', auth, async (req, res) => {
     try {
-        const bookings = await Booking.find({ userId: req.user._id });
-        res.json({ success: true, data: bookings });
+        const bookings = await Booking.find({ userId: req.user._id })
+            .populate('userId', 'fullName email phone');
+
+        // Transform data to have 'user' field for frontend compatibility
+        const transformedBookings = bookings.map(booking => {
+            const bookingObj = booking.toObject();
+            return {
+                ...bookingObj,
+                user: bookingObj.userId // Add 'user' field as alias for populated userId
+            };
+        });
+
+        res.json({ success: true, data: transformedBookings });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -59,11 +77,20 @@ router.get('/:id', auth, async (req, res) => {
         const booking = await Booking.findOne({
             _id: req.params.id,
             userId: req.user._id
-        });
+        }).populate('userId', 'fullName email phone');
+
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Not found' });
         }
-        res.json({ success: true, data: booking });
+
+        // Transform data to have 'user' field for frontend compatibility
+        const bookingObj = booking.toObject();
+        const transformedBooking = {
+            ...bookingObj,
+            user: bookingObj.userId // Add 'user' field as alias for populated userId
+        };
+
+        res.json({ success: true, data: transformedBooking });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

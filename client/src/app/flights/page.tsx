@@ -1,100 +1,55 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Flight, flightService } from "@/services/flightService";
 import FlightSearchForm from "@/components/flight/FlightSearchForm";
-import Link from "next/link";
+import FlightSearchResults from "@/components/flight/FlightSearchResults";
 
 export default function Flights() {
   const [isVisible, setIsVisible] = useState(false);
-  const [flights, setFlights] = useState<Flight[]>([]); // State to store fetched flights
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState<string | null>(null); // Error state
-  const [searchValue, setSearchValue] = useState("");
+  const [searchResults, setSearchResults] = useState<Flight[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Search parameters
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [selectedDeparture, setSelectedDeparture] = useState("");
   const [selectedArrival, setSelectedArrival] = useState("");
-  const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
-  const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [passengerCount, setPassengerCount] = useState(1);
   const [seatClass, setSeatClass] = useState("economy");
-  const [showMobileForm, setShowMobileForm] = useState(false);
 
-  useEffect(() => {
-    setIsVisible(true);
-    const fetchFlights = async () => {
-      try {
-        const data = await flightService.getAllFlights();
-        setFlights(data);
-      } catch (err) {
-        setError("Failed to fetch flights. Please try again later.");
-        console.error("Error fetching flights:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFlights();
-  }, []);
-
-  useEffect(() => {
-    let result = flights;
-    if (searchValue.trim()) {
-      const keyword = searchValue.toLowerCase();
-      result = result.filter(
-        (f) =>
-          f.flightNumber.toLowerCase().includes(keyword) ||
-          f.airline.toLowerCase().includes(keyword) ||
-          f.departureAirport.city.toLowerCase().includes(keyword) ||
-          f.arrivalAirport.city.toLowerCase().includes(keyword)
-      );
-    }
-    if (selectedDeparture) {
-      result = result.filter(
-        (f) => f.departureAirport.code === selectedDeparture
-      );
-    }
-    if (selectedArrival) {
-      result = result.filter((f) => f.arrivalAirport.code === selectedArrival);
-    }
-    setFilteredFlights(result);
-  }, [flights, searchValue, selectedDeparture, selectedArrival]);
-
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Đã lọc realtime qua useEffect
-  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100">
-        <p className="text-xl text-sky-700">Loading flights...</p>
-      </div>
-    );
-  }
+    if (!selectedDeparture || !selectedArrival || !departureDate) {
+      setError("Vui lòng nhập đầy đủ thông tin tìm kiếm");
+      return;
+    }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100">
-        <p className="text-xl text-red-600">{error}</p>
-      </div>
-    );
-  }
+    setLoading(true);
+    setError(null);
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
+    try {
+      const results = await flightService.searchFlights({
+        from: selectedDeparture,
+        to: selectedArrival,
+        date: departureDate
+      });
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
+      setSearchResults(results);
+      setHasSearched(true);
+    } catch (err) {
+      setError("Không tìm thấy chuyến bay phù hợp. Vui lòng thử lại.");
+      console.error("Error searching flights:", err);
+      setSearchResults([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -130,109 +85,46 @@ export default function Flights() {
               Tìm và đặt vé máy bay giá tốt nhất
             </p>
           </div>
-          {/* Nút mở form trên mobile */}
-          <button
-            type="button"
-            className="block md:hidden mx-auto mb-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-full px-6 py-3 shadow-lg"
-            onClick={() => setShowMobileForm((v) => !v)}
-          >
-            {showMobileForm ? "Đóng tìm chuyến bay" : "Tìm chuyến bay"}
-          </button>
-          {/* Form chỉ hiện trên desktop hoặc khi showMobileForm=true */}
-          <div className={`${showMobileForm ? "block" : "hidden"} md:block`}>
-            <FlightSearchForm
-              flights={flights}
-              isRoundTrip={isRoundTrip}
-              setIsRoundTrip={setIsRoundTrip}
-              selectedDeparture={selectedDeparture}
-              setSelectedDeparture={setSelectedDeparture}
-              selectedArrival={selectedArrival}
-              setSelectedArrival={setSelectedArrival}
-              departureDate={departureDate}
-              setDepartureDate={setDepartureDate}
-              returnDate={returnDate}
-              setReturnDate={setReturnDate}
-              passengerCount={passengerCount}
-              setPassengerCount={setPassengerCount}
-              seatClass={seatClass}
-              setSeatClass={setSeatClass}
-              handleSearch={handleSearch}
+
+          <FlightSearchForm
+            isRoundTrip={isRoundTrip}
+            setIsRoundTrip={setIsRoundTrip}
+            selectedDeparture={selectedDeparture}
+            setSelectedDeparture={setSelectedDeparture}
+            selectedArrival={selectedArrival}
+            setSelectedArrival={setSelectedArrival}
+            departureDate={departureDate}
+            setDepartureDate={setDepartureDate}
+            returnDate={returnDate}
+            setReturnDate={setReturnDate}
+            passengerCount={passengerCount}
+            setPassengerCount={setPassengerCount}
+            seatClass={seatClass}
+            setSeatClass={setSeatClass}
+            handleSearch={handleSearch}
+          />
+        </div>
+      </section>
+
+      {/* Search Results Section */}
+      {hasSearched && (
+        <section className="py-16 px-4">
+          <div className="container mx-auto">
+            <FlightSearchResults
+              results={searchResults}
+              loading={loading}
+              error={error}
+              searchParams={{
+                from: selectedDeparture,
+                to: selectedArrival,
+                date: departureDate,
+                passengers: passengerCount,
+                seatClass
+              }}
             />
           </div>
-        </div>
-      </section>
-
-      {/* Flights Section */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto">
-          {filteredFlights.length === 0 ? (
-            <p className="text-center text-xl text-gray-700">
-              Không tìm thấy chuyến bay nào.
-            </p>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredFlights.map((flight, index) => (
-                <div
-                  key={flight._id}
-                  className={`card-surface rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 delay-${
-                    index * 100
-                  } ${
-                    isVisible ? "animate-slide-up" : "opacity-0"
-                  } border border-white/20`}
-                >
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-xl font-bold text-gray-800">
-                        {flight.airline}
-                      </h3>
-                      <span className="text-xs bg-sky-100 text-sky-700 px-2 py-1 rounded-full">
-                        {flight.seatInfo.classes.business.available > 0
-                          ? "Thương gia"
-                          : "Phổ thông"}
-                      </span>
-                    </div>
-
-                    <div className="mb-4">
-                      <div className="text-lg font-semibold text-gray-800 mb-2">
-                        {`${flight.departureAirport.city} → ${flight.arrivalAirport.city}`}
-                      </div>
-                      <div className="flex justify-between items-center text-sm text-gray-600">
-                        <span>{formatTime(flight.departureTime)}</span>
-                        <span className="text-sky-500">
-                          ✈️ {formatDuration(flight.durationMinutes)}
-                        </span>
-                        <span>{formatTime(flight.arrivalTime)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="text-2xl font-bold text-sky-600">
-                          {new Intl.NumberFormat("vi-VN").format(
-                            flight.seatInfo.classes.business.available > 0
-                              ? flight.seatInfo.classes.business.price
-                              : flight.seatInfo.classes.economy.price
-                          )}
-                          đ
-                        </span>
-                        <span className="text-gray-500 text-sm">/người</span>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Link href={`/flights/booking/${flight._id}`} legacyBehavior>
-                          <a className="bg-gradient-to-r from-sky-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center font-medium">Đặt Vé</a>
-                        </Link>
-                        <Link href={`/flights/detail/${flight._id}`} legacyBehavior>
-                          <a className="bg-white border border-sky-500 text-sky-600 px-6 py-2 rounded-lg hover:bg-sky-50 transition-all duration-300 text-center font-medium">Xem chi tiết</a>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       <Footer />
     </div>

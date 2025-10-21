@@ -33,7 +33,10 @@ export const bookingActivityService = {
       // Check if user is authenticated
       const token = getToken();
       if (!token) {
-        return { success: false, message: "Vui lòng đăng nhập để đặt hoạt động" };
+        return {
+          success: false,
+          message: "Vui lòng đăng nhập để đặt hoạt động"
+        };
       }
 
       // Validate payload
@@ -41,14 +44,17 @@ export const bookingActivityService = {
         return { success: false, message: "Thông tin đặt chỗ không hợp lệ" };
       }
 
-      const totalParticipants = 
-        payload.numAdults + 
-        payload.numChildren + 
-        payload.numBabies + 
+      const totalParticipants =
+        payload.numAdults +
+        payload.numChildren +
+        payload.numBabies +
         payload.numSeniors;
 
       if (totalParticipants <= 0) {
-        return { success: false, message: "Số lượng người tham gia phải lớn hơn 0" };
+        return {
+          success: false,
+          message: "Số lượng người tham gia phải lớn hơn 0"
+        };
       }
 
       // 1. Create booking first
@@ -106,11 +112,17 @@ export const bookingActivityService = {
         bookingId: bookingData.data._id
       };
 
-      console.log("Creating booking activity with payload:", bookingActivityPayload);
+      console.log(
+        "Creating booking activity with payload:",
+        bookingActivityPayload
+      );
 
       const res = await fetch(`${API_BASE_URL}/bookingactivities`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` // Add authentication header
+        },
         body: JSON.stringify(bookingActivityPayload)
       });
 

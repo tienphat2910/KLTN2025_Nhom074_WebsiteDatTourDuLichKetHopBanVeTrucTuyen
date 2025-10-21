@@ -12,7 +12,6 @@ import {
   Users,
   MapPin,
   Star,
-  Loader2,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -54,7 +53,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Tour, ToursResponse } from "@/services/tourService";
-import { TourModal } from "@/components/Admin/TourModal";
+import { AddTourModal } from "@/components/Admin/AddTourModal";
 import { tourService } from "@/services/tourService";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/useSocket";
@@ -62,7 +61,6 @@ import { useSocket } from "@/hooks/useSocket";
 export function TourManagement() {
   const [tours, setTours] = useState<Tour[]>([]);
   const [totalTours, setTotalTours] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -80,8 +78,6 @@ export function TourManagement() {
     try {
       if (showRefreshing) {
         setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
       }
       setError(null);
 
@@ -128,7 +124,6 @@ export function TourManagement() {
       setError("Có lỗi xảy ra khi tải dữ liệu");
       setTours([]);
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
   };
@@ -319,14 +314,11 @@ export function TourManagement() {
     setIsModalOpen(true);
   };
 
-  const handleSaveTour = async (tourData: Partial<Tour>) => {
+  const handleSaveTour = async (tourData: Partial<Tour> & { _id?: string }) => {
     try {
-      if (editingTour) {
+      if (tourData._id) {
         // Update existing tour
-        const response = await tourService.updateTour(
-          editingTour._id,
-          tourData
-        );
+        const response = await tourService.updateTour(tourData._id, tourData);
         if (response.success) {
           toast.success("Cập nhật tour thành công");
           loadTours(currentPage, true);
@@ -387,8 +379,10 @@ export function TourManagement() {
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const nights = diffDays - 1;
-    return `${diffDays}N${nights}Đ`;
+    // Số ngày = diffDays + 1 (vì tính cả ngày bắt đầu và ngày kết thúc)
+    const totalDays = diffDays + 1;
+    const nights = diffDays;
+    return `${totalDays} Ngày ${nights} đêm`;
   };
 
   return (
@@ -446,7 +440,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing ? "..." : totalTours}
+              {isRefreshing ? "..." : totalTours}
             </div>
           </CardContent>
         </Card>
@@ -459,7 +453,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing
+              {isRefreshing
                 ? "..."
                 : tours.filter((t) => {
                     const status = getTourStatus(t);
@@ -479,9 +473,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing
-                ? "..."
-                : tours.filter((t) => t.isFeatured).length}
+              {isRefreshing ? "..." : tours.filter((t) => t.isFeatured).length}
             </div>
           </CardContent>
         </Card>
@@ -492,7 +484,7 @@ export function TourManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading || isRefreshing
+              {isRefreshing
                 ? "..."
                 : tours.reduce((total, t) => total + t.seats, 0)}
             </div>
@@ -558,12 +550,11 @@ export function TourManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading || isRefreshing ? (
+                {isRefreshing ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                       <p className="mt-2 text-muted-foreground">
-                        {isRefreshing ? "Đang cập nhật..." : "Đang tải..."}
+                        Đang cập nhật...
                       </p>
                     </TableCell>
                   </TableRow>
@@ -616,7 +607,8 @@ export function TourManagement() {
                             {formatDate(tour.startDate)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {getDuration(tour.startDate, tour.endDate)}
+                            {tour.duration ||
+                              getDuration(tour.startDate, tour.endDate)}
                           </div>
                         </div>
                       </TableCell>
@@ -695,7 +687,7 @@ export function TourManagement() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && !isLoading && !isRefreshing && (
+          {totalPages > 1 && !isRefreshing && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
                 Hiển thị {(currentPage - 1) * 10 + 1}-
@@ -758,8 +750,8 @@ export function TourManagement() {
         </CardContent>
       </Card>
 
-      {/* Tour Modal */}
-      <TourModal
+      {/* Add/Edit Tour Modal */}
+      <AddTourModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         tour={editingTour}
@@ -768,3 +760,63 @@ export function TourManagement() {
     </div>
   );
 }
+
+// Helper functions
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+};
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND"
+  }).format(amount);
+};
+
+const getDuration = (startDate: string, endDate: string): string => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const totalDays = diffDays + 1;
+  const nights = diffDays;
+  return `${totalDays} Ngày ${nights} đêm`;
+};
+
+const getTourStatus = (tour: Tour): string => {
+  const now = new Date();
+  const startDate = new Date(tour.startDate);
+  const endDate = new Date(tour.endDate);
+
+  if (tour.isActive === false) return "inactive";
+  if (endDate < now) return "expired";
+  if (tour.availableSeats <= 0) return "full";
+  if (startDate > now) return "upcoming";
+  return "active";
+};
+
+const getStatusBadge = (tour: Tour) => {
+  const status = getTourStatus(tour);
+
+  switch (status) {
+    case "active":
+      return (
+        <Badge className="bg-green-100 text-green-800">Đang hoạt động</Badge>
+      );
+    case "upcoming":
+      return <Badge className="bg-blue-100 text-blue-800">Sắp diễn ra</Badge>;
+    case "expired":
+      return <Badge className="bg-gray-100 text-gray-800">Đã kết thúc</Badge>;
+    case "full":
+      return <Badge className="bg-red-100 text-red-800">Hết chỗ</Badge>;
+    case "inactive":
+      return <Badge className="bg-gray-100 text-gray-800">Đã ẩn</Badge>;
+    default:
+      return <Badge variant="secondary">Không xác định</Badge>;
+  }
+};

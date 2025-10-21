@@ -26,7 +26,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tours', require('./routes/tours'));
 app.use('/api/destinations', require('./routes/destinations'));
+app.use('/api/airlines', require('./routes/airlines'));
 app.use('/api/flights', require('./routes/flights'));
+app.use('/api/flight-classes', require('./routes/flightclasses'));
+app.use('/api/flight-schedules', require('./routes/flightschedules'));
 app.use('/api/activities', require('./routes/activities'));
 app.use('/api/airports', require('./routes/airports'));
 app.use('/api/bookingtours', require('./routes/bookingtours'));

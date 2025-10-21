@@ -1,6 +1,10 @@
 const express = require('express');
 const Tour = require('../models/Tour');
 const Destination = require('../models/Destination');
+const { uploadTourImage } = require('../utils/cloudinaryUpload');
+const { uploadSingle, handleUploadError } = require('../middleware/upload');
+const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
 const router = express.Router();
 
 /**
@@ -388,6 +392,102 @@ router.get('/slug/:slug', async (req, res) => {
             error: error.message
         });
     }
+});
+
+/**
+ * @swagger
+ * /api/tours/upload-image:
+ *   post:
+ *     summary: Upload tour image
+ *     tags: [Tours]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *               tourId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *       400:
+ *         description: No image provided
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/upload-image', auth, admin, (req, res, next) => {
+    // Create multer upload for 'image' field (different from 'avatar')
+    const multer = require('multer');
+    const path = require('path');
+
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, path.join(__dirname, '../uploads'));
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+        }
+    });
+
+    const fileFilter = (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Chỉ chấp nhận file ảnh định dạng JPG, PNG, WEBP'), false);
+        }
+    };
+
+    const uploadImage = multer({
+        storage: storage,
+        fileFilter: fileFilter,
+        limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    }).single('image');
+
+    uploadImage(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({
+                success: false,
+                message: err.message
+            });
+        }
+
+        try {
+            if (!req.file) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Vui lòng chọn ảnh để tải lên'
+                });
+            }
+
+            const tourId = req.body.tourId || 'temp';
+            const uploadResult = await uploadTourImage(req.file, tourId);
+
+            res.status(200).json({
+                success: true,
+                message: 'Tải ảnh lên thành công',
+                data: {
+                    url: uploadResult.url,
+                    public_id: uploadResult.public_id
+                }
+            });
+        } catch (error) {
+            console.error('Upload tour image error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi khi tải ảnh lên',
+                error: error.message
+            });
+        }
+    });
 });
 
 /**

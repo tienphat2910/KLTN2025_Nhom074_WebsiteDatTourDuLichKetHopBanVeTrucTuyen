@@ -30,6 +30,9 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BookingDetailModal } from "@/components/Booking/BookingDetailModal";
+import { FlightBookingDetailModal } from "@/components/Admin/FlightBookingDetailModal";
+import { TourBookingDetailModal } from "@/components/Admin/TourBookingDetailModal";
+import { ActivityBookingDetailModal } from "@/components/Admin/ActivityBookingDetailModal";
 
 const statusConfig = {
   pending: {
@@ -412,7 +415,15 @@ export default function BookingPage() {
                             </div>
 
                             <div className="flex gap-2">
-                              <BookingDetailModal booking={booking} />
+                              {booking.bookingType === "flight" ? (
+                                <FlightBookingDetailModal booking={booking} />
+                              ) : booking.bookingType === "tour" ? (
+                                <TourBookingDetailModal booking={booking} />
+                              ) : booking.bookingType === "activity" ? (
+                                <ActivityBookingDetailModal booking={booking} />
+                              ) : (
+                                <BookingDetailModal booking={booking} />
+                              )}
 
                               {booking.status === "pending" && (
                                 <Button

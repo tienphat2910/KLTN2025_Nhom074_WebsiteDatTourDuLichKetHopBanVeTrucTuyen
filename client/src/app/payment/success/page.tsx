@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { paymentService } from "@/services/paymentService";
 import { bookingTourService } from "@/services/bookingTourService";
+import { bookingFlightService } from "@/services/bookingFlightService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-interface BookingData {
+interface BookingTourData {
   tourId: string;
   numAdults: number;
   numChildren: number;
@@ -19,6 +20,23 @@ interface BookingData {
     infant: number;
   };
   subtotal: number;
+  status: string;
+  passengers: any[];
+  note: string;
+  paymentMethod: string;
+  momoOrderId: string;
+}
+
+interface BookingFlightData {
+  flightId: string;
+  flightCode: string;
+  flightClassId: string;
+  numTickets: number;
+  pricePerTicket: number;
+  totalFlightPrice: number;
+  discountAmount?: number;
+  finalTotal?: number;
+  discountCode?: string;
   status: string;
   passengers: any[];
   note: string;
@@ -78,16 +96,21 @@ export default function PaymentSuccessPage() {
         return;
       }
 
-      // Get pending booking data from localStorage
-      const pendingBookingData = localStorage.getItem("pendingBooking");
-      if (!pendingBookingData) {
+      // Get pending booking data from localStorage - try both tour and flight
+      const pendingTourData = localStorage.getItem("pendingBooking");
+      const pendingFlightData = localStorage.getItem("pendingFlightBooking");
+
+      if (!pendingTourData && !pendingFlightData) {
         setPaymentStatus("error");
         setLoading(false);
-        toast.error("Không tìm thấy thông tin đặt tour!");
+        toast.error("Không tìm thấy thông tin đặt vé!");
         return;
       }
 
-      const bookingData: BookingData = JSON.parse(pendingBookingData);
+      const isTour = !!pendingTourData;
+      const bookingData = isTour
+        ? (JSON.parse(pendingTourData) as BookingTourData)
+        : (JSON.parse(pendingFlightData!) as BookingFlightData);
 
       // Verify this is the correct order
       if (bookingData.momoOrderId !== orderId) {
@@ -123,22 +146,42 @@ export default function PaymentSuccessPage() {
         // Create the booking if payment successful and not already created
         if (!bookingCreated) {
           try {
-            const bookingResponse = await bookingTourService.createBookingTour({
-              ...bookingData,
-              status: "confirmed", // Set as confirmed since payment is successful
-              note: `${
-                bookingData.note ? bookingData.note + "\n" : ""
-              }Thanh toán MoMo thành công. Mã giao dịch: ${transId}, Mã đơn hàng: ${orderId}`
-            });
+            let bookingResponse;
+
+            if (isTour) {
+              // Create tour booking
+              bookingResponse = await bookingTourService.createBookingTour({
+                ...(bookingData as BookingTourData),
+                status: "confirmed",
+                note: `${
+                  bookingData.note ? bookingData.note + "\n" : ""
+                }Thanh toán MoMo thành công. Mã giao dịch: ${transId}, Mã đơn hàng: ${orderId}`
+              });
+            } else {
+              // Create flight booking
+              bookingResponse = await bookingFlightService.createBookingFlight({
+                ...(bookingData as BookingFlightData),
+                status: "confirmed",
+                note: `${
+                  bookingData.note ? bookingData.note + "\n" : ""
+                }Thanh toán MoMo thành công. Mã giao dịch: ${transId}, Mã đơn hàng: ${orderId}`
+              });
+            }
 
             if (bookingResponse.success) {
               setBookingCreated(true);
               toast.success(
-                "Thanh toán thành công! Đặt tour đã được xác nhận."
+                isTour
+                  ? "Thanh toán thành công! Đặt tour đã được xác nhận."
+                  : "Thanh toán thành công! Đặt vé máy bay đã được xác nhận."
               );
 
               // Clear pending booking data
-              localStorage.removeItem("pendingBooking");
+              if (isTour) {
+                localStorage.removeItem("pendingBooking");
+              } else {
+                localStorage.removeItem("pendingFlightBooking");
+              }
             } else {
               // Payment successful but booking creation failed
               toast.error(
@@ -157,7 +200,11 @@ export default function PaymentSuccessPage() {
         toast.error(`Thanh toán thất bại: ${message || "Lỗi không xác định"}`);
 
         // Clear pending booking data
-        localStorage.removeItem("pendingBooking");
+        if (isTour) {
+          localStorage.removeItem("pendingBooking");
+        } else {
+          localStorage.removeItem("pendingFlightBooking");
+        }
       }
     } catch (error) {
       console.error("Payment result handling error:", error);
@@ -171,7 +218,8 @@ export default function PaymentSuccessPage() {
   const handleRetryBooking = () => {
     // Clear any pending data and redirect back to booking
     localStorage.removeItem("pendingBooking");
-    router.push("/tour");
+    localStorage.removeItem("pendingFlightBooking");
+    router.push("/");
   };
 
   const handleGoToBookings = () => {

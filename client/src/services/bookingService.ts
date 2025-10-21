@@ -61,6 +61,121 @@ export interface BookingStatsResponse {
   message?: string;
 }
 
+export interface FlightBookingDetail {
+  _id: string;
+  bookingId: string;
+  flightId: {
+    _id: string;
+    flightCode: string;
+    airline: {
+      _id: string;
+      name: string;
+      code: string;
+      logo?: string;
+    };
+    departureAirport: {
+      _id: string;
+      name: string;
+      code: string;
+      city: string;
+      country: string;
+    };
+    arrivalAirport: {
+      _id: string;
+      name: string;
+      code: string;
+      city: string;
+      country: string;
+    };
+    departureTime: string;
+    arrivalTime: string;
+    duration: string;
+    aircraft?: string;
+  };
+  flightClassId: {
+    _id: string;
+    name: string;
+    code: string;
+    description?: string;
+    amenities?: string[];
+  };
+  numTickets: number;
+  pricePerTicket: number;
+  totalFlightPrice: number;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  note?: string;
+  paymentMethod: "momo" | "bank_transfer";
+  discountCode?: string;
+  discountAmount: number;
+  passengers?: Array<{
+    _id: string;
+    fullName: string;
+    dateOfBirth: string;
+    gender: "male" | "female" | "Male" | "Female" | "Nam" | "Nữ" | "other";
+    passportNumber?: string;
+    seatNumber?: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FlightBookingResponse {
+  success: boolean;
+  data: FlightBookingDetail;
+  message?: string;
+}
+
+export interface ActivityBookingDetail {
+  _id: string;
+  bookingId: string;
+  activityId: {
+    _id: string;
+    name: string;
+    slug: string;
+    description: string;
+    destination: {
+      _id: string;
+      name: string;
+      region: string;
+      image?: string;
+    } | null;
+    location:
+      | {
+          name?: string;
+          address?: string;
+        }
+      | string;
+    operating_hours:
+      | {
+          mon_to_sat?: string;
+          sunday_holidays?: string;
+          ticket_cutoff?: string;
+          rides_end?: string;
+        }
+      | string;
+    features: string[];
+    gallery: string[];
+  };
+  numAdults: number;
+  numChildren: number;
+  numBabies: number;
+  numSeniors: number;
+  price: number;
+  subtotal: number;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  scheduledDate: string;
+  note?: string;
+  paymentMethod: "momo" | "bank_transfer";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActivityBookingResponse {
+  success: boolean;
+  data: ActivityBookingDetail;
+  message?: string;
+}
+
 export interface AdminBookingsResponse {
   success: boolean;
   data: Booking[];
@@ -398,6 +513,98 @@ export const bookingService = {
           completedBookings: 0,
           totalRevenue: 0
         },
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Get flight booking details by booking ID
+  getFlightBookingDetails: async (
+    bookingId: string
+  ): Promise<FlightBookingResponse> => {
+    try {
+      const token = getToken();
+      if (!token) {
+        return {
+          success: false,
+          data: {} as FlightBookingDetail,
+          message: "Vui lòng đăng nhập"
+        };
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/bookingflights/booking/${bookingId}/details`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          data: {} as FlightBookingDetail,
+          message: result.message || "Không thể tải thông tin chuyến bay"
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Get flight booking details error:", error);
+      return {
+        success: false,
+        data: {} as FlightBookingDetail,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Get activity booking details by booking ID
+  getActivityBookingDetails: async (
+    bookingId: string
+  ): Promise<ActivityBookingResponse> => {
+    try {
+      const token = getToken();
+      if (!token) {
+        return {
+          success: false,
+          data: {} as ActivityBookingDetail,
+          message: "Vui lòng đăng nhập"
+        };
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/bookingactivities/booking/${bookingId}/details`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          data: {} as ActivityBookingDetail,
+          message: result.message || "Không thể tải thông tin hoạt động"
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Get activity booking details error:", error);
+      return {
+        success: false,
+        data: {} as ActivityBookingDetail,
         message: "Lỗi kết nối server"
       };
     }
