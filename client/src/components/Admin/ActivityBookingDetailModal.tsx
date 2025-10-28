@@ -39,6 +39,7 @@ import {
 
 interface ActivityBookingDetailModalProps {
   booking: Booking;
+  userId?: any;
   trigger?: React.ReactNode;
 }
 
@@ -84,6 +85,7 @@ const paymentMethodConfig = {
 
 export function ActivityBookingDetailModal({
   booking,
+  userId,
   trigger
 }: ActivityBookingDetailModalProps) {
   const [open, setOpen] = useState(false);
@@ -472,7 +474,7 @@ export function ActivityBookingDetailModal({
             </div>
 
             {/* Customer Information */}
-            {(booking.user || booking.userId) && (
+            {(booking.user || booking.userId || userId) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -487,7 +489,8 @@ export function ActivityBookingDetailModal({
                       <div>
                         <p className="text-sm text-gray-500">Tên khách hàng</p>
                         <p className="font-medium">
-                          {booking.user?.fullName ||
+                          {(typeof userId === "object" && userId?.fullName) ||
+                            booking.user?.fullName ||
                             (typeof booking.userId === "object" &&
                               booking.userId?.fullName) ||
                             "N/A"}
@@ -495,7 +498,8 @@ export function ActivityBookingDetailModal({
                       </div>
                     </div>
 
-                    {(booking.user?.email ||
+                    {((typeof userId === "object" && userId?.email) ||
+                      booking.user?.email ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.email)) && (
                       <div className="flex items-center gap-3">
@@ -503,7 +507,8 @@ export function ActivityBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Email</p>
                           <p className="font-medium">
-                            {booking.user?.email ||
+                            {(typeof userId === "object" && userId?.email) ||
+                              booking.user?.email ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.email)}
                           </p>
@@ -511,7 +516,8 @@ export function ActivityBookingDetailModal({
                       </div>
                     )}
 
-                    {(booking.user?.phone ||
+                    {((typeof userId === "object" && userId?.phone) ||
+                      booking.user?.phone ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.phone)) && (
                       <div className="flex items-center gap-3">
@@ -519,7 +525,8 @@ export function ActivityBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Số điện thoại</p>
                           <p className="font-medium">
-                            {booking.user?.phone ||
+                            {(typeof userId === "object" && userId?.phone) ||
+                              booking.user?.phone ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.phone)}
                           </p>

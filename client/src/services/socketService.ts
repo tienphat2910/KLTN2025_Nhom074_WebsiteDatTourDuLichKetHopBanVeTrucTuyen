@@ -175,6 +175,21 @@ class SocketService {
       console.log("📩 [socketService] Received system_alert from server");
       this.emit("system_alert", data);
     });
+
+    // Cancellation request events
+    this.socket.on("new_cancellation_request", (data: any) => {
+      console.log(
+        "📩 [socketService] Received new_cancellation_request from server"
+      );
+      this.emit("new_cancellation_request", data);
+    });
+
+    this.socket.on("cancellation_request_processed", (data: any) => {
+      console.log(
+        "📩 [socketService] Received cancellation_request_processed from server"
+      );
+      this.emit("cancellation_request_processed", data);
+    });
   }
 
   private setupReconnection() {
