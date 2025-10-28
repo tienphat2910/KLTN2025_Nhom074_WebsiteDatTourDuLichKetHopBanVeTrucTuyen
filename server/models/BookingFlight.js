@@ -39,7 +39,6 @@ const bookingFlightSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        default: 'pending',
         enum: ['pending', 'confirmed', 'cancelled', 'completed']
     },
     note: {
@@ -49,7 +48,7 @@ const bookingFlightSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['momo', 'bank_transfer']
+        enum: ['momo', 'zalopay', 'bank_transfer']
     },
     discountCode: {
         type: String,
@@ -60,6 +59,14 @@ const bookingFlightSchema = new mongoose.Schema({
         type: Number,
         default: 0,
         min: 0
+    },
+    qrCode: {
+        type: String, // URL to QR code image
+        trim: true
+    },
+    qrCodePublicId: {
+        type: String, // Cloudinary public ID for QR code
+        trim: true
     }
 }, {
     timestamps: true

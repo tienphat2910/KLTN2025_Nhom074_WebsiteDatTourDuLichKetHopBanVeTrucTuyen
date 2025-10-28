@@ -104,9 +104,12 @@ export interface FlightBookingDetail {
   totalFlightPrice: number;
   status: "pending" | "confirmed" | "cancelled" | "completed";
   note?: string;
-  paymentMethod: "momo" | "bank_transfer";
+  paymentMethod: "momo" | "bank_transfer" | "zalopay";
   discountCode?: string;
   discountAmount: number;
+  qrCode?: string;
+  qrCodePublicId?: string;
+  flightCode: string;
   passengers?: Array<{
     _id: string;
     fullName: string;
@@ -165,7 +168,9 @@ export interface ActivityBookingDetail {
   status: "pending" | "confirmed" | "cancelled" | "completed";
   scheduledDate: string;
   note?: string;
-  paymentMethod: "momo" | "bank_transfer";
+  paymentMethod: "momo" | "bank_transfer" | "zalopay" | "cash";
+  qrCode?: string;
+  qrCodePublicId?: string;
   createdAt: string;
   updatedAt: string;
 }

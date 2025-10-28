@@ -10,12 +10,13 @@ import { tourService, Tour } from "@/services/tourService";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
 import { env } from "@/config/env";
+import { Mountain, Plane, Ticket } from "lucide-react";
 
 const services = [
   {
     title: "Tour Du Lịch",
     description: "Khám phá những điểm đến tuyệt vời tại Việt Nam",
-    icon: "🏔️",
+    icon: Mountain,
     href: "/tours",
     gradient: "from-blue-500 to-purple-600",
     bgColor: "bg-white"
@@ -23,7 +24,7 @@ const services = [
   {
     title: "Vé Máy Bay",
     description: "Đặt vé máy bay giá tốt nhất",
-    icon: "✈️",
+    icon: Plane,
     href: "/flights",
     gradient: "from-green-500 to-blue-500",
     bgColor: "bg-[#87CEFA]/20"
@@ -31,7 +32,7 @@ const services = [
   {
     title: "Vé Giải Trí",
     description: "Đặt vé các điểm vui chơi giải trí",
-    icon: "🏯",
+    icon: Ticket,
     href: "/activity",
     gradient: "from-amber-400 to-orange-500",
     bgColor: "bg-orange-50/80"
@@ -281,9 +282,9 @@ export default function Home() {
                     className={`${service.bgColor} backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/20 h-full flex flex-col`}
                   >
                     <div
-                      className={`w-16 h-16 bg-gradient-to-r ${service.gradient} rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:rotate-12 transition-transform duration-300 flex-shrink-0`}
+                      className={`w-16 h-16 bg-gradient-to-r ${service.gradient} rounded-lg flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform duration-300 flex-shrink-0`}
                     >
-                      {service.icon}
+                      <service.icon className="w-8 h-8 text-white" />
                     </div>
                     <div className="flex-1 flex flex-col">
                       <h3 className="text-xl font-semibold text-slate-800 mb-2">

@@ -37,6 +37,7 @@ app.use('/api/booking', require('./routes/booking'));
 app.use('/api/bookingflights', require('./routes/bookingflights'));
 app.use('/api/bookingactivities', require('./routes/bookingactivities'));
 app.use('/api/payment/momo', require('./routes/payment'));
+app.use('/api/payment', require('./routes/zalopay'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/cancellationrequests', require('./routes/cancellationrequests'));

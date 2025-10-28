@@ -63,8 +63,14 @@ export const bookingFlightService = {
           1,
           Math.round(payload.finalTotal || payload.totalFlightPrice)
         ),
-        status: "pending",
-        bookingType: "flight"
+        status: payload.status || "pending", // Use status from payload (confirmed for online payment)
+        bookingType: "flight",
+        paymentMethod: payload.paymentMethod,
+        paymentStatus:
+          payload.paymentMethod === "momo" ||
+          payload.paymentMethod === "zalopay"
+            ? "paid"
+            : "pending"
       };
       const bookingRes = await fetch(`${API_BASE_URL}/booking`, {
         method: "POST",

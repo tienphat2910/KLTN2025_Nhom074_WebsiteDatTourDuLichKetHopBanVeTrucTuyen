@@ -85,6 +85,14 @@ router.post('/', auth, async (req, res) => {
         const bookingTour = new BookingTour(req.body);
         await bookingTour.save();
 
+        // Update booking totalPrice with the subtotal
+        const booking = await Booking.findById(bookingId);
+        if (booking) {
+            booking.totalPrice = bookingTour.subtotal || 0;
+            await booking.save();
+            console.log(`✅ Booking totalPrice updated to ${bookingTour.subtotal}`);
+        }
+
         // Update available seats in tour
         await Tour.findByIdAndUpdate(
             tourId,

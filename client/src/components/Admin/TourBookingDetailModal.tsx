@@ -65,7 +65,10 @@ const statusConfig = {
   }
 };
 
-const paymentMethodConfig = {
+const paymentMethodConfig: Record<
+  string,
+  { label: string; color: string; logo?: string; icon?: string }
+> = {
   cash: {
     label: "Tiền mặt",
     icon: "💵",
@@ -73,8 +76,13 @@ const paymentMethodConfig = {
   },
   momo: {
     label: "Ví MoMo",
-    icon: "💳",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png",
     color: "text-pink-600"
+  },
+  zalopay: {
+    label: "ZaloPay",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png",
+    color: "text-blue-500"
   },
   bank_transfer: {
     label: "Chuyển khoản",
@@ -463,10 +471,23 @@ export function TourBookingDetailModal({
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {paymentMethodConfig[tourBooking.paymentMethod]?.icon ||
-                          "💳"}
-                      </span>
+                      {paymentMethodConfig[tourBooking.paymentMethod]?.logo ? (
+                        <img
+                          src={
+                            paymentMethodConfig[tourBooking.paymentMethod]?.logo
+                          }
+                          alt={
+                            paymentMethodConfig[tourBooking.paymentMethod]
+                              ?.label
+                          }
+                          className="w-12 h-12 object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl">
+                          {paymentMethodConfig[tourBooking.paymentMethod]
+                            ?.icon || "💳"}
+                        </span>
+                      )}
                       <div>
                         <p className="font-medium">
                           {paymentMethodConfig[tourBooking.paymentMethod]

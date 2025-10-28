@@ -190,9 +190,20 @@ class CancellationRequestService {
         headers: await this.getAuthHeader()
       });
 
+      // Don't log error for 404 - it's normal when no cancellation request exists
+      if (response.status === 404) {
+        return {
+          success: false,
+          message: "Không tìm thấy yêu cầu hủy đang chờ xử lý"
+        };
+      }
+
       return await this.handleResponse<CancellationRequestResponse>(response);
     } catch (error) {
-      console.error("Get cancellation request by booking error:", error);
+      // Only log unexpected errors
+      if (!(error instanceof Error && error.message.includes("404"))) {
+        console.error("Get cancellation request by booking error:", error);
+      }
       return {
         success: false,
         message:

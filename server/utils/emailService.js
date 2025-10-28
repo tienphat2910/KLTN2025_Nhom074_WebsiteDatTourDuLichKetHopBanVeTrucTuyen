@@ -407,9 +407,10 @@ const sendTourBookingEmail = async (userEmail, bookingData) => {
                 <div class="info-row">
                     <div class="info-label">Phương thức:</div>
                     <div class="info-value">${bookingData.tourBooking.paymentMethod === 'momo' ? 'MoMo' :
-                bookingData.tourBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
-                    bookingData.tourBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
-                        'Chưa xác định'
+                bookingData.tourBooking.paymentMethod === 'zalopay' ? 'ZaloPay' :
+                    bookingData.tourBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
+                        bookingData.tourBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
+                            'Chưa xác định'
             }</div>
                 </div>
                 ${bookingData.tourBooking.note ? `
@@ -604,9 +605,10 @@ const sendActivityBookingEmail = async (userEmail, bookingData) => {
                 <div class="info-row">
                     <div class="info-label">Phương thức:</div>
                     <div class="info-value">${bookingData.activityBooking.paymentMethod === 'momo' ? 'MoMo' :
-                bookingData.activityBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
-                    bookingData.activityBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
-                        'Chưa xác định'
+                bookingData.activityBooking.paymentMethod === 'zalopay' ? 'ZaloPay' :
+                    bookingData.activityBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
+                        bookingData.activityBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
+                            'Chưa xác định'
             }</div>
                 </div>
                 ${bookingData.activityBooking.price?.retail?.adult > 0 ? `
@@ -633,6 +635,15 @@ const sendActivityBookingEmail = async (userEmail, bookingData) => {
                 <div class="label">Tổng tiền</div>
                 <div class="amount">${formatCurrency(bookingData.activityBooking.subtotal)}</div>
             </div>
+
+            ${bookingData.activityBooking.qrCode ? `
+            <div class="info-section" style="text-align: center; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                <h3 style="margin-bottom: 15px;">🎫 Mã QR Check-in</h3>
+                <img src="${bookingData.activityBooking.qrCode}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px auto; display: block; border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;">
+                <p style="margin-top: 10px; color: #666; font-size: 14px;">Vui lòng xuất trình mã QR này khi check-in</p>
+                <p style="color: #666; font-size: 13px;">Mã booking: <strong>${bookingData.booking._id.toString().slice(-8).toUpperCase()}</strong></p>
+            </div>
+            ` : ''}
 
             <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
                 <strong>📌 Lưu ý quan trọng:</strong>
@@ -837,9 +848,10 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
                 <div class="info-row">
                     <div class="info-label">Phương thức:</div>
                     <div class="info-value">${bookingData.flightBooking.paymentMethod === 'momo' ? 'MoMo' :
-                bookingData.flightBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
-                    bookingData.flightBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
-                        'Chưa xác định'
+                bookingData.flightBooking.paymentMethod === 'zalopay' ? 'ZaloPay' :
+                    bookingData.flightBooking.paymentMethod === 'cash' ? 'Tiền mặt' :
+                        bookingData.flightBooking.paymentMethod === 'bank_transfer' ? 'Chuyển khoản ngân hàng' :
+                            'Chưa xác định'
             }</div>
                 </div>
                 ${bookingData.flightBooking.discountAmount > 0 ? `
@@ -860,6 +872,15 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
                 <div class="label">Tổng tiền</div>
                 <div class="amount">${formatCurrency(bookingData.flightBooking.totalFlightPrice)}</div>
             </div>
+
+            ${bookingData.flightBooking.qrCode ? `
+            <div class="info-section" style="text-align: center; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                <h3 style="margin-bottom: 15px;">🎫 Mã QR Boarding Pass</h3>
+                <img src="${bookingData.flightBooking.qrCode}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px auto; display: block; border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;">
+                <p style="margin-top: 10px; color: #666; font-size: 14px;">Vui lòng xuất trình mã QR này khi check-in</p>
+                <p style="color: #666; font-size: 13px;">Mã chuyến bay: <strong>${bookingData.flightBooking.flightCode}</strong></p>
+            </div>
+            ` : ''}
 
             <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
                 <strong>📌 Lưu ý quan trọng:</strong>

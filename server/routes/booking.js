@@ -17,6 +17,11 @@ router.post('/', auth, async (req, res) => {
             userId: req.user._id // Set userId from authenticated user
         };
 
+        // Set paidAt if payment is already paid (online payment)
+        if (bookingData.paymentStatus === 'paid') {
+            bookingData.paidAt = new Date();
+        }
+
         const booking = new Booking(bookingData);
         await booking.save();
 

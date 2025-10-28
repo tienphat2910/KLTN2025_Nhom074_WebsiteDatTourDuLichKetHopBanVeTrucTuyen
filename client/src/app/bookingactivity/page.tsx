@@ -356,6 +356,64 @@ export default function BookingActivityPage() {
         }
       }
 
+      // If payment method is ZaloPay
+      if (paymentMethod === "zalopay") {
+        try {
+          const zalopayResponse = await paymentService.createZaloPayPayment({
+            amount: finalTotal,
+            description: `Thanh toán hoạt động: ${activity.name}`,
+            extraData: JSON.stringify({
+              activityId: activity._id,
+              numAdults: adults,
+              numChildren: children,
+              numBabies: babies,
+              numSeniors: seniors,
+              scheduledDate,
+              participants,
+              note,
+              discountCode: appliedDiscount?.code,
+              discountAmount
+            })
+          });
+
+          if (zalopayResponse.success && zalopayResponse.data?.order_url) {
+            const bookingData = {
+              activityId: activity._id,
+              numAdults: adults,
+              numChildren: children,
+              numBabies: babies,
+              numSeniors: seniors,
+              scheduledDate,
+              subtotal,
+              discountAmount,
+              finalTotal,
+              discountCode: appliedDiscount?.code,
+              participants,
+              note,
+              paymentMethod,
+              zalopayTransId: zalopayResponse.data.app_trans_id
+            };
+
+            localStorage.setItem(
+              "pendingActivityBooking",
+              JSON.stringify(bookingData)
+            );
+            toast.success("Đang chuyển hướng đến trang thanh toán ZaloPay...");
+            window.location.href = zalopayResponse.data.order_url;
+            return;
+          } else {
+            throw new Error(
+              zalopayResponse.message || "Không thể tạo thanh toán ZaloPay"
+            );
+          }
+        } catch (zalopayError) {
+          console.error("ZaloPay payment error:", zalopayError);
+          toast.error("Lỗi khi tạo thanh toán ZaloPay. Vui lòng thử lại!");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       // For other payment methods
       const res = await bookingActivityService.createBookingActivity({
         activityId: activity._id,
@@ -643,7 +701,7 @@ export default function BookingActivityPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Hình thức thanh toán *
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div
                     onClick={() => setPaymentMethod("cash")}
                     className={`cursor-pointer p-4 border-2 rounded-lg transition-all ${
@@ -672,9 +730,34 @@ export default function BookingActivityPage() {
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <CreditCard className="w-6 h-6 text-pink-600" />
+                      <img
+                        src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png"
+                        alt="MoMo"
+                        className="w-8 h-8 object-contain"
+                      />
                       <div>
                         <div className="font-medium">MoMo</div>
+                        <div className="text-xs text-gray-500">Ví điện tử</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentMethod("zalopay")}
+                    className={`cursor-pointer p-4 border-2 rounded-lg transition-all ${
+                      paymentMethod === "zalopay"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src="https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png"
+                        alt="ZaloPay"
+                        className="w-8 h-8 object-contain"
+                      />
+                      <div>
+                        <div className="font-medium">ZaloPay</div>
                         <div className="text-xs text-gray-500">Ví điện tử</div>
                       </div>
                     </div>

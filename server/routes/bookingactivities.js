@@ -5,6 +5,7 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendActivityBookingEmail } = require('../utils/emailService');
+const { generateQRCode } = require('../utils/qrCodeGenerator');
 const router = express.Router();
 
 /**
@@ -114,6 +115,33 @@ router.post('/', auth, async (req, res) => {
         const bookingActivity = new BookingActivity(bookingActivityData);
         await bookingActivity.save();
 
+        // Generate QR code for the booking
+        try {
+            const qrResult = await generateQRCode({
+                bookingId: bookingActivity._id.toString(),
+                bookingType: 'activity',
+                code: `ACT${bookingActivity._id.toString().slice(-8).toUpperCase()}`
+            });
+
+            if (qrResult.success) {
+                bookingActivity.qrCode = qrResult.qrCodeUrl;
+                bookingActivity.qrCodePublicId = qrResult.qrCodePublicId;
+                await bookingActivity.save();
+                console.log('✅ QR code generated for activity booking');
+            }
+        } catch (qrError) {
+            console.error('❌ QR code generation failed:', qrError);
+            // Continue even if QR generation fails
+        }
+
+        // Update booking totalPrice with the calculated subtotal
+        const booking = await Booking.findById(bookingId);
+        if (booking) {
+            booking.totalPrice = subtotal;
+            await booking.save();
+            console.log(`✅ Booking totalPrice updated to ${subtotal}`);
+        }
+
         console.log(`✅ Activity booking created for ${totalParticipants} people. Activity: ${activityId}`);
 
         // Send confirmation email
@@ -215,7 +243,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const bookingActivity = await BookingActivity.findById(req.params.id)
-            .populate('activityId', 'name slug location price operating_hours')
+            .populate('activityId')
             .populate('bookingId', 'userId totalPrice status bookingDate');
 
         if (!bookingActivity) {
@@ -599,6 +627,8 @@ router.get('/booking/:bookingId/details', async (req, res) => {
             scheduledDate: bookingActivity.scheduledDate,
             note: bookingActivity.note,
             paymentMethod: bookingActivity.paymentMethod,
+            qrCode: bookingActivity.qrCode,
+            qrCodePublicId: bookingActivity.qrCodePublicId,
             createdAt: bookingActivity.createdAt,
             updatedAt: bookingActivity.updatedAt
         };

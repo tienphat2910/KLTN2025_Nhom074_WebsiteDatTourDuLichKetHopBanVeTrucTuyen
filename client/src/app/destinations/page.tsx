@@ -7,30 +7,31 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { LoadingSpinner } from "@/components/Loading";
 import { destinationService, Destination } from "@/services/destinationService";
+import { Map, Plane, PartyPopper, Circle } from "lucide-react";
 
 const serviceIcons = [
   {
     id: "tour",
     name: "Tour",
-    icon: "🗺️",
+    icon: Map,
     href: "/tours"
   },
   {
     id: "flight",
     name: "Chuyến bay",
-    icon: "✈️",
+    icon: Plane,
     href: "/flights"
   },
   {
     id: "activity",
     name: "Giải trí",
-    icon: "🎉",
+    icon: PartyPopper,
     href: "/activity"
   },
   {
     id: "all-services",
     name: "Tất cả các mục",
-    icon: "⚫",
+    icon: Circle,
     href: "/services"
   }
 ];
@@ -241,8 +242,8 @@ export default function DestinationsPage() {
                     }
                     className="flex flex-col items-center p-3 rounded-xl hover:bg-blue-50 transition-colors group"
                   >
-                    <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">
-                      {service.icon}
+                    <div className="w-10 h-10 mb-2 group-hover:scale-110 transition-transform flex items-center justify-center">
+                      <service.icon className="w-8 h-8 text-gray-700 group-hover:text-blue-600" />
                     </div>
                     <span className="text-xs text-center text-gray-700 group-hover:text-blue-600 font-medium">
                       {service.name}
