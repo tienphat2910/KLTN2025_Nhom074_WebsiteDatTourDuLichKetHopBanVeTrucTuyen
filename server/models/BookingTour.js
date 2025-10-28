@@ -91,7 +91,6 @@ const bookingTourSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        default: 'pending',
         enum: ['pending', 'confirmed', 'cancelled', 'completed']
     },
     passengers: [passengerSchema],
@@ -102,7 +101,7 @@ const bookingTourSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['cash', 'momo', 'bank_transfer'],
+        enum: ['cash', 'momo', 'zalopay', 'bank_transfer'],
         default: 'cash'
     }
 }, {

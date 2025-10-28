@@ -16,6 +16,7 @@ import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
 import { destinationService, Destination } from "@/services/destinationService";
 import { toast } from "sonner";
+import { Star, MapPin, Calendar, Backpack } from "lucide-react";
 
 // Define props interface for TourCard component
 interface TourCardProps {
@@ -80,8 +81,9 @@ const TourCard = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
         {tour.isFeatured && (
-          <div className="absolute top-3 left-3 bg-yellow-500 text-yellow-900 px-2 py-1 rounded-md text-xs font-bold">
-            ⭐ Nổi bật
+          <div className="absolute top-3 left-3 bg-yellow-500 text-yellow-900 px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+            <Star className="w-3 h-3 fill-yellow-900" />
+            Nổi bật
           </div>
         )}
         <div className="absolute bottom-3 right-3 bg-black/50 text-white px-2 py-1 rounded text-xs">
@@ -96,17 +98,19 @@ const TourCard = ({
           </h3>
           {tour.rating && tour.rating > 0 && (
             <div className="flex items-center">
-              <span className="text-yellow-500">⭐</span>
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
               <span className="text-sm text-gray-600 ml-1">{tour.rating}</span>
             </div>
           )}
         </div>
 
-        <p className="text-gray-600 mb-2">
-          📍 Khởi hành từ: {tour.departureLocation.name}
+        <p className="text-gray-600 mb-2 flex items-center gap-2">
+          <MapPin className="w-4 h-4" />
+          Khởi hành từ: {tour.departureLocation.name}
         </p>
-        <p className="text-gray-600 mb-4">
-          🗓️ {new Date(tour.startDate).toLocaleDateString("vi-VN")} -{" "}
+        <p className="text-gray-600 mb-4 flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
+          {new Date(tour.startDate).toLocaleDateString("vi-VN")} -{" "}
           {new Date(tour.endDate).toLocaleDateString("vi-VN")}
         </p>
 
@@ -752,7 +756,9 @@ export default function ToursByDestinationPage() {
             </>
           ) : (
             <div className="text-center py-16">
-              <div className="text-6xl mb-4">🎒</div>
+              <div className="flex justify-center mb-4">
+                <Backpack className="w-16 h-16 text-gray-400" />
+              </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-4">
                 Chưa có tour nào
               </h3>

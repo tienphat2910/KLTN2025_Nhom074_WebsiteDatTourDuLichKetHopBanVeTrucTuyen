@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   Percent,
-  LogOut
+  LogOut,
+  AlertCircle
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -32,6 +33,8 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSocket } from "@/hooks/useSocket";
+import { cancellationRequestService } from "@/services/cancellationRequestService";
 
 const sidebarItems = [
   {
@@ -70,6 +73,12 @@ const sidebarItems = [
     icon: Calendar
   },
   {
+    title: "Cancellation Requests",
+    href: "/admin/cancellation-requests",
+    icon: AlertCircle,
+    showBadge: true
+  },
+  {
     title: "Discounts",
     href: "/admin/discounts",
     icon: Percent
@@ -98,6 +107,51 @@ interface AdminSidebarProps {
 export function AdminSidebar({ className }: AdminSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { isConnected, socketService } = useSocket();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Load initial pending count
+  useEffect(() => {
+    loadPendingCount();
+  }, []);
+
+  // Listen for socket events to update count
+  useEffect(() => {
+    if (!isConnected || !socketService) return;
+
+    const handleNewRequest = (data: any) => {
+      console.log("🔔 AdminSidebar: New cancellation request:", data);
+      loadPendingCount();
+    };
+
+    const handleRequestProcessed = (data: any) => {
+      console.log("🔔 AdminSidebar: Request processed:", data);
+      loadPendingCount();
+    };
+
+    // Listen to socket events
+    socketService.on("new_cancellation_request", handleNewRequest);
+    socketService.on("cancellation_request_processed", handleRequestProcessed);
+
+    return () => {
+      socketService.off("new_cancellation_request", handleNewRequest);
+      socketService.off(
+        "cancellation_request_processed",
+        handleRequestProcessed
+      );
+    };
+  }, [isConnected, socketService]);
+
+  const loadPendingCount = async () => {
+    try {
+      const response = await cancellationRequestService.getPendingCount();
+      if (response.success && response.data) {
+        setPendingCount(response.data.count);
+      }
+    } catch (error) {
+      console.error("Load pending count error:", error);
+    }
+  };
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -124,14 +178,21 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
             <Link key={item.href} href={item.href}>
               <div
                 className={cn(
-                  "flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                  "flex items-center justify-between space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                   isActive
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground"
                 )}
               >
-                <item.icon className="h-4 w-4" />
-                <span>{item.title}</span>
+                <div className="flex items-center space-x-3">
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </div>
+                {item.showBadge && pendingCount > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    {pendingCount > 9 ? "9+" : pendingCount}
+                  </span>
+                )}
               </div>
             </Link>
           );

@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour, ItineraryDay } from "@/services/tourService";
+import { Star, MapPin } from "lucide-react";
 
 export default function TourDetailPage() {
   const params = useParams();
@@ -1769,8 +1770,9 @@ export default function TourDetailPage() {
                   <h4 className="font-semibold text-gray-800 line-clamp-2 mb-1">
                     {t.title}
                   </h4>
-                  <div className="text-sm text-gray-600 mb-2">
-                    📍 {t.departureLocation?.name || "Khởi hành"}
+                  <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {t.departureLocation?.name || "Khởi hành"}
                   </div>
                   <div className="font-bold text-emerald-600">
                     {tourService.formatPrice(

@@ -25,6 +25,7 @@ export interface BookingActivityPayload {
   note?: string;
   paymentMethod?: string;
   bookingId?: string;
+  status?: string;
 }
 
 export const bookingActivityService = {
@@ -61,8 +62,14 @@ export const bookingActivityService = {
       const bookingPayload: any = {
         bookingDate: new Date().toISOString(),
         totalPrice: 1, // Will be updated after calculating from activity prices
-        status: "pending",
-        bookingType: "activity"
+        status: payload.status || "pending", // Use status from payload (confirmed for online payment)
+        bookingType: "activity",
+        paymentMethod: payload.paymentMethod,
+        paymentStatus:
+          payload.paymentMethod === "momo" ||
+          payload.paymentMethod === "zalopay"
+            ? "paid"
+            : "pending"
       };
 
       console.log("Creating booking with payload:", bookingPayload);

@@ -39,6 +39,7 @@ import {
 
 interface ActivityBookingDetailModalProps {
   booking: Booking;
+  userId?: any;
   trigger?: React.ReactNode;
 }
 
@@ -69,11 +70,24 @@ const statusConfig = {
   }
 };
 
-const paymentMethodConfig = {
+const paymentMethodConfig: Record<
+  string,
+  { label: string; color: string; logo?: string; icon?: string }
+> = {
   momo: {
     label: "Ví MoMo",
-    icon: "💳",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png",
     color: "text-pink-600"
+  },
+  zalopay: {
+    label: "ZaloPay",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png",
+    color: "text-blue-500"
+  },
+  cash: {
+    label: "Tiền mặt",
+    icon: "💵",
+    color: "text-green-600"
   },
   bank_transfer: {
     label: "Chuyển khoản",
@@ -84,6 +98,7 @@ const paymentMethodConfig = {
 
 export function ActivityBookingDetailModal({
   booking,
+  userId,
   trigger
 }: ActivityBookingDetailModalProps) {
   const [open, setOpen] = useState(false);
@@ -132,6 +147,8 @@ export function ActivityBookingDetailModal({
       );
 
       if (response.success && response.data) {
+        console.log("✅ Activity booking data:", response.data);
+        console.log("📱 QR Code URL:", response.data.qrCode);
         setActivityBooking(response.data);
       } else {
         console.error(
@@ -297,9 +314,22 @@ export function ActivityBookingDetailModal({
                           .map((image, index) => (
                             <div
                               key={index}
-                              className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"
+                              className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0"
                             >
-                              <Camera className="h-6 w-6 text-gray-400" />
+                              <img
+                                src={image}
+                                alt={`Activity image ${index + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = "none";
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML =
+                                      '<div class="w-full h-full flex items-center justify-center"><svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>';
+                                  }
+                                }}
+                              />
                             </div>
                           ))}
                         {activityBooking.activityId.gallery.length > 4 && (
@@ -411,10 +441,25 @@ export function ActivityBookingDetailModal({
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {paymentMethodConfig[activityBooking.paymentMethod]
-                          ?.icon || "💳"}
-                      </span>
+                      {paymentMethodConfig[activityBooking.paymentMethod]
+                        ?.logo ? (
+                        <img
+                          src={
+                            paymentMethodConfig[activityBooking.paymentMethod]
+                              .logo
+                          }
+                          alt={
+                            paymentMethodConfig[activityBooking.paymentMethod]
+                              .label
+                          }
+                          className="w-12 h-12 object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl">
+                          {paymentMethodConfig[activityBooking.paymentMethod]
+                            ?.icon || "💳"}
+                        </span>
+                      )}
                       <div>
                         <p className="font-medium">
                           {paymentMethodConfig[activityBooking.paymentMethod]
@@ -471,8 +516,42 @@ export function ActivityBookingDetailModal({
               </Card>
             </div>
 
+            {/* QR Code Section */}
+            {activityBooking.qrCode && (
+              <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-700">
+                    <Camera className="h-5 w-5" />
+                    Mã QR Check-in
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="bg-white p-4 rounded-lg shadow-md">
+                      <img
+                        src={activityBooking.qrCode}
+                        alt="QR Code"
+                        className="w-48 h-48 object-contain"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600 mb-1">
+                        Vui lòng xuất trình mã QR này khi check-in
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Mã booking:{" "}
+                        <span className="font-semibold text-green-700">
+                          {booking._id.slice(-8).toUpperCase()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Customer Information */}
-            {(booking.user || booking.userId) && (
+            {(booking.user || booking.userId || userId) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -487,7 +566,8 @@ export function ActivityBookingDetailModal({
                       <div>
                         <p className="text-sm text-gray-500">Tên khách hàng</p>
                         <p className="font-medium">
-                          {booking.user?.fullName ||
+                          {(typeof userId === "object" && userId?.fullName) ||
+                            booking.user?.fullName ||
                             (typeof booking.userId === "object" &&
                               booking.userId?.fullName) ||
                             "N/A"}
@@ -495,7 +575,8 @@ export function ActivityBookingDetailModal({
                       </div>
                     </div>
 
-                    {(booking.user?.email ||
+                    {((typeof userId === "object" && userId?.email) ||
+                      booking.user?.email ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.email)) && (
                       <div className="flex items-center gap-3">
@@ -503,7 +584,8 @@ export function ActivityBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Email</p>
                           <p className="font-medium">
-                            {booking.user?.email ||
+                            {(typeof userId === "object" && userId?.email) ||
+                              booking.user?.email ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.email)}
                           </p>
@@ -511,7 +593,8 @@ export function ActivityBookingDetailModal({
                       </div>
                     )}
 
-                    {(booking.user?.phone ||
+                    {((typeof userId === "object" && userId?.phone) ||
+                      booking.user?.phone ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.phone)) && (
                       <div className="flex items-center gap-3">
@@ -519,7 +602,8 @@ export function ActivityBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Số điện thoại</p>
                           <p className="font-medium">
-                            {booking.user?.phone ||
+                            {(typeof userId === "object" && userId?.phone) ||
+                              booking.user?.phone ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.phone)}
                           </p>

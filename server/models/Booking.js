@@ -27,6 +27,28 @@ const bookingSchema = new mongoose.Schema({
     bookingType: {
         type: String,
         required: true
+    },
+    paymentStatus: {
+        type: String,
+        default: 'pending',
+        enum: ['pending', 'paid', 'refunded', 'failed']
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['momo', 'zalopay', 'bank_transfer', 'cash']
+    },
+    // ZaloPay payment fields
+    zalopayTransId: {
+        type: String // app_trans_id from ZaloPay
+    },
+    zalopayZpTransId: {
+        type: String // zp_trans_id from ZaloPay callback
+    },
+    zalopayOrderUrl: {
+        type: String // Payment URL
+    },
+    paidAt: {
+        type: Date
     }
 }, {
     timestamps: true

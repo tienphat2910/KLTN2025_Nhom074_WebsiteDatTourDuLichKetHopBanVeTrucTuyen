@@ -34,6 +34,7 @@ import { tourService, TourBookingDetail } from "@/services/tourService";
 
 interface TourBookingDetailModalProps {
   booking: Booking;
+  userId?: any;
   trigger?: React.ReactNode;
 }
 
@@ -64,7 +65,10 @@ const statusConfig = {
   }
 };
 
-const paymentMethodConfig = {
+const paymentMethodConfig: Record<
+  string,
+  { label: string; color: string; logo?: string; icon?: string }
+> = {
   cash: {
     label: "Tiền mặt",
     icon: "💵",
@@ -72,8 +76,13 @@ const paymentMethodConfig = {
   },
   momo: {
     label: "Ví MoMo",
-    icon: "💳",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png",
     color: "text-pink-600"
+  },
+  zalopay: {
+    label: "ZaloPay",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png",
+    color: "text-blue-500"
   },
   bank_transfer: {
     label: "Chuyển khoản",
@@ -99,6 +108,7 @@ const passengerTypeConfig = {
 
 export function TourBookingDetailModal({
   booking,
+  userId,
   trigger
 }: TourBookingDetailModalProps) {
   const [open, setOpen] = useState(false);
@@ -461,10 +471,23 @@ export function TourBookingDetailModal({
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {paymentMethodConfig[tourBooking.paymentMethod]?.icon ||
-                          "💳"}
-                      </span>
+                      {paymentMethodConfig[tourBooking.paymentMethod]?.logo ? (
+                        <img
+                          src={
+                            paymentMethodConfig[tourBooking.paymentMethod]?.logo
+                          }
+                          alt={
+                            paymentMethodConfig[tourBooking.paymentMethod]
+                              ?.label
+                          }
+                          className="w-12 h-12 object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl">
+                          {paymentMethodConfig[tourBooking.paymentMethod]
+                            ?.icon || "💳"}
+                        </span>
+                      )}
                       <div>
                         <p className="font-medium">
                           {paymentMethodConfig[tourBooking.paymentMethod]
@@ -516,7 +539,7 @@ export function TourBookingDetailModal({
             </div>
 
             {/* Customer Information */}
-            {(booking.user || booking.userId) && (
+            {(booking.user || booking.userId || userId) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -531,7 +554,8 @@ export function TourBookingDetailModal({
                       <div>
                         <p className="text-sm text-gray-500">Tên khách hàng</p>
                         <p className="font-medium">
-                          {booking.user?.fullName ||
+                          {(typeof userId === "object" && userId?.fullName) ||
+                            booking.user?.fullName ||
                             (typeof booking.userId === "object" &&
                               booking.userId?.fullName) ||
                             "N/A"}
@@ -539,7 +563,8 @@ export function TourBookingDetailModal({
                       </div>
                     </div>
 
-                    {(booking.user?.email ||
+                    {((typeof userId === "object" && userId?.email) ||
+                      booking.user?.email ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.email)) && (
                       <div className="flex items-center gap-3">
@@ -547,7 +572,8 @@ export function TourBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Email</p>
                           <p className="font-medium">
-                            {booking.user?.email ||
+                            {(typeof userId === "object" && userId?.email) ||
+                              booking.user?.email ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.email)}
                           </p>
@@ -555,7 +581,8 @@ export function TourBookingDetailModal({
                       </div>
                     )}
 
-                    {(booking.user?.phone ||
+                    {((typeof userId === "object" && userId?.phone) ||
+                      booking.user?.phone ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.phone)) && (
                       <div className="flex items-center gap-3">
@@ -563,7 +590,8 @@ export function TourBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Số điện thoại</p>
                           <p className="font-medium">
-                            {booking.user?.phone ||
+                            {(typeof userId === "object" && userId?.phone) ||
+                              booking.user?.phone ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.phone)}
                           </p>

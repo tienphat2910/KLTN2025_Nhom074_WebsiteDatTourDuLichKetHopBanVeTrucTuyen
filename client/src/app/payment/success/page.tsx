@@ -55,6 +55,9 @@ export default function PaymentSuccessPage() {
   >("checking");
   const [paymentInfo, setPaymentInfo] = useState<any>(null);
   const [bookingCreated, setBookingCreated] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"momo" | "zalopay" | null>(
+    null
+  );
 
   // Get URL parameters from MoMo redirect
   const partnerCode = searchParams.get("partnerCode");
@@ -71,7 +74,36 @@ export default function PaymentSuccessPage() {
   const extraData = searchParams.get("extraData");
   const signature = searchParams.get("signature");
 
+  // Get URL parameters from ZaloPay redirect
+  const appTransId = searchParams.get("apptransid");
+  const zalopayStatus = searchParams.get("status"); // 1 = success, -1 = failed
+  const zalopayAmount = searchParams.get("amount");
+  const checksum = searchParams.get("checksum");
+
   useEffect(() => {
+    console.log("🔄 UseEffect triggered:", {
+      isAuthLoading,
+      isAuthenticated,
+      paymentMethod,
+      hasAppTransId: !!appTransId,
+      hasZalopayStatus: !!zalopayStatus,
+      hasOrderId: !!orderId,
+      hasPartnerCode: !!partnerCode
+    });
+
+    // Detect payment method from URL params (only run once on mount)
+    if (!paymentMethod) {
+      if (appTransId || zalopayStatus) {
+        console.log("✅ Detected ZaloPay");
+        setPaymentMethod("zalopay");
+        return; // Return early to avoid calling handlePaymentResult in the same render
+      } else if (orderId || partnerCode) {
+        console.log("✅ Detected MoMo");
+        setPaymentMethod("momo");
+        return; // Return early to avoid calling handlePaymentResult in the same render
+      }
+    }
+
     // Check authentication
     if (!isAuthLoading && !isAuthenticated) {
       toast.error("Vui lòng đăng nhập!");
@@ -79,132 +111,31 @@ export default function PaymentSuccessPage() {
       return;
     }
 
-    if (isAuthenticated) {
+    if (isAuthenticated && paymentMethod && !bookingCreated) {
+      console.log("🚀 Calling handlePaymentResult with method:", paymentMethod);
       handlePaymentResult();
     }
-  }, [isAuthenticated, isAuthLoading]);
+  }, [
+    isAuthenticated,
+    isAuthLoading,
+    paymentMethod,
+    appTransId,
+    zalopayStatus,
+    orderId,
+    partnerCode
+  ]);
 
   const handlePaymentResult = async () => {
     try {
       setLoading(true);
 
-      // Check if we have the required parameters
-      if (!orderId || !resultCode) {
-        setPaymentStatus("error");
-        setLoading(false);
-        toast.error("Thông tin thanh toán không hợp lệ!");
-        return;
-      }
-
-      // Get pending booking data from localStorage - try both tour and flight
-      const pendingTourData = localStorage.getItem("pendingBooking");
-      const pendingFlightData = localStorage.getItem("pendingFlightBooking");
-
-      if (!pendingTourData && !pendingFlightData) {
-        setPaymentStatus("error");
-        setLoading(false);
-        toast.error("Không tìm thấy thông tin đặt vé!");
-        return;
-      }
-
-      const isTour = !!pendingTourData;
-      const bookingData = isTour
-        ? (JSON.parse(pendingTourData) as BookingTourData)
-        : (JSON.parse(pendingFlightData!) as BookingFlightData);
-
-      // Verify this is the correct order
-      if (bookingData.momoOrderId !== orderId) {
-        setPaymentStatus("error");
-        setLoading(false);
-        toast.error("Mã đơn hàng không khớp!");
-        return;
-      }
-
-      // Check payment status with MoMo
-      const statusResponse = await paymentService.checkMoMoPaymentStatus(
-        orderId
-      );
-
-      if (!statusResponse.success) {
-        throw new Error("Không thể kiểm tra trạng thái thanh toán");
-      }
-
-      const paymentResult = statusResponse.data;
-      setPaymentInfo({
-        orderId,
-        amount,
-        message,
-        resultCode,
-        transId,
-        paymentResult
-      });
-
-      // Check if payment was successful
-      if (resultCode === "0" && paymentResult?.resultCode === 0) {
-        setPaymentStatus("success");
-
-        // Create the booking if payment successful and not already created
-        if (!bookingCreated) {
-          try {
-            let bookingResponse;
-
-            if (isTour) {
-              // Create tour booking
-              bookingResponse = await bookingTourService.createBookingTour({
-                ...(bookingData as BookingTourData),
-                status: "confirmed",
-                note: `${
-                  bookingData.note ? bookingData.note + "\n" : ""
-                }Thanh toán MoMo thành công. Mã giao dịch: ${transId}, Mã đơn hàng: ${orderId}`
-              });
-            } else {
-              // Create flight booking
-              bookingResponse = await bookingFlightService.createBookingFlight({
-                ...(bookingData as BookingFlightData),
-                status: "confirmed",
-                note: `${
-                  bookingData.note ? bookingData.note + "\n" : ""
-                }Thanh toán MoMo thành công. Mã giao dịch: ${transId}, Mã đơn hàng: ${orderId}`
-              });
-            }
-
-            if (bookingResponse.success) {
-              setBookingCreated(true);
-              toast.success(
-                isTour
-                  ? "Thanh toán thành công! Đặt tour đã được xác nhận."
-                  : "Thanh toán thành công! Đặt vé máy bay đã được xác nhận."
-              );
-
-              // Clear pending booking data
-              if (isTour) {
-                localStorage.removeItem("pendingBooking");
-              } else {
-                localStorage.removeItem("pendingFlightBooking");
-              }
-            } else {
-              // Payment successful but booking creation failed
-              toast.error(
-                "Thanh toán thành công nhưng có lỗi khi tạo booking. Vui lòng liên hệ hỗ trợ!"
-              );
-            }
-          } catch (bookingError) {
-            console.error("Booking creation error:", bookingError);
-            toast.error(
-              "Thanh toán thành công nhưng có lỗi khi tạo booking. Vui lòng liên hệ hỗ trợ!"
-            );
-          }
-        }
+      if (paymentMethod === "momo") {
+        await handleMoMoPayment();
+      } else if (paymentMethod === "zalopay") {
+        await handleZaloPayPayment();
       } else {
-        setPaymentStatus("failed");
-        toast.error(`Thanh toán thất bại: ${message || "Lỗi không xác định"}`);
-
-        // Clear pending booking data
-        if (isTour) {
-          localStorage.removeItem("pendingBooking");
-        } else {
-          localStorage.removeItem("pendingFlightBooking");
-        }
+        setPaymentStatus("error");
+        toast.error("Không xác định được phương thức thanh toán!");
       }
     } catch (error) {
       console.error("Payment result handling error:", error);
@@ -215,15 +146,267 @@ export default function PaymentSuccessPage() {
     }
   };
 
-  const handleRetryBooking = () => {
-    // Clear any pending data and redirect back to booking
+  const handleMoMoPayment = async () => {
+    // Check if we have the required parameters
+    if (!orderId || !resultCode) {
+      setPaymentStatus("error");
+      toast.error("Thông tin thanh toán không hợp lệ!");
+      return;
+    }
+
+    // Get pending booking data from localStorage - try tour, flight, and activity
+    const pendingTourData = localStorage.getItem("pendingBooking");
+    const pendingFlightData = localStorage.getItem("pendingFlightBooking");
+    const pendingActivityData = localStorage.getItem("pendingActivityBooking");
+
+    if (!pendingTourData && !pendingFlightData && !pendingActivityData) {
+      setPaymentStatus("error");
+      toast.error("Không tìm thấy thông tin đặt vé!");
+      return;
+    }
+
+    const isTour = !!pendingTourData;
+    const isFlight = !!pendingFlightData;
+    const isActivity = !!pendingActivityData;
+
+    const bookingData = isTour
+      ? JSON.parse(pendingTourData)
+      : isFlight
+      ? JSON.parse(pendingFlightData!)
+      : JSON.parse(pendingActivityData!);
+
+    // Verify this is the correct order
+    if (bookingData.momoOrderId !== orderId) {
+      setPaymentStatus("error");
+      toast.error("Mã đơn hàng không khớp!");
+      return;
+    }
+
+    // Check payment status with MoMo
+    const statusResponse = await paymentService.checkMoMoPaymentStatus(orderId);
+
+    if (!statusResponse.success) {
+      throw new Error("Không thể kiểm tra trạng thái thanh toán");
+    }
+
+    const paymentResult = statusResponse.data;
+    setPaymentInfo({
+      orderId,
+      amount,
+      message,
+      resultCode,
+      transId,
+      paymentResult,
+      method: "momo"
+    });
+
+    // Check if payment was successful
+    if (resultCode === "0" && paymentResult?.resultCode === 0) {
+      setPaymentStatus("success");
+
+      // Create the booking if payment successful and not already created
+      if (!bookingCreated && transId && orderId) {
+        await createBooking(
+          bookingData,
+          isTour,
+          isFlight,
+          isActivity,
+          transId,
+          orderId
+        );
+      }
+    } else {
+      setPaymentStatus("failed");
+      toast.error(`Thanh toán thất bại: ${message || "Lỗi không xác định"}`);
+      clearPendingBookings();
+    }
+  };
+
+  const handleZaloPayPayment = async () => {
+    console.log("🔍 ZaloPay Payment Debug:", {
+      appTransId,
+      zalopayStatus,
+      zalopayAmount,
+      checksum
+    });
+
+    // Check if we have the required parameters
+    if (!appTransId || !zalopayStatus) {
+      setPaymentStatus("error");
+      toast.error("Thông tin thanh toán không hợp lệ!");
+      return;
+    }
+
+    // Get pending booking data from localStorage
+    const pendingTourData = localStorage.getItem("pendingBooking");
+    const pendingFlightData = localStorage.getItem("pendingFlightBooking");
+    const pendingActivityData = localStorage.getItem("pendingActivityBooking");
+
+    console.log("📦 Pending Data:", {
+      hasTour: !!pendingTourData,
+      hasFlight: !!pendingFlightData,
+      hasActivity: !!pendingActivityData
+    });
+
+    if (!pendingTourData && !pendingFlightData && !pendingActivityData) {
+      setPaymentStatus("error");
+      toast.error("Không tìm thấy thông tin đặt vé!");
+      return;
+    }
+
+    const isTour = !!pendingTourData;
+    const isFlight = !!pendingFlightData;
+    const isActivity = !!pendingActivityData;
+
+    const bookingData = isTour
+      ? JSON.parse(pendingTourData)
+      : isFlight
+      ? JSON.parse(pendingFlightData!)
+      : JSON.parse(pendingActivityData!);
+
+    console.log("📄 Booking Data:", {
+      fullData: bookingData,
+      zalopayTransId: bookingData.zalopayTransId,
+      appTransId,
+      matches: bookingData.zalopayTransId === appTransId
+    });
+
+    // Verify this is the correct order (only if zalopayTransId exists)
+    if (
+      bookingData.zalopayTransId &&
+      bookingData.zalopayTransId !== appTransId
+    ) {
+      console.error("❌ Transaction ID mismatch!", {
+        stored: bookingData.zalopayTransId,
+        received: appTransId
+      });
+      setPaymentStatus("error");
+      toast.error("Mã giao dịch không khớp!");
+      return;
+    }
+
+    // If no zalopayTransId in booking data, add it now
+    if (!bookingData.zalopayTransId) {
+      console.warn("⚠️ No zalopayTransId in booking data, adding it now");
+      bookingData.zalopayTransId = appTransId;
+    }
+
+    setPaymentInfo({
+      orderId: appTransId,
+      amount: zalopayAmount,
+      transId: appTransId,
+      method: "zalopay"
+    });
+
+    // Check if payment was successful (status = 1)
+    if (zalopayStatus === "1") {
+      setPaymentStatus("success");
+
+      // Create the booking if payment successful and not already created
+      if (!bookingCreated) {
+        await createBooking(
+          bookingData,
+          isTour,
+          isFlight,
+          isActivity,
+          appTransId!,
+          appTransId!
+        );
+      }
+    } else {
+      setPaymentStatus("failed");
+      toast.error("Thanh toán ZaloPay thất bại!");
+      clearPendingBookings();
+    }
+  };
+
+  const createBooking = async (
+    bookingData: any,
+    isTour: boolean,
+    isFlight: boolean,
+    isActivity: boolean,
+    transId: string,
+    orderId: string
+  ) => {
+    try {
+      let bookingResponse;
+      const paymentNote =
+        paymentMethod === "momo"
+          ? `Thanh toán MoMo thành công. Mã giao dịch: ${transId}, Mã đơn hàng: ${orderId}`
+          : `Thanh toán ZaloPay thành công. Mã giao dịch: ${transId}`;
+
+      if (isTour) {
+        const { bookingTourService } = await import(
+          "@/services/bookingTourService"
+        );
+        bookingResponse = await bookingTourService.createBookingTour({
+          ...bookingData,
+          status: "confirmed",
+          note: `${
+            bookingData.note ? bookingData.note + "\n" : ""
+          }${paymentNote}`
+        });
+      } else if (isFlight) {
+        const { bookingFlightService } = await import(
+          "@/services/bookingFlightService"
+        );
+        bookingResponse = await bookingFlightService.createBookingFlight({
+          ...bookingData,
+          status: "confirmed",
+          note: `${
+            bookingData.note ? bookingData.note + "\n" : ""
+          }${paymentNote}`
+        });
+      } else if (isActivity) {
+        const { bookingActivityService } = await import(
+          "@/services/bookingActivityService"
+        );
+        bookingResponse = await bookingActivityService.createBookingActivity({
+          ...bookingData,
+          status: "confirmed",
+          note: `${
+            bookingData.note ? bookingData.note + "\n" : ""
+          }${paymentNote}`
+        });
+      }
+
+      if (bookingResponse?.success) {
+        setBookingCreated(true);
+        const bookingType = isTour
+          ? "tour"
+          : isFlight
+          ? "vé máy bay"
+          : "hoạt động";
+        toast.success(
+          `Thanh toán thành công! Đặt ${bookingType} đã được xác nhận.`
+        );
+        clearPendingBookings();
+      } else {
+        toast.error(
+          "Thanh toán thành công nhưng có lỗi khi tạo booking. Vui lòng liên hệ hỗ trợ!"
+        );
+      }
+    } catch (bookingError) {
+      console.error("Booking creation error:", bookingError);
+      toast.error(
+        "Thanh toán thành công nhưng có lỗi khi tạo booking. Vui lòng liên hệ hỗ trợ!"
+      );
+    }
+  };
+
+  const clearPendingBookings = () => {
     localStorage.removeItem("pendingBooking");
     localStorage.removeItem("pendingFlightBooking");
+    localStorage.removeItem("pendingActivityBooking");
+  };
+
+  const handleRetryBooking = () => {
+    clearPendingBookings();
     router.push("/");
   };
 
   const handleGoToBookings = () => {
-    router.push("/profile/bookings");
+    router.push("/profile/booking");
   };
 
   const handleGoHome = () => {
@@ -278,12 +461,62 @@ export default function PaymentSuccessPage() {
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-4xl mb-2">
-                      {paymentStatus === "success" && "✅"}
-                      {paymentStatus === "failed" && "❌"}
+                    <div className="flex justify-center mb-4">
+                      {paymentStatus === "success" && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          x="0px"
+                          y="0px"
+                          width="100"
+                          height="100"
+                          viewBox="0,0,256,256"
+                        >
+                          <g
+                            fill="none"
+                            fillRule="nonzero"
+                            stroke="none"
+                            strokeWidth="1"
+                            strokeLinecap="butt"
+                            strokeLinejoin="miter"
+                            strokeMiterlimit="10"
+                            strokeDasharray=""
+                            strokeDashoffset="0"
+                            fontFamily="none"
+                            fontWeight="none"
+                            fontSize="none"
+                            textAnchor="none"
+                            style={{ mixBlendMode: "normal" }}
+                          >
+                            <g transform="scale(5.33333,5.33333)">
+                              <path
+                                d="M44,24c0,11.045 -8.955,20 -20,20c-11.045,0 -20,-8.955 -20,-20c0,-11.045 8.955,-20 20,-20c11.045,0 20,8.955 20,20z"
+                                fill="#5af360"
+                              ></path>
+                              <path
+                                d="M34.602,14.602l-13.602,13.597l-5.602,-5.598l-2.797,2.797l8.399,8.403l16.398,-16.402z"
+                                fill="#ffffff"
+                              ></path>
+                            </g>
+                          </g>
+                        </svg>
+                      )}
+                      {paymentStatus === "failed" && (
+                        <img
+                          width="100"
+                          height="100"
+                          src="https://img.icons8.com/ios-glyphs/100/ffffff/multiply-2.png"
+                          alt="failed"
+                        />
+                      )}
                       {(paymentStatus === "error" ||
-                        paymentStatus === "checking") &&
-                        "⚠️"}
+                        paymentStatus === "checking") && (
+                        <img
+                          width="100"
+                          height="100"
+                          src="https://img.icons8.com/color/100/error--v1.png"
+                          alt="error"
+                        />
+                      )}
                     </div>
                     <h1 className="text-2xl font-bold">
                       {paymentStatus === "success" && "Thanh toán thành công!"}
@@ -301,7 +534,7 @@ export default function PaymentSuccessPage() {
                     <div className="text-center">
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                         <h3 className="font-semibold text-green-800 mb-2">
-                          Đặt tour thành công!
+                          Đặt đơn thành công!
                         </h3>
                         <p className="text-green-700 text-sm">
                           Cảm ơn bạn đã sử dụng dịch vụ của LuTrip. Chúng tôi sẽ
@@ -353,7 +586,7 @@ export default function PaymentSuccessPage() {
                           onClick={handleGoToBookings}
                           className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-300"
                         >
-                          Xem đặt tour của tôi
+                          Xem đơn hàng của tôi
                         </button>
                         <button
                           onClick={handleGoHome}
@@ -413,7 +646,7 @@ export default function PaymentSuccessPage() {
                           onClick={handleRetryBooking}
                           className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-300"
                         >
-                          Thử lại đặt tour
+                          Thử lại
                         </button>
                         <button
                           onClick={handleGoHome}
@@ -434,7 +667,7 @@ export default function PaymentSuccessPage() {
                         </h3>
                         <p className="text-yellow-700 text-sm">
                           Không thể xác định trạng thái thanh toán. Vui lòng
-                          liên hệ hỗ trợ hoặc kiểm tra lại thông tin đặt tour.
+                          liên hệ hỗ trợ hoặc kiểm tra lại thông tin đặt đơn.
                         </p>
                       </div>
 
@@ -443,13 +676,13 @@ export default function PaymentSuccessPage() {
                           onClick={handleGoToBookings}
                           className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-300"
                         >
-                          Kiểm tra đặt tour của tôi
+                          Kiểm tra đặt đơn của tôi
                         </button>
                         <button
                           onClick={handleRetryBooking}
                           className="w-full bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-300 transition-all duration-300"
                         >
-                          Đặt tour mới
+                          Đặt đơn mới
                         </button>
                       </div>
                     </div>

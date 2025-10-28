@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { bookingService, Booking } from "@/services/bookingService";
+import { cancellationRequestService } from "@/services/cancellationRequestService";
 import {
   Card,
   CardContent,
@@ -33,6 +34,7 @@ import { BookingDetailModal } from "@/components/Booking/BookingDetailModal";
 import { FlightBookingDetailModal } from "@/components/Admin/FlightBookingDetailModal";
 import { TourBookingDetailModal } from "@/components/Admin/TourBookingDetailModal";
 import { ActivityBookingDetailModal } from "@/components/Admin/ActivityBookingDetailModal";
+import { CancelBookingDialog } from "@/components/Booking/CancelBookingDialog";
 
 const statusConfig = {
   pending: {
@@ -128,26 +130,9 @@ export default function BookingPage() {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy booking này?")) {
-      return;
-    }
-
-    try {
-      setCancellingId(bookingId);
-      const response = await bookingService.cancelBooking(bookingId);
-
-      if (response.success) {
-        toast.success("Đã hủy booking thành công");
-        loadBookings(); // Reload bookings
-      } else {
-        toast.error(response.message || "Không thể hủy booking");
-      }
-    } catch (error) {
-      console.error("Cancel booking error:", error);
-      toast.error("Có lỗi xảy ra khi hủy booking");
-    } finally {
-      setCancellingId(null);
-    }
+    // This function is no longer needed as we're using the dialog
+    // Keeping it for backward compatibility
+    loadBookings();
   };
 
   const formatCurrency = (amount: number) => {
@@ -426,20 +411,10 @@ export default function BookingPage() {
                               )}
 
                               {booking.status === "pending" && (
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleCancelBooking(booking._id)
-                                  }
-                                  disabled={cancellingId === booking._id}
-                                >
-                                  {cancellingId === booking._id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    "Hủy"
-                                  )}
-                                </Button>
+                                <CancelBookingDialog
+                                  booking={booking}
+                                  onSuccess={loadBookings}
+                                />
                               )}
                             </div>
                           </div>

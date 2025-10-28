@@ -6,6 +6,7 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { sendFlightBookingEmail } = require('../utils/emailService');
+const { generateQRCode } = require('../utils/qrCodeGenerator');
 const router = express.Router();
 
 /**
@@ -69,6 +70,33 @@ router.post('/', auth, async (req, res) => {
         // Create the booking flight
         const bookingFlight = new BookingFlight({ ...bookingFlightData, bookingId });
         await bookingFlight.save();
+
+        // Generate QR code for the flight booking
+        try {
+            const qrResult = await generateQRCode({
+                bookingId: bookingFlight._id.toString(),
+                bookingType: 'flight',
+                code: bookingFlight.flightCode
+            });
+
+            if (qrResult.success) {
+                bookingFlight.qrCode = qrResult.qrCodeUrl;
+                bookingFlight.qrCodePublicId = qrResult.qrCodePublicId;
+                await bookingFlight.save();
+                console.log('✅ QR code generated for flight booking');
+            }
+        } catch (qrError) {
+            console.error('❌ QR code generation failed:', qrError);
+            // Continue even if QR generation fails
+        }
+
+        // Update booking totalPrice with the flight price
+        const booking = await Booking.findById(bookingId);
+        if (booking) {
+            booking.totalPrice = bookingFlight.totalFlightPrice || 0;
+            await booking.save();
+            console.log(`✅ Booking totalPrice updated to ${bookingFlight.totalFlightPrice}`);
+        }
 
         // Create passenger records if provided
         let createdPassengers = [];
@@ -343,6 +371,9 @@ router.get('/booking/:bookingId/details', async (req, res) => {
             paymentMethod: bookingFlight.paymentMethod,
             discountCode: bookingFlight.discountCode,
             discountAmount: bookingFlight.discountAmount,
+            qrCode: bookingFlight.qrCode,
+            qrCodePublicId: bookingFlight.qrCodePublicId,
+            flightCode: bookingFlight.flightCode,
             passengers: passengers.map(passenger => ({
                 _id: passenger._id,
                 fullName: passenger.fullName,

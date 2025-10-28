@@ -70,7 +70,6 @@ const bookingActivitySchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        default: 'pending',
         enum: ['pending', 'confirmed', 'cancelled', 'completed']
     },
     scheduledDate: {
@@ -84,17 +83,25 @@ const bookingActivitySchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['cash', 'momo', 'bank_transfer'],
+        enum: ['cash', 'momo', 'zalopay', 'bank_transfer'],
         default: 'cash'
+    },
+    qrCode: {
+        type: String, // URL to QR code image
+        trim: true
+    },
+    qrCodePublicId: {
+        type: String, // Cloudinary public ID for QR code
+        trim: true
     }
 }, {
     timestamps: true
 });
 
 // Pre-save hook to calculate subtotal if not provided
-bookingActivitySchema.pre('save', function(next) {
+bookingActivitySchema.pre('save', function (next) {
     if (!this.subtotal && this.price && this.price.retail) {
-        this.subtotal = 
+        this.subtotal =
             (this.numAdults * this.price.retail.adult) +
             (this.numChildren * this.price.retail.child) +
             (this.numBabies * this.price.retail.baby) +

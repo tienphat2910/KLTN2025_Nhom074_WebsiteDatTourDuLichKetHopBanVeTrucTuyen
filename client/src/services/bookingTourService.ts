@@ -64,8 +64,14 @@ export const bookingTourService = {
       const bookingPayload: any = {
         bookingDate: new Date().toISOString(),
         totalPrice: Math.max(1, Math.round(payload.subtotal)),
-        status: "pending",
-        bookingType: "tour"
+        status: payload.status || "pending", // Use status from payload (confirmed for online payment)
+        bookingType: "tour",
+        paymentMethod: payload.paymentMethod,
+        paymentStatus:
+          payload.paymentMethod === "momo" ||
+          payload.paymentMethod === "zalopay"
+            ? "paid"
+            : "pending"
       };
 
       console.log("Creating booking with payload:", bookingPayload);

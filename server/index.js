@@ -37,8 +37,10 @@ app.use('/api/booking', require('./routes/booking'));
 app.use('/api/bookingflights', require('./routes/bookingflights'));
 app.use('/api/bookingactivities', require('./routes/bookingactivities'));
 app.use('/api/payment/momo', require('./routes/payment'));
+app.use('/api/payment', require('./routes/zalopay'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/discounts', require('./routes/discounts'));
+app.use('/api/cancellationrequests', require('./routes/cancellationrequests'));
 app.use('/api/admin/tours', require('./routes/admin/tours'));
 app.use('/api/admin/bookings', require('./routes/admin/bookings'));
 
@@ -138,5 +140,6 @@ const server = app.listen(PORT, () => {
 });
 
 // Khởi tạo Socket.IO
-initSocket(server);
+const io = initSocket(server);
+app.set('io', io); // Make io accessible to routes
 console.log('🔌 Socket.IO đã được khởi tạo');

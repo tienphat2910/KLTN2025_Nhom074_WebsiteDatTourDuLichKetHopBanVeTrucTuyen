@@ -32,7 +32,8 @@ import {
   Wifi,
   Coffee,
   Monitor,
-  ChevronRight
+  ChevronRight,
+  Camera
 } from "lucide-react";
 import {
   Booking,
@@ -42,6 +43,7 @@ import {
 
 interface FlightBookingDetailModalProps {
   booking: Booking;
+  userId?: any;
   trigger?: React.ReactNode;
 }
 
@@ -72,11 +74,19 @@ const statusConfig = {
   }
 };
 
-const paymentMethodConfig = {
+const paymentMethodConfig: Record<
+  string,
+  { label: string; color: string; logo?: string; icon?: string }
+> = {
   momo: {
     label: "Ví MoMo",
-    icon: "💳",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png",
     color: "text-pink-600"
+  },
+  zalopay: {
+    label: "ZaloPay",
+    logo: "https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png",
+    color: "text-blue-500"
   },
   bank_transfer: {
     label: "Chuyển khoản",
@@ -87,6 +97,7 @@ const paymentMethodConfig = {
 
 export function FlightBookingDetailModal({
   booking,
+  userId,
   trigger
 }: FlightBookingDetailModalProps) {
   const [open, setOpen] = useState(false);
@@ -140,6 +151,8 @@ export function FlightBookingDetailModal({
       );
 
       if (response.success && response.data) {
+        console.log("✅ Flight booking data:", response.data);
+        console.log("📱 QR Code URL:", response.data.qrCode);
         setFlightBooking(response.data);
       } else {
         console.error(
@@ -155,73 +168,6 @@ export function FlightBookingDetailModal({
       setIsLoading(false);
     }
   };
-
-  // Mock data for development/testing
-  const getMockFlightBooking = (): FlightBookingDetail => ({
-    _id: "flight_booking_123",
-    bookingId: booking._id,
-    flightId: {
-      _id: "flight_123",
-      flightCode: "VN123",
-      airline: {
-        _id: "airline_123",
-        name: "Vietnam Airlines",
-        code: "VN",
-        logo: "/images/airlines/vietnam-airlines.png"
-      },
-      departureAirport: {
-        _id: "airport_sgn",
-        name: "Tân Sơn Nhất",
-        code: "SGN",
-        city: "Hồ Chí Minh",
-        country: "Việt Nam"
-      },
-      arrivalAirport: {
-        _id: "airport_han",
-        name: "Nội Bài",
-        code: "HAN",
-        city: "Hà Nội",
-        country: "Việt Nam"
-      },
-      departureTime: "2024-12-25T10:00:00Z",
-      arrivalTime: "2024-12-25T12:30:00Z",
-      duration: "2h 30m",
-      aircraft: "Airbus A321"
-    },
-    flightClassId: {
-      _id: "class_eco",
-      name: "Phổ thông",
-      code: "ECO",
-      description: "Hạng phổ thông với tiện nghi cơ bản",
-      amenities: ["Bữa ăn nhẹ", "Nước uống", "WiFi"]
-    },
-    numTickets: 2,
-    pricePerTicket: 1500000,
-    totalFlightPrice: 3000000,
-    status: booking.status,
-    paymentMethod: "momo",
-    discountAmount: 0,
-    passengers: [
-      {
-        _id: "pass_1",
-        fullName: "Nguyễn Văn A",
-        dateOfBirth: "1990-01-01",
-        gender: "male",
-        passportNumber: "P123456789",
-        seatNumber: "12A"
-      },
-      {
-        _id: "pass_2",
-        fullName: "Trần Thị B",
-        dateOfBirth: "1992-05-15",
-        gender: "female",
-        passportNumber: "P987654321",
-        seatNumber: "12B"
-      }
-    ],
-    createdAt: booking.createdAt,
-    updatedAt: booking.updatedAt
-  });
 
   if (booking.bookingType !== "flight") {
     return null;
@@ -499,10 +445,25 @@ export function FlightBookingDetailModal({
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {paymentMethodConfig[flightBooking.paymentMethod]
-                          ?.icon || "💳"}
-                      </span>
+                      {paymentMethodConfig[flightBooking.paymentMethod]
+                        ?.logo ? (
+                        <img
+                          src={
+                            paymentMethodConfig[flightBooking.paymentMethod]
+                              .logo
+                          }
+                          alt={
+                            paymentMethodConfig[flightBooking.paymentMethod]
+                              .label
+                          }
+                          className="w-12 h-12 object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl">
+                          {paymentMethodConfig[flightBooking.paymentMethod]
+                            ?.icon || "💳"}
+                        </span>
+                      )}
                       <div>
                         <p className="font-medium">
                           {paymentMethodConfig[flightBooking.paymentMethod]
@@ -561,8 +522,42 @@ export function FlightBookingDetailModal({
               </Card>
             </div>
 
+            {/* QR Code Section */}
+            {flightBooking.qrCode && (
+              <Card className="border-green-200 bg-gradient-to-br from-blue-50 to-sky-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-blue-700">
+                    <Camera className="h-5 w-5" />
+                    Mã QR Boarding Pass
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="bg-white p-4 rounded-lg shadow-md">
+                      <img
+                        src={flightBooking.qrCode}
+                        alt="QR Code"
+                        className="w-48 h-48 object-contain"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600 mb-1">
+                        Vui lòng xuất trình mã QR này khi check-in
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Mã chuyến bay:{" "}
+                        <span className="font-semibold text-blue-700">
+                          {flightBooking.flightCode}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Customer Information */}
-            {(booking.user || booking.userId) && (
+            {(booking.user || booking.userId || userId) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -577,7 +572,8 @@ export function FlightBookingDetailModal({
                       <div>
                         <p className="text-sm text-gray-500">Tên khách hàng</p>
                         <p className="font-medium">
-                          {booking.user?.fullName ||
+                          {(typeof userId === "object" && userId?.fullName) ||
+                            booking.user?.fullName ||
                             (typeof booking.userId === "object" &&
                               booking.userId?.fullName) ||
                             "N/A"}
@@ -585,7 +581,8 @@ export function FlightBookingDetailModal({
                       </div>
                     </div>
 
-                    {(booking.user?.email ||
+                    {((typeof userId === "object" && userId?.email) ||
+                      booking.user?.email ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.email)) && (
                       <div className="flex items-center gap-3">
@@ -593,7 +590,8 @@ export function FlightBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Email</p>
                           <p className="font-medium">
-                            {booking.user?.email ||
+                            {(typeof userId === "object" && userId?.email) ||
+                              booking.user?.email ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.email)}
                           </p>
@@ -601,7 +599,8 @@ export function FlightBookingDetailModal({
                       </div>
                     )}
 
-                    {(booking.user?.phone ||
+                    {((typeof userId === "object" && userId?.phone) ||
+                      booking.user?.phone ||
                       (typeof booking.userId === "object" &&
                         booking.userId?.phone)) && (
                       <div className="flex items-center gap-3">
@@ -609,7 +608,8 @@ export function FlightBookingDetailModal({
                         <div>
                           <p className="text-sm text-gray-500">Số điện thoại</p>
                           <p className="font-medium">
-                            {booking.user?.phone ||
+                            {(typeof userId === "object" && userId?.phone) ||
+                              booking.user?.phone ||
                               (typeof booking.userId === "object" &&
                                 booking.userId?.phone)}
                           </p>

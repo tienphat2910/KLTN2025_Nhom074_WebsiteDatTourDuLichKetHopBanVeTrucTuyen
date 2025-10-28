@@ -20,6 +20,7 @@ export default function Login() {
 
   // Get redirect parameter
   const redirectPath = searchParams.get("redirect");
+  const tokenExpired = searchParams.get("expired");
 
   const [formData, setFormData] = useState({
     email: "",
@@ -28,7 +29,15 @@ export default function Login() {
 
   useEffect(() => {
     setIsVisible(true);
-  }, []);
+
+    // Show toast if token expired
+    if (tokenExpired === "true") {
+      toast.error("Phiên đăng nhập đã hết hạn", {
+        description: "Vui lòng đăng nhập lại để tiếp tục",
+        duration: 4000
+      });
+    }
+  }, [tokenExpired]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({

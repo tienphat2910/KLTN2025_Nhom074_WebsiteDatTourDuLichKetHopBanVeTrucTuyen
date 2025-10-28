@@ -250,6 +250,76 @@ const notifySystemAlert = (message, type = 'info') => {
     });
 };
 
+const notifyCancellationRequestCreated = (requestData) => {
+    console.log('📢 [socketHandler] notifyCancellationRequestCreated called');
+
+    // Extract user info if populated
+    const userInfo = requestData.userId && typeof requestData.userId === 'object'
+        ? {
+            _id: requestData.userId._id,
+            fullName: requestData.userId.fullName,
+            email: requestData.userId.email
+        }
+        : null;
+
+    const eventData = {
+        request: {
+            _id: requestData._id,
+            bookingId: requestData.bookingId,
+            userId: requestData.userId,
+            user: userInfo,
+            bookingType: requestData.bookingType,
+            reason: requestData.reason,
+            status: requestData.status,
+            createdAt: requestData.createdAt
+        },
+        message: `Yêu cầu hủy ${requestData.bookingType} mới từ ${userInfo?.fullName || 'người dùng'}`,
+        timestamp: new Date()
+    };
+
+    console.log('📤 [socketHandler] Emitting new_cancellation_request to admin_room');
+    emitToAdmins('new_cancellation_request', eventData);
+};
+
+const notifyCancellationRequestProcessed = (requestData, processStatus) => {
+    console.log('📢 [socketHandler] notifyCancellationRequestProcessed called');
+
+    // Extract user info if populated
+    const userInfo = requestData.userId && typeof requestData.userId === 'object'
+        ? {
+            _id: requestData.userId._id,
+            fullName: requestData.userId.fullName,
+            email: requestData.userId.email
+        }
+        : null;
+
+    const eventData = {
+        request: {
+            _id: requestData._id,
+            bookingId: requestData.bookingId,
+            userId: requestData.userId,
+            user: userInfo,
+            bookingType: requestData.bookingType,
+            reason: requestData.reason,
+            status: requestData.status,
+            adminNote: requestData.adminNote,
+            processedAt: requestData.processedAt
+        },
+        status: processStatus,
+        timestamp: new Date()
+    };
+
+    console.log('📤 [socketHandler] Emitting cancellation_request_processed to admin_room');
+    emitToAdmins('cancellation_request_processed', eventData);
+
+    // Also notify the user who made the request
+    const userIdToNotify = typeof requestData.userId === 'object'
+        ? requestData.userId._id
+        : requestData.userId;
+
+    emitToUser(userIdToNotify, 'cancellation_request_processed', eventData);
+};
+
 module.exports = {
     initSocket,
     emitToUser,
@@ -261,5 +331,7 @@ module.exports = {
     notifyBookingCancelled,
     notifyPaymentCompleted,
     notifyUserStatusChanged,
-    notifySystemAlert
+    notifySystemAlert,
+    notifyCancellationRequestCreated,
+    notifyCancellationRequestProcessed
 };

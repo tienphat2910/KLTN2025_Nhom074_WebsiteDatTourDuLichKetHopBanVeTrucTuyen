@@ -394,6 +394,64 @@ export default function BookingFlightPage() {
         }
       }
 
+      // If payment method is ZaloPay, handle ZaloPay payment flow
+      if (paymentMethod === "zalopay") {
+        try {
+          const zalopayResponse = await paymentService.createZaloPayPayment({
+            amount: finalTotal,
+            description: `Thanh toán vé máy bay: ${flight.flightCode}`,
+            extraData: JSON.stringify({
+              flightId: flight._id,
+              flightCode: flight.flightCode,
+              flightClassId: selectedClass._id,
+              numTickets,
+              pricePerTicket,
+              totalFlightPrice,
+              passengers,
+              note: bookingNote,
+              discountCode: appliedDiscount?.code,
+              discountAmount
+            })
+          });
+
+          if (zalopayResponse.success && zalopayResponse.data?.order_url) {
+            const bookingData = {
+              flightId: flight._id,
+              flightCode: flight.flightCode,
+              flightClassId: selectedClass._id,
+              numTickets,
+              pricePerTicket,
+              totalFlightPrice,
+              discountAmount,
+              finalTotal,
+              discountCode: appliedDiscount?.code,
+              status: "pending",
+              passengers,
+              note: bookingNote,
+              paymentMethod,
+              zalopayTransId: zalopayResponse.data.app_trans_id
+            };
+
+            localStorage.setItem(
+              "pendingFlightBooking",
+              JSON.stringify(bookingData)
+            );
+            toast.success("Đang chuyển hướng đến trang thanh toán ZaloPay...");
+            window.location.href = zalopayResponse.data.order_url;
+            return;
+          } else {
+            throw new Error(
+              zalopayResponse.message || "Không thể tạo thanh toán ZaloPay"
+            );
+          }
+        } catch (zalopayError) {
+          console.error("ZaloPay payment error:", zalopayError);
+          toast.error("Lỗi khi tạo thanh toán ZaloPay. Vui lòng thử lại!");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       // For other payment methods, proceed with normal booking flow
       const res = await bookingFlightService.createBookingFlight({
         flightId: flight._id,
@@ -842,9 +900,11 @@ export default function BookingFlightPage() {
                         onChange={(e) => setPaymentMethod(e.target.value)}
                         className="mr-3 text-blue-600"
                       />
-                      <div className="w-6 h-6 mr-2 bg-pink-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                        M
-                      </div>
+                      <img
+                        src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png"
+                        alt="MoMo"
+                        className="w-6 h-6 mr-2 object-contain"
+                      />
                       <label
                         htmlFor="momo"
                         className="font-semibold text-gray-800 cursor-pointer"
@@ -854,6 +914,42 @@ export default function BookingFlightPage() {
                     </div>
                     <p className="text-sm text-gray-600 ml-8">
                       Thanh toán qua ví điện tử MoMo
+                    </p>
+                  </div>
+
+                  {/* ZaloPay Payment */}
+                  <div
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      paymentMethod === "zalopay"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-blue-300"
+                    }`}
+                    onClick={() => setPaymentMethod("zalopay")}
+                  >
+                    <div className="flex items-center mb-2">
+                      <input
+                        type="radio"
+                        id="zalopay"
+                        name="paymentMethod"
+                        value="zalopay"
+                        checked={paymentMethod === "zalopay"}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="mr-3 text-blue-600"
+                      />
+                      <img
+                        src="https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png"
+                        alt="ZaloPay"
+                        className="w-6 h-6 mr-2 object-contain"
+                      />
+                      <label
+                        htmlFor="zalopay"
+                        className="font-semibold text-gray-800 cursor-pointer"
+                      >
+                        ZaloPay
+                      </label>
+                    </div>
+                    <p className="text-sm text-gray-600 ml-8">
+                      Thanh toán qua ví điện tử ZaloPay
                     </p>
                   </div>
 
