@@ -8,7 +8,8 @@ const nextConfig = {
             "res.cloudinary.com",
             "images.unsplash.com",
             "plus.unsplash.com",
-            "cloudinary.com"
+            "cloudinary.com",
+            "static.vinwonders.com"
         ]
     }
 };

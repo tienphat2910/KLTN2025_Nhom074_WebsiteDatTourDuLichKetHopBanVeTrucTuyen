@@ -2,7 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { uploadAvatar } = require('../utils/cloudinaryUpload'); // Updated import
-const { createFirebaseUser, signInFirebaseUser, sendFirebaseEmailVerification } = require('../utils/firebaseAuth');
+const { createFirebaseUser, signInFirebaseUser, sendFirebaseEmailVerification, signInWithGoogleCredential } = require('../utils/firebaseAuth');
 const { generateOTP, sendOTPEmail } = require('../utils/emailService');
 const { validateEmail } = require('../utils/emailValidation');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
@@ -807,6 +807,136 @@ router.post('/resend-verification', async (req, res) => {
         });
     } catch (error) {
         console.error('Resend verification error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server, vui lòng thử lại sau'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/google:
+ *   post:
+ *     summary: Login or register with Google
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Google ID token from Firebase
+ *     responses:
+ *       200:
+ *         description: Login/Register successful
+ *       401:
+ *         description: Invalid token
+ */
+router.post('/google', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        console.log('🔐 Google login request received');
+        console.log('📝 Token received:', idToken ? `Yes (${idToken.length} chars)` : 'No');
+
+        if (!idToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID token là bắt buộc'
+            });
+        }
+
+        // Verify Google token with Firebase
+        console.log('🔍 Verifying token with Google...');
+        const firebaseResult = await signInWithGoogleCredential(idToken);
+
+        console.log('✅ Firebase result:', {
+            success: firebaseResult.success,
+            email: firebaseResult.email,
+            error: firebaseResult.error
+        });
+
+        if (!firebaseResult.success) {
+            console.error('❌ Token verification failed:', firebaseResult.error);
+            return res.status(401).json({
+                success: false,
+                message: 'Token Google không hợp lệ',
+                error: firebaseResult.error
+            });
+        }
+
+        const { email, displayName, photoURL, uid, emailVerified } = firebaseResult;
+
+        console.log('👤 User info from Google:', { email, displayName, uid });
+
+        // Check if user exists
+        let user = await User.findOne({ email });
+
+        if (user) {
+            console.log('✅ Existing user found:', user.email);
+            // Update existing user
+            user.lastLogin = new Date();
+            if (!user.firebaseUid) {
+                user.firebaseUid = uid;
+            }
+            if (!user.avatar && photoURL) {
+                user.avatar = photoURL;
+            }
+            if (!user.isVerified && emailVerified) {
+                user.isVerified = true;
+                user.status = 'active';
+            }
+            await user.save();
+        } else {
+            console.log('➕ Creating new user:', email);
+            // Create new user
+            user = new User({
+                email,
+                fullName: displayName || email.split('@')[0],
+                avatar: photoURL,
+                firebaseUid: uid,
+                isVerified: emailVerified,
+                status: emailVerified ? 'active' : 'inactive',
+                role: 'user',
+                password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) // Random password for Google users
+            });
+            await user.save();
+
+            // Notify admins about new user registration
+            notifyUserRegistered(user);
+        }
+
+        // Generate JWT token
+        const token = generateToken(user._id);
+
+        res.status(200).json({
+            success: true,
+            message: user.isNew ? 'Đăng ký thành công với Google' : 'Đăng nhập thành công với Google',
+            data: {
+                user: {
+                    _id: user._id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    avatar: user.avatar,
+                    phone: user.phone,
+                    role: user.role,
+                    isVerified: user.isVerified,
+                    firebaseUid: user.firebaseUid,
+                    lastLogin: user.lastLogin,
+                    createdAt: user.createdAt,
+                    updatedAt: user.updatedAt
+                },
+                token
+            }
+        });
+    } catch (error) {
+        console.error('Google authentication error:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi server, vui lòng thử lại sau'

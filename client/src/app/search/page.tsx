@@ -9,6 +9,9 @@ import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour } from "@/services/tourService";
 import { destinationService, Destination } from "@/services/destinationService";
+import { activityService } from "@/services/activityService";
+import { Activity } from "@/types/activity";
+import { MapPin, Star, Clock } from "lucide-react";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -19,14 +22,17 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<{
     tours: Tour[];
     destinations: Destination[];
+    activities: Activity[];
   }>({
     tours: [],
-    destinations: []
+    destinations: [],
+    activities: []
   });
   const [activeTab, setActiveTab] = useState("all");
   const [sectionLoading, setSectionLoading] = useState({
     tours: true,
-    destinations: true
+    destinations: true,
+    activities: true
   });
 
   useEffect(() => {
@@ -34,24 +40,30 @@ export default function SearchPage() {
       setIsLoading(true);
       setSectionLoading({
         tours: true,
-        destinations: true
+        destinations: true,
+        activities: true
       });
 
       try {
-        // Use Promise.allSettled to handle multiple API calls independently
-        const [toursResult, destinationsResult] = await Promise.allSettled([
-          // Use parameters that match the defined interface
-          tourService.getTours({
-            // Use title parameter which should be supported by the API
-            title: query,
-            limit: 20
-          }),
-          // For destinations, use the correct parameter according to its interface
-          destinationService.getDestinations({
-            search: query, // Use 'search' instead of 'name' which isn't in the interface
-            limit: 20
-          })
-        ]);
+        // Perform parallel searches
+        const [toursResult, destinationsResult, activitiesResult] =
+          await Promise.allSettled([
+            // Search tours by title
+            tourService.getTours({
+              title: query,
+              limit: 50
+            }),
+            // Search destinations by search parameter
+            destinationService.getDestinations({
+              search: query,
+              limit: 50
+            }),
+            // Search activities by search parameter
+            activityService.getActivities({
+              search: query,
+              limit: 50
+            })
+          ]);
 
         // Process tours response
         const tours =
@@ -68,16 +80,26 @@ export default function SearchPage() {
             : [];
         setSectionLoading((prev) => ({ ...prev, destinations: false }));
 
+        // Process activities response
+        const activities =
+          activitiesResult.status === "fulfilled" &&
+          activitiesResult.value.success
+            ? activitiesResult.value.data.activities
+            : [];
+        setSectionLoading((prev) => ({ ...prev, activities: false }));
+
         setSearchResults({
           tours,
-          destinations
+          destinations,
+          activities
         });
       } catch (error) {
         console.error("Search error:", error);
         // Set all sections as loaded even in case of error
         setSectionLoading({
           tours: false,
-          destinations: false
+          destinations: false,
+          activities: false
         });
       } finally {
         setIsLoading(false);
@@ -91,7 +113,8 @@ export default function SearchPage() {
       setIsLoading(false);
       setSectionLoading({
         tours: false,
-        destinations: false
+        destinations: false,
+        activities: false
       });
       setIsVisible(true);
     }
@@ -99,21 +122,25 @@ export default function SearchPage() {
 
   // Calculate total results
   const totalResults =
-    searchResults.tours.length + searchResults.destinations.length;
+    searchResults.tours.length +
+    searchResults.destinations.length +
+    searchResults.activities.length;
 
   // Filter results based on active tab
   const getFilteredResults = () => {
     if (activeTab === "all") {
       return {
         tours: searchResults.tours.slice(0, 10),
-        destinations: searchResults.destinations.slice(0, 10)
+        destinations: searchResults.destinations.slice(0, 10),
+        activities: searchResults.activities.slice(0, 10)
       };
     }
 
     return {
       tours: activeTab === "tours" ? searchResults.tours : [],
       destinations:
-        activeTab === "destinations" ? searchResults.destinations : []
+        activeTab === "destinations" ? searchResults.destinations : [],
+      activities: activeTab === "activities" ? searchResults.activities : []
     };
   };
 
@@ -170,6 +197,16 @@ export default function SearchPage() {
                 onClick={() => setActiveTab("tours")}
               >
                 Tours ({searchResults.tours.length})
+              </button>
+              <button
+                className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  activeTab === "activities"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-blue-600"
+                }`}
+                onClick={() => setActiveTab("activities")}
+              >
+                Hoạt động ({searchResults.activities.length})
               </button>
               <button
                 className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${
@@ -281,11 +318,13 @@ export default function SearchPage() {
                           <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
                             {tour.title}
                           </h3>
-                          <div className="text-sm text-gray-600 mb-2">
-                            📍 {tour.departureLocation?.name || "Đang cập nhật"}
+                          <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                            <MapPin className="w-4 h-4" />
+                            {tour.departureLocation?.name || "Đang cập nhật"}
                           </div>
-                          <div className="text-sm text-gray-600 mb-2">
-                            ⏱️ {tour.duration || "Đang cập nhật"}
+                          <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {tour.duration || "Đang cập nhật"}
                           </div>
 
                           <div className="mt-auto pt-4">
@@ -298,6 +337,110 @@ export default function SearchPage() {
                               )}
                               <span className="text-sm text-gray-500 font-normal ml-1">
                                 /người
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Activities Section */}
+            {(activeTab === "all" || activeTab === "activities") && (
+              <div className="mb-12">
+                {/* Section header */}
+                {activeTab !== "activities" && (
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-gray-800">
+                      Hoạt động & Vui chơi
+                    </h2>
+                    {searchResults.activities.length >
+                      filteredResults.activities.length && (
+                      <button
+                        onClick={() => setActiveTab("activities")}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      >
+                        Xem tất cả ({searchResults.activities.length})
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Loading state for activities section */}
+                {sectionLoading.activities ? (
+                  <div className="py-8 text-center">
+                    <LoadingSpinner
+                      type="dots"
+                      size="md"
+                      text="Đang tìm kiếm hoạt động..."
+                    />
+                  </div>
+                ) : filteredResults.activities.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <p className="text-gray-500">
+                      Không tìm thấy hoạt động nào phù hợp
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredResults.activities.map((activity) => (
+                      <Link
+                        key={activity._id}
+                        href={`/activity/${activity.slug}`}
+                        className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 flex flex-col h-full"
+                      >
+                        <div className="relative h-48">
+                          <div className="w-full h-full bg-gray-200">
+                            {activity.gallery && activity.gallery[0] ? (
+                              <Image
+                                src={activity.gallery[0]}
+                                alt={activity.name}
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                className="object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <span className="text-gray-400">No image</span>
+                              </div>
+                            )}
+                          </div>
+                          {activity.popular && (
+                            <div className="absolute top-3 right-3 bg-yellow-500 text-yellow-900 px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-yellow-900" />
+                              Phổ biến
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="p-4 flex-1 flex flex-col">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+                            {activity.name}
+                          </h3>
+                          <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                            <MapPin className="w-4 h-4" />
+                            {activity.location?.name || "Đang cập nhật"}
+                          </div>
+                          <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {activity.operating_hours?.mon_to_sat ||
+                              "Đang cập nhật"}
+                          </div>
+
+                          <div className="mt-auto pt-4">
+                            <div className="font-bold text-orange-600">
+                              {activity.price?.retail?.adult
+                                ? new Intl.NumberFormat("vi-VN", {
+                                    style: "currency",
+                                    currency: "VND"
+                                  }).format(activity.price.retail.adult)
+                                : "Liên hệ"}
+                              <span className="text-sm text-gray-500 font-normal ml-1">
+                                /người lớn
                               </span>
                             </div>
                           </div>
@@ -370,8 +513,9 @@ export default function SearchPage() {
                             )}
                           </div>
                           {destination.popular && (
-                            <div className="absolute top-3 left-3 bg-yellow-500 text-yellow-900 px-2 py-1 rounded-md text-xs font-bold">
-                              ⭐ Phổ biến
+                            <div className="absolute top-3 left-3 bg-yellow-500 text-yellow-900 px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-yellow-900" />
+                              Phổ biến
                             </div>
                           )}
                         </div>
@@ -380,8 +524,9 @@ export default function SearchPage() {
                           <h3 className="text-lg font-semibold text-gray-800 mb-2">
                             {destination.name}
                           </h3>
-                          <div className="text-sm text-gray-600 mb-2">
-                            📍 {destination.region || "Việt Nam"}
+                          <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                            <MapPin className="w-4 h-4" />
+                            {destination.region || "Việt Nam"}
                           </div>
                           <p className="text-sm text-gray-500 mb-4 line-clamp-2">
                             {destination.description ||

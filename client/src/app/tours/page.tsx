@@ -14,6 +14,7 @@ export default function Tours() {
   const [isLoading, setIsLoading] = useState(true);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [tours, setTours] = useState<Tour[]>([]);
+  const [featuredTours, setFeaturedTours] = useState<Tour[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -36,7 +37,14 @@ export default function Tours() {
     tourService
       .getTours({ limit: 12, start: today, end: "2099-12-31" })
       .then((res) => {
-        if (res.success) setTours(res.data.tours);
+        if (res.success) {
+          const allTours = res.data.tours;
+          setTours(allTours);
+          // Lọc tour nổi bật
+          setFeaturedTours(
+            allTours.filter((t: Tour) => t.isFeatured).slice(0, 3)
+          );
+        }
         setIsLoading(false);
         setIsVisible(true);
       });
@@ -221,66 +229,161 @@ export default function Tours() {
       {/* Tours Section */}
       <section className="py-16 px-4">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {tours.map((tour, index) => (
-              <div
-                key={tour._id}
-                className={`card-surface rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 ${
-                  isVisible ? "animate-slide-up" : "opacity-0"
-                } border border-white/20`}
-              >
-                <div
-                  className="h-48 bg-cover bg-center"
-                  style={{
-                    backgroundImage: `url('${
-                      tour.images?.[0] || "/tour1.jpg"
-                    }')`
-                  }}
-                ></div>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold text-gray-800 line-clamp-2">
-                      {tour.title}
-                    </h3>
-                    <div className="flex items-center">
-                      <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+          {/* Tour nổi bật */}
+          {featuredTours.length > 0 && (
+            <div className="mb-16">
+              <div className="text-center mb-12">
+                <h2 className="text-4xl font-bold text-gray-800 mb-4">
+                  <span className="bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                    ⭐ Tour Nổi Bật
+                  </span>
+                </h2>
+                <p className="text-gray-600 text-lg">
+                  Những tour du lịch được yêu thích nhất
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {featuredTours.map((tour) => (
+                  <div
+                    key={tour._id}
+                    className={`card-surface rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-[1.02] transition-[transform,shadow] duration-200 ease-out will-change-transform ${
+                      isVisible ? "animate-slide-up" : "opacity-0"
+                    } border-2 border-yellow-400/30 bg-gradient-to-br from-yellow-50 to-white`}
+                  >
+                    <div className="relative">
+                      <div
+                        className="h-48 bg-cover bg-center"
+                        style={{
+                          backgroundImage: `url('${
+                            tour.images?.[0] || "/tour1.jpg"
+                          }')`
+                        }}
+                      ></div>
+                      <div className="absolute top-3 right-3 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                        Nổi bật
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-xl font-bold text-gray-800 line-clamp-2">
+                          {tour.title}
+                        </h3>
+                        <div className="flex items-center">
+                          <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                        </div>
+                      </div>
+                      <p className="text-gray-600 mb-2 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        {tour.departureLocation?.name || "Đang cập nhật"}
+                      </p>
+                      <p className="text-gray-600 mb-4 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        {tour.duration
+                          ? typeof tour.duration === "string"
+                            ? tour.duration
+                            : `${tour.duration} ngày`
+                          : calculateDuration(tour.startDate, tour.endDate) ||
+                            "Đang cập nhật"}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-2xl font-bold text-green-600">
+                            {tourService.formatPrice(
+                              tourService.getDiscountedPrice(
+                                tour.price,
+                                tour.discount
+                              )
+                            )}
+                          </span>
+                          <span className="text-gray-500 text-sm">/người</span>
+                        </div>
+                        <button
+                          className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-[1.02] transition-[transform,shadow] duration-150 ease-out will-change-transform"
+                          onClick={() => handleBookTour(tour.slug)}
+                        >
+                          Đặt Tour
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-gray-600 mb-2 flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    {tour.departureLocation?.name || "Đang cập nhật"}
-                  </p>
-                  <p className="text-gray-600 mb-4 flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    {tour.duration
-                      ? typeof tour.duration === "string"
-                        ? tour.duration
-                        : `${tour.duration} ngày`
-                      : calculateDuration(tour.startDate, tour.endDate) ||
-                        "Đang cập nhật"}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-2xl font-bold text-green-600">
-                        {tourService.formatPrice(
-                          tourService.getDiscountedPrice(
-                            tour.price,
-                            tour.discount
-                          )
-                        )}
-                      </span>
-                      <span className="text-gray-500 text-sm">/người</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tất cả tour */}
+          <div>
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-800 mb-4">
+                <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  🌏 Tất Cả Tour
+                </span>
+              </h2>
+              <p className="text-gray-600 text-lg">
+                Khám phá các tour du lịch đa dạng khắp Việt Nam
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {tours.map((tour, index) => (
+                <div
+                  key={tour._id}
+                  className={`card-surface rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-[1.02] transition-[transform,shadow] duration-200 ease-out will-change-transform ${
+                    isVisible ? "animate-slide-up" : "opacity-0"
+                  } border border-white/20`}
+                >
+                  <div
+                    className="h-48 bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url('${
+                        tour.images?.[0] || "/tour1.jpg"
+                      }')`
+                    }}
+                  ></div>
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 line-clamp-2">
+                        {tour.title}
+                      </h3>
+                      <div className="flex items-center">
+                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                      </div>
                     </div>
-                    <button
-                      className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                      onClick={() => handleBookTour(tour.slug)}
-                    >
-                      Đặt Tour
-                    </button>
+                    <p className="text-gray-600 mb-2 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      {tour.departureLocation?.name || "Đang cập nhật"}
+                    </p>
+                    <p className="text-gray-600 mb-4 flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {tour.duration
+                        ? typeof tour.duration === "string"
+                          ? tour.duration
+                          : `${tour.duration} ngày`
+                        : calculateDuration(tour.startDate, tour.endDate) ||
+                          "Đang cập nhật"}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-2xl font-bold text-green-600">
+                          {tourService.formatPrice(
+                            tourService.getDiscountedPrice(
+                              tour.price,
+                              tour.discount
+                            )
+                          )}
+                        </span>
+                        <span className="text-gray-500 text-sm">/người</span>
+                      </div>
+                      <button
+                        className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-[1.02] transition-[transform,shadow] duration-150 ease-out will-change-transform"
+                        onClick={() => handleBookTour(tour.slug)}
+                      >
+                        Đặt Tour
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>

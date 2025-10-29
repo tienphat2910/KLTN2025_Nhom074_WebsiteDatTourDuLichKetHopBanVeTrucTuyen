@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { env } from "@/config/env";
 
@@ -101,12 +102,16 @@ export default function Activity() {
       <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat transform scale-105 transition-transform duration-[10s] ease-in-out"
-            style={{
-              backgroundImage: "url('/images/banner-entertainment.webp')"
-            }}
-          ></div>
+          <Image
+            src="https://static.vinwonders.com/production/DJI_20231015142010_0245_D.jpg"
+            alt="Activities Background"
+            fill
+            priority
+            quality={90}
+            sizes="100vw"
+            className="object-cover"
+            style={{ objectPosition: "center 35%" }}
+          />
           <div className="absolute inset-0 bg-gradient-to-br from-orange-900/50 via-red-900/40 to-pink-900/50"></div>
         </div>
 
