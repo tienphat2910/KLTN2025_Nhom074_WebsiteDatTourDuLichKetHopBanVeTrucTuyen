@@ -487,18 +487,18 @@ export default function BookingActivityPage() {
   const finalTotal = calculateFinalTotal(subtotal);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
       <Header />
 
       <div className="py-8 px-4 mt-20">
         <div className="container mx-auto max-w-4xl">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6">
+            <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-6">
               <h1 className="text-2xl font-bold mb-2">
                 Đặt hoạt động: {activity.name}
               </h1>
-              <div className="flex items-center text-blue-100">
+              <div className="flex items-center text-orange-100">
                 <MapPin className="w-4 h-4 mr-2" />
                 {activity.location?.name ||
                   activity.location?.address ||
@@ -508,13 +508,13 @@ export default function BookingActivityPage() {
 
             <form onSubmit={handleSubmit} className="p-6">
               {/* Activity Info */}
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
-                <h2 className="font-semibold text-lg mb-3 text-blue-900">
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 mb-6">
+                <h2 className="font-semibold text-lg mb-3 text-orange-900">
                   Thông tin hoạt động
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-2 text-blue-600" />
+                    <Users className="w-4 h-4 mr-2 text-orange-600" />
                     <span>
                       {adults} người lớn, {children} trẻ em, {babies} em bé,{" "}
                       {seniors} người cao tuổi
@@ -522,7 +522,7 @@ export default function BookingActivityPage() {
                   </div>
                   {activity.operating_hours?.mon_to_sat && (
                     <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-2 text-blue-600" />
+                      <Clock className="w-4 h-4 mr-2 text-orange-600" />
                       <span>
                         Giờ hoạt động: {activity.operating_hours.mon_to_sat}
                       </span>
@@ -543,7 +543,7 @@ export default function BookingActivityPage() {
                     value={scheduledDate}
                     onChange={(e) => setScheduledDate(e.target.value)}
                     min={new Date().toISOString().split("T")[0]}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -576,7 +576,7 @@ export default function BookingActivityPage() {
                           onChange={(e) =>
                             updateParticipant(index, "fullName", e.target.value)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                           required
                           placeholder="Nhập họ và tên"
                         />
@@ -635,7 +635,7 @@ export default function BookingActivityPage() {
                           onChange={(e) =>
                             updateParticipant(index, "gender", e.target.value)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                           required
                         >
                           <option value="">Chọn giới tính</option>
@@ -658,7 +658,7 @@ export default function BookingActivityPage() {
                               e.target.value
                             )
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                           required
                         />
                       </div>
@@ -673,7 +673,7 @@ export default function BookingActivityPage() {
                           onChange={(e) =>
                             updateParticipant(index, "cccd", e.target.value)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                           placeholder="Nhập số CCCD/CMND (tùy chọn)"
                         />
                       </div>
@@ -691,7 +691,7 @@ export default function BookingActivityPage() {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   placeholder="Nhập ghi chú của bạn..."
                 />
               </div>
@@ -706,7 +706,7 @@ export default function BookingActivityPage() {
                     onClick={() => setPaymentMethod("cash")}
                     className={`cursor-pointer p-4 border-2 rounded-lg transition-all ${
                       paymentMethod === "cash"
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-orange-500 bg-orange-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
@@ -725,7 +725,7 @@ export default function BookingActivityPage() {
                     onClick={() => setPaymentMethod("momo")}
                     className={`cursor-pointer p-4 border-2 rounded-lg transition-all ${
                       paymentMethod === "momo"
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-orange-500 bg-orange-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
@@ -746,7 +746,7 @@ export default function BookingActivityPage() {
                     onClick={() => setPaymentMethod("zalopay")}
                     className={`cursor-pointer p-4 border-2 rounded-lg transition-all ${
                       paymentMethod === "zalopay"
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-orange-500 bg-orange-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
@@ -767,7 +767,7 @@ export default function BookingActivityPage() {
                     onClick={() => setPaymentMethod("bank_transfer")}
                     className={`cursor-pointer p-4 border-2 rounded-lg transition-all ${
                       paymentMethod === "bank_transfer"
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-orange-500 bg-orange-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
@@ -796,13 +796,13 @@ export default function BookingActivityPage() {
                         setDiscountCode(e.target.value.toUpperCase())
                       }
                       placeholder="Nhập mã giảm giá"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     />
                     <button
                       type="button"
                       onClick={handleApplyDiscount}
                       disabled={applyingDiscount}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                      className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400"
                     >
                       {applyingDiscount ? "Đang kiểm tra..." : "Áp dụng"}
                     </button>
@@ -837,7 +837,7 @@ export default function BookingActivityPage() {
               </div>
 
               {/* Price Summary */}
-              <div className="bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-lg border border-blue-200 mb-6">
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-lg border border-orange-200 mb-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-800">
                   Chi tiết giá
                 </h2>
@@ -913,7 +913,7 @@ export default function BookingActivityPage() {
                   )}
                 </div>
 
-                <div className="border-t border-blue-200 pt-3 space-y-2">
+                <div className="border-t border-orange-200 pt-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Tạm tính:</span>
                     <span className="font-medium">
@@ -930,7 +930,7 @@ export default function BookingActivityPage() {
                     </div>
                   )}
 
-                  <div className="flex justify-between text-lg font-bold text-blue-900 pt-2 border-t border-blue-200">
+                  <div className="flex justify-between text-lg font-bold text-orange-900 pt-2 border-t border-orange-200">
                     <span>Tổng cộng:</span>
                     <span>{finalTotal.toLocaleString("vi-VN")}đ</span>
                   </div>
@@ -941,7 +941,11 @@ export default function BookingActivityPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:from-green-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600 
+             text-white py-3 rounded-lg font-semibold 
+             hover:from-yellow-500 hover:via-orange-600 hover:to-red-700 
+             transition-all duration-300 transform hover:scale-[1.02] 
+             shadow-md hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? "Đang xử lý..." : "Xác nhận đặt chỗ"}
               </button>

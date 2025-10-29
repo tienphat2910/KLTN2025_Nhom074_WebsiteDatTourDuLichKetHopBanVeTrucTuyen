@@ -31,12 +31,15 @@ export function CancelBookingDialog({
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
-  const [isCheckingRequest, setIsCheckingRequest] = useState(true);
+  const [isCheckingRequest, setIsCheckingRequest] = useState(false);
 
   // Check if there's already a pending cancellation request for this booking
+  // Only check when dialog is opened
   useEffect(() => {
-    checkPendingRequest();
-  }, [booking._id]);
+    if (open) {
+      checkPendingRequest();
+    }
+  }, [open, booking._id]);
 
   const checkPendingRequest = async () => {
     try {
@@ -55,7 +58,8 @@ export function CancelBookingDialog({
         }
       }
     } catch (error) {
-      console.error("Check pending request error:", error);
+      // Silently handle error - 404 is expected when no request exists
+      console.debug("No pending cancellation request found");
     } finally {
       setIsCheckingRequest(false);
     }
@@ -98,25 +102,6 @@ export function CancelBookingDialog({
     }
   };
 
-  // Show loading state while checking for pending request
-  if (isCheckingRequest) {
-    return (
-      <Button variant="outline" size="sm" disabled>
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </Button>
-    );
-  }
-
-  // If there's already a pending request, show disabled button
-  if (hasPendingRequest) {
-    return (
-      <Button variant="outline" size="sm" disabled className="gap-2">
-        <CheckCircle className="h-4 w-4" />
-        Đã gửi yêu cầu
-      </Button>
-    );
-  }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -133,90 +118,115 @@ export function CancelBookingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-amber-800">
-              <p className="font-medium mb-1">Lưu ý quan trọng:</p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>Yêu cầu hủy sẽ được gửi đến admin để xem xét</li>
-                <li>Quá trình xử lý có thể mất 1-3 ngày làm việc</li>
-                <li>Bạn sẽ nhận được thông báo khi yêu cầu được xử lý</li>
-              </ul>
+        {/* Show loading state while checking for pending request */}
+        {isCheckingRequest ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <span className="ml-2 text-sm text-gray-600">Đang kiểm tra...</span>
+          </div>
+        ) : hasPendingRequest ? (
+          <div className="py-6">
+            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+              <div className="text-sm text-green-800">
+                <p className="font-medium">Đã có yêu cầu hủy đang chờ xử lý</p>
+                <p className="text-xs mt-1">
+                  Bạn đã gửi yêu cầu hủy cho booking này. Vui lòng đợi admin xử
+                  lý.
+                </p>
+              </div>
             </div>
           </div>
+        ) : (
+          <>
+            <div className="grid gap-4 py-4">
+              <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium mb-1">Lưu ý quan trọng:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Yêu cầu hủy sẽ được gửi đến admin để xem xét</li>
+                    <li>Quá trình xử lý có thể mất 1-3 ngày làm việc</li>
+                    <li>Bạn sẽ nhận được thông báo khi yêu cầu được xử lý</li>
+                  </ul>
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="reason">
-              Lý do hủy <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="reason"
-              placeholder="Vui lòng nhập lý do hủy booking (tối thiểu 10 ký tự)..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="min-h-[120px] resize-none"
-              disabled={isSubmitting}
-              maxLength={500}
-            />
-            <p className="text-xs text-gray-500">{reason.length}/500 ký tự</p>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="reason">
+                  Lý do hủy <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="reason"
+                  placeholder="Vui lòng nhập lý do hủy booking (tối thiểu 10 ký tự)..."
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="min-h-[120px] resize-none"
+                  disabled={isSubmitting}
+                  maxLength={500}
+                />
+                <p className="text-xs text-gray-500">
+                  {reason.length}/500 ký tự
+                </p>
+              </div>
 
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Thông tin booking:
-            </p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <p>
-                <span className="font-medium">Mã:</span>{" "}
-                {booking._id.slice(-8).toUpperCase()}
-              </p>
-              <p>
-                <span className="font-medium">Loại:</span>{" "}
-                {booking.bookingType === "tour"
-                  ? "Tour du lịch"
-                  : booking.bookingType === "activity"
-                  ? "Hoạt động"
-                  : "Chuyến bay"}
-              </p>
-              <p>
-                <span className="font-medium">Tổng tiền:</span>{" "}
-                {new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND"
-                }).format(booking.totalPrice)}
-              </p>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Thông tin booking:
+                </p>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <p>
+                    <span className="font-medium">Mã:</span>{" "}
+                    {booking._id.slice(-8).toUpperCase()}
+                  </p>
+                  <p>
+                    <span className="font-medium">Loại:</span>{" "}
+                    {booking.bookingType === "tour"
+                      ? "Tour du lịch"
+                      : booking.bookingType === "activity"
+                      ? "Hoạt động"
+                      : "Chuyến bay"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Tổng tiền:</span>{" "}
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND"
+                    }).format(booking.totalPrice)}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isSubmitting}
-          >
-            Hủy bỏ
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleSubmit}
-            disabled={
-              isSubmitting || !reason.trim() || reason.trim().length < 10
-            }
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Đang gửi...
-              </>
-            ) : (
-              "Gửi yêu cầu"
-            )}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleSubmit}
+                disabled={
+                  isSubmitting || !reason.trim() || reason.trim().length < 10
+                }
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang gửi...
+                  </>
+                ) : (
+                  "Gửi yêu cầu"
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

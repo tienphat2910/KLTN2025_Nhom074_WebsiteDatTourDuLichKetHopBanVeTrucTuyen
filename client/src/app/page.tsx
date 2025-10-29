@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { destinationService, Destination } from "@/services/destinationService";
@@ -39,6 +40,20 @@ const services = [
   }
 ];
 
+// Hero background images
+const heroBackgroundImages = [
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567963/LuTrip/anh-chup-man-hinh-2024-04-01-luc-12-crop-1711950811260_tulfat.png",
+  "https://images.unsplash.com/photo-1528127269322-539801943592?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762361/6_bdb1li.jpg",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762361/5_ypsfcz.jpg",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762361/3_cbuacd.jpg",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762361/7_skbwv2.jpg",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762362/1_h0dcbn.jpg",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762361/2_a5dzrk.jpg",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762363/9_dqin93.jpg",
+  "https://res.cloudinary.com/de5rurcwt/image/upload/v1761762364/8_xeeaao.jpg"
+];
+
 export default function Home() {
   const { isAuthLoading } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
@@ -54,6 +69,7 @@ export default function Home() {
   const [hasMounted, setHasMounted] = useState(false);
   const [popularActivities, setPopularActivities] = useState<any[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+  const [heroBackgroundImage, setHeroBackgroundImage] = useState<string>("");
 
   // Load popular destinations from the database
   useEffect(() => {
@@ -85,6 +101,9 @@ export default function Home() {
 
   useEffect(() => {
     setIsVisible(true);
+    // Random select a hero background image
+    const randomIndex = Math.floor(Math.random() * heroBackgroundImages.length);
+    setHeroBackgroundImage(heroBackgroundImages[randomIndex]);
   }, []);
 
   // Load featured/popular tours
@@ -204,15 +223,21 @@ export default function Home() {
       <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-[20s] ease-out"
-            style={{
-              backgroundImage:
-                "url('https://res.cloudinary.com/de5rurcwt/image/upload/v1754567963/LuTrip/anh-chup-man-hinh-2024-04-01-luc-12-crop-1711950811260_tulfat.png')",
-              filter: "brightness(0.7)"
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-purple-900/30 to-slate-900/40" />
+          {heroBackgroundImage && (
+            <>
+              <Image
+                src={heroBackgroundImage}
+                alt="Hero Background"
+                fill
+                priority
+                quality={90}
+                sizes="100vw"
+                className="object-cover object-center brightness-75"
+                style={{ objectPosition: "center 40%" }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-purple-900/20 to-slate-900/30" />
+            </>
+          )}
         </div>
 
         {/* Content */}
@@ -224,7 +249,11 @@ export default function Home() {
           >
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
               Khám Phá{" "}
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <span
+                className="bg-gradient-to-r from-red-700 via-yellow-400 to-red-700 
+                 bg-clip-text text-transparent 
+                 animate-gradient-x font-extrabold"
+              >
                 Việt Nam
               </span>
             </h1>
@@ -233,7 +262,12 @@ export default function Home() {
               vé máy bay và vé giải trí
             </p>
             <Link href="/destinations">
-              <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:shadow-2xl transform hover:scale-105 transition-all duration-300 shadow-xl">
+              <button
+                className="relative overflow-hidden bg-gradient-to-r from-red-700 via-yellow-400 to-red-700
+                     text-white px-8 py-4 rounded-full text-lg font-semibold
+                     transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-xl
+                     bg-[length:200%_200%] hover:animate-gradient-x"
+              >
                 Bắt Đầu Khám Phá
               </button>
             </Link>
@@ -313,13 +347,13 @@ export default function Home() {
       >
         {/* Background */}
         <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage:
-                "url('https://res.cloudinary.com/de5rurcwt/image/upload/v1754568367/LuTrip/hinh-nen-viet-nam-4k35_piebu1.jpg')",
-              filter: "brightness(1)"
-            }}
+          <Image
+            src="https://res.cloudinary.com/de5rurcwt/image/upload/v1754568367/LuTrip/hinh-nen-viet-nam-4k35_piebu1.jpg"
+            alt="Destinations Background"
+            fill
+            quality={85}
+            sizes="100vw"
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-blue-900/60" />
         </div>
@@ -368,11 +402,13 @@ export default function Home() {
                   } group`}
                 >
                   <div className="h-64 relative overflow-hidden">
-                    <div
-                      className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-110"
-                      style={{
-                        backgroundImage: `url('${destination.image}')`
-                      }}
+                    <Image
+                      src={destination.image}
+                      alt={destination.name}
+                      fill
+                      quality={85}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 33vw"
+                      className="object-cover object-center transition-transform duration-700 group-hover:scale-110"
                     />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
@@ -440,12 +476,13 @@ export default function Home() {
       >
         {/* Background */}
         <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: "url('/images/banner-tour.jpg')",
-              filter: "brightness(0.9)"
-            }}
+          <Image
+            src="/images/banner-tour.jpg"
+            alt="Tours Background"
+            fill
+            quality={85}
+            sizes="100vw"
+            className="object-cover object-center brightness-90"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-emerald-900/60" />
         </div>
@@ -492,14 +529,16 @@ export default function Home() {
                   } group`}
                 >
                   <div className="h-64 relative overflow-hidden">
-                    <div
-                      className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-110"
-                      style={{
-                        backgroundImage: `url('${
-                          (tour.images && tour.images[0]) ||
-                          "/images/banner-tour.jpg"
-                        }')`
-                      }}
+                    <Image
+                      src={
+                        (tour.images && tour.images[0]) ||
+                        "/images/banner-tour.jpg"
+                      }
+                      alt={tour.title}
+                      fill
+                      quality={85}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 33vw"
+                      className="object-cover object-center transition-transform duration-700 group-hover:scale-110"
                     />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end">
@@ -631,13 +670,15 @@ export default function Home() {
       >
         {/* Background */}
         <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: "url('/images/banner-entertainment.webp')",
-              filter: "brightness(0.9)"
-            }}
+          <Image
+            src="https://static.vinwonders.com/production/DJI_20231015142010_0245_D.jpg"
+            alt="Activities Background"
+            fill
+            quality={85}
+            sizes="100vw"
+            className="object-cover object-center brightness-90"
           />
+
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-orange-900/60" />
         </div>
 
@@ -688,11 +729,13 @@ export default function Home() {
                     {/* Gallery image nếu có */}
                     <div className="h-64 relative overflow-hidden">
                       {place.gallery && place.gallery.length > 0 ? (
-                        <div
-                          className="w-full h-full bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-110"
-                          style={{
-                            backgroundImage: `url('${place.gallery[0]}')`
-                          }}
+                        <Image
+                          src={place.gallery[0]}
+                          alt={place.name}
+                          fill
+                          quality={85}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 33vw"
+                          className="object-cover object-center transition-transform duration-700 group-hover:scale-110"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-orange-400 to-red-500" />

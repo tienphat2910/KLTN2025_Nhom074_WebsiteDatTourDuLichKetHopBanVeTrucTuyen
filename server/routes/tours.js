@@ -67,6 +67,23 @@ const router = express.Router();
  *         schema:
  *           type: string
  *         description: Filter by departure location
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         description: Search tours by title (case-insensitive)
+ *       - in: query
+ *         name: start
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tours starting from this date
+ *       - in: query
+ *         name: end
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tours ending before this date
  *     responses:
  *       200:
  *         description: Tours retrieved successfully
@@ -95,6 +112,12 @@ router.get('/', async (req, res) => {
 
         if (req.query.departure) {
             filter['departureLocation.name'] = { $regex: req.query.departure, $options: 'i' };
+        }
+
+        // Filter by title (for search functionality)
+        if (req.query.title) {
+            filter.title = { $regex: req.query.title, $options: 'i' };
+            console.log('🔍 Filtering tours by title:', req.query.title);
         }
 
         if (req.query.minPrice || req.query.maxPrice) {

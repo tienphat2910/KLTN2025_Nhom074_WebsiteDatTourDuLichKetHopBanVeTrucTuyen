@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Flight } from "@/services/flightService";
 import { airportService, Airport } from "@/services/airportService";
 import { addDays, format } from "date-fns";
@@ -545,7 +546,7 @@ export default function FlightSearchForm({
           {/* Nút hoán đổi */}
           <button
             type="button"
-            className="flex items-center justify-center bg-[#e3f2fd] hover:bg-[#bbdefb] rounded-full w-9 h-9 md:w-10 md:h-10 mx-0 md:mx-2 shadow transition-all border border-[#90caf9] flex-shrink-0 mb-2 md:mb-0"
+            className="flex items-center justify-center bg-transparent hover:opacity-80 rounded-full w-9 h-9 md:w-10 md:h-10 mx-0 md:mx-2 transition-all flex-shrink-0 mb-2 md:mb-0"
             style={{ marginTop: 0 }}
             aria-label="Hoán đổi sân bay"
             onClick={() => {
@@ -557,59 +558,24 @@ export default function FlightSearchForm({
               setArrivalSearch(tempText);
             }}
           >
-            {/* Mobile: icon bình thường */}
-            <span className="md:hidden rotate-90">
-              <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="11"
-                  fill="#e3f2fd"
-                  stroke="#90caf9"
-                  strokeWidth="1"
-                />
-                <path
-                  d="M15 8l4 4-4 4"
-                  stroke="#1976d2"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M9 15l-4-4 4-4"
-                  stroke="#1976d2"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+            {/* Mobile: xoay 90 độ */}
+            <span className="md:hidden">
+              <Image
+                src="https://res.cloudinary.com/de5rurcwt/image/upload/v1761764817/swap_sxtvze.png"
+                alt="Swap"
+                width={36}
+                height={36}
+                className="rotate-90"
+              />
             </span>
-            {/* Desktop: icon xoay 90 độ */}
-            <span className="hidden md:inline-block transform">
-              <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="11"
-                  fill="#e3f2fd"
-                  stroke="#90caf9"
-                  strokeWidth="1"
-                />
-                <path
-                  d="M15 8l4 4-4 4"
-                  stroke="#1976d2"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M9 15l-4-4 4-4"
-                  stroke="#1976d2"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+            {/* Desktop: không xoay */}
+            <span className="hidden md:inline-block">
+              <Image
+                src="https://res.cloudinary.com/de5rurcwt/image/upload/v1761764817/swap_sxtvze.png"
+                alt="Swap"
+                width={40}
+                height={40}
+              />
             </span>
           </button>
           {/* Đến - search sân bay */}
