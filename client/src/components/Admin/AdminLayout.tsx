@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { socketService } from "@/services/socketService";
@@ -16,6 +17,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -43,8 +45,37 @@ export function AdminLayout({
   title,
   breadcrumbs
 }: AdminLayoutProps) {
+  const router = useRouter();
+  const { user, isAuthLoading } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+
+  // Check authentication immediately
+  useEffect(() => {
+    if (!isAuthLoading) {
+      const token = localStorage.getItem("lutrip_admin_token");
+
+      // Redirect if no token or not admin
+      if (!token || !user || user.role !== "admin") {
+        router.replace("/login");
+        return;
+      }
+    }
+  }, [user, isAuthLoading, router]);
+
+  // Don't render anything while loading or if not authenticated
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  const token = localStorage.getItem("lutrip_admin_token");
+  if (!token || !user || user.role !== "admin") {
+    return null; // Don't render anything while redirecting
+  }
 
   useEffect(() => {
     // Connect to socket when admin logs in
