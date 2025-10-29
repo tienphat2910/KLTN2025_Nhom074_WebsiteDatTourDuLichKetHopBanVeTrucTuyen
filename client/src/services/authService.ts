@@ -339,5 +339,27 @@ export const authService = {
         message: "Lỗi kết nối server khi xóa ảnh"
       };
     }
+  },
+
+  // Google Sign In
+  googleSignIn: async (idToken: string): Promise<AuthResponse> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ idToken })
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Google sign in error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
   }
 };
