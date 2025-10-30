@@ -6,6 +6,16 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useParams, useRouter } from "next/navigation";
 import { env } from "@/config/env";
+import {
+  MapPin,
+  Clock,
+  Users,
+  Calendar,
+  DollarSign,
+  Info,
+  Tag,
+  Ticket
+} from "lucide-react";
 
 function formatVND(amount: number) {
   return amount?.toLocaleString("vi-VN") + "đ";
@@ -67,7 +77,7 @@ export default function ActivityDetail() {
       children: childCount.toString(),
       babies: babyCount.toString(),
       seniors: seniorCount.toString(),
-      date: selectedDate,
+      date: selectedDate
     });
 
     router.push(`/bookingactivity?${params.toString()}`);
@@ -218,62 +228,20 @@ export default function ActivityDetail() {
               </h1>
               <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-gray-600 mb-4">
                 <div className="flex items-center bg-orange-50 px-3 py-1 rounded-full">
-                  <svg
-                    className="w-4 h-4 mr-1 text-orange-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
+                  <MapPin className="w-4 h-4 mr-1 text-orange-600" />
                   <span className="font-medium">Địa điểm:</span>
                   <span className="ml-1 text-orange-700">
                     {activity.location?.name || "Chưa cập nhật"}
                   </span>
                 </div>
                 <div className="flex items-center">
-                  <svg
-                    className="w-4 h-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
+                  <Tag className="w-4 h-4 mr-1" />
                   <span>
                     Địa chỉ: {activity.location?.address || "Chưa cập nhật"}
                   </span>
                 </div>
                 <div className="flex items-center">
-                  <svg
-                    className="w-4 h-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                  <Clock className="w-4 h-4 mr-1" />
                   <span>
                     Giờ mở cửa: {activity.operating_hours?.mon_to_sat || "?"}{" "}
                     (T2-T7), {activity.operating_hours?.sunday_holidays || "?"}{" "}
@@ -336,7 +304,9 @@ export default function ActivityDetail() {
                 </ul>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <div className="text-4xl mb-4">📋</div>
+                  <div className="flex justify-center mb-4">
+                    <Info className="w-16 h-16 text-gray-400" />
+                  </div>
                   <h4 className="text-lg font-medium mb-2">
                     Chi tiết hoạt động đang được cập nhật
                   </h4>
@@ -371,7 +341,7 @@ export default function ActivityDetail() {
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={new Date().toISOString().split("T")[0]}
                       className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
@@ -453,9 +423,7 @@ export default function ActivityDetail() {
                       <button
                         type="button"
                         className="w-8 h-8 rounded-full bg-white border border-orange-300 flex items-center justify-center text-orange-600 hover:bg-orange-50 transition"
-                        onClick={() =>
-                          setBabyCount(Math.max(0, babyCount - 1))
-                        }
+                        onClick={() => setBabyCount(Math.max(0, babyCount - 1))}
                         disabled={babyCount <= 0}
                       >
                         −
@@ -530,7 +498,7 @@ export default function ActivityDetail() {
                   </div>
                 )}
               </div>
-              <button 
+              <button
                 onClick={handleBooking}
                 className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-base"
               >
