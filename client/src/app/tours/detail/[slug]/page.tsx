@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { tourService, Tour, ItineraryDay } from "@/services/tourService";
-import { Star, MapPin } from "lucide-react";
+import { Star, MapPin, Info } from "lucide-react";
 
 export default function TourDetailPage() {
   const params = useParams();
@@ -474,7 +474,21 @@ export default function TourDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
         <Header />
         <div className="container mx-auto px-4 pt-24 pb-16 text-center">
-          <div className="text-6xl mb-4">😕</div>
+          <div className="flex justify-center mb-4">
+            <svg
+              className="w-24 h-24 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-4">
             Không tìm thấy tour
           </h1>
@@ -1004,8 +1018,9 @@ export default function TourDetailPage() {
                                       {paragraph
                                         .trim()
                                         .startsWith("Lựa chọn") ? (
-                                        <div className="font-semibold text-blue-700 bg-blue-100 px-3 py-2 rounded-lg mb-2">
-                                          📋 {paragraph.trim()}
+                                        <div className="font-semibold text-blue-700 bg-blue-100 px-3 py-2 rounded-lg mb-2 flex items-center gap-2">
+                                          <Info className="w-4 h-4 flex-shrink-0" />
+                                          <span>{paragraph.trim()}</span>
                                         </div>
                                       ) : paragraph.trim().includes(":") &&
                                         paragraph.length < 100 ? (
@@ -1152,7 +1167,22 @@ export default function TourDetailPage() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <div className="text-4xl mb-4">📋</div>
+                  <div className="flex justify-center mb-4">
+                    <svg
+                      className="w-16 h-16 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.5"
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01"
+                      />
+                    </svg>
+                  </div>
                   <h4 className="text-lg font-medium mb-2">
                     Lịch trình đang được cập nhật
                   </h4>

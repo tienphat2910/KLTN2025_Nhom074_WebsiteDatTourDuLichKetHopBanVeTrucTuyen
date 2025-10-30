@@ -233,9 +233,10 @@ export default function Tours() {
           {featuredTours.length > 0 && (
             <div className="mb-16">
               <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-gray-800 mb-4">
+                <h2 className="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center gap-2">
+                  <Star className="w-10 h-10 text-yellow-500 fill-yellow-500" />
                   <span className="bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                    ⭐ Tour Nổi Bật
+                    Tour Nổi Bật
                   </span>
                 </h2>
                 <p className="text-gray-600 text-lg">
@@ -314,9 +315,22 @@ export default function Tours() {
           {/* Tất cả tour */}
           <div>
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-800 mb-4">
+              <h2 className="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center gap-2">
+                <svg
+                  className="w-10 h-10 text-emerald-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
                 <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                  🌏 Tất Cả Tour
+                  Tất Cả Tour
                 </span>
               </h2>
               <p className="text-gray-600 text-lg">

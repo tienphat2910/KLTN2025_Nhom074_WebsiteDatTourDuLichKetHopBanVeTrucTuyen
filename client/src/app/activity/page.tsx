@@ -9,7 +9,7 @@ import { env } from "@/config/env";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-
+import { MapPin, FileText, Ticket } from "lucide-react";
 function formatVND(amount: number) {
   return amount.toLocaleString("vi-VN") + "đ";
 }
@@ -248,15 +248,21 @@ export default function Activity() {
                   <h3 className="text-xl font-bold text-gray-800 mb-2">
                     {activity.name}
                   </h3>
-                  <p className="text-gray-600 mb-2">
+                  <p className="text-gray-600 mb-2 flex items-center gap-2 leading-tight">
+                    <MapPin className="w-5 h-5 text-orange-600 shrink-0" />
                     {activity.location?.address
-                      ? `📍 ${activity.location.address}`
-                      : "📍 Địa chỉ chưa cập nhật"}
+                      ? activity.location.address
+                      : "Địa chỉ chưa cập nhật"}
                   </p>
 
-                  <p className="text-gray-600 mb-4">{activity.description}</p>
+                  <p className="text-gray-600 mb-4 flex items-center gap-2 leading-tight">
+                    <FileText className="w-5 h-5 text-sky-600 shrink-0" />
+                    {activity.description}
+                  </p>
+
                   <div className="mb-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">
+                    <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                      <Ticket className="w-5 h-5 text-sky-600" />
                       Giá vé:
                     </h4>
                     {activity.price && activity.price.retail && (
