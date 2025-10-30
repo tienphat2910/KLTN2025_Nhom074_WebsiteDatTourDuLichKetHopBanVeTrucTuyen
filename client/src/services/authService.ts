@@ -30,6 +30,11 @@ export interface AuthResponse {
   success: boolean;
   message: string;
   code?: string;
+  errors?: Array<{
+    field: string;
+    message: string;
+  }>;
+  passwordStrength?: "weak" | "medium" | "strong";
   data?: {
     user?: {
       _id?: string;

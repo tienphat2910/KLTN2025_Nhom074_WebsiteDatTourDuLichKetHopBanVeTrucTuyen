@@ -2,18 +2,24 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Flight, flightService } from "@/services/flightService";
-import {
-  bookingFlightService,
-  PassengerInfo
-} from "@/services/bookingFlightService";
+import { flightService, Flight } from "@/services/flightService";
+import { bookingFlightService } from "@/services/bookingFlightService";
 import { paymentService } from "@/services/paymentService";
-import { discountService } from "@/services/discountService";
 import { Discount } from "@/types/discount";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import Header from "@/components/Header/Header";
+import Footer from "@/components/Footer/Footer";
+import { Users, DollarSign } from "lucide-react";
+import {
+  DiscountCode,
+  PaymentMethod,
+  SpecialRequest,
+  validateFlightPassengers,
+  validatePaymentMethod,
+  FlightPassenger,
+} from "@/components/Booking/Common";
+import { FlightPassengerForm, FlightPriceSummary } from "@/components/Booking/Flight";
 
 export default function BookingFlightPage() {
   const searchParams = useSearchParams();
@@ -41,14 +47,13 @@ export default function BookingFlightPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Passenger information
-  const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
+  const [passengers, setPassengers] = useState<FlightPassenger[]>([]);
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
 
   // Discount information
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(null);
-  const [applyingDiscount, setApplyingDiscount] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -65,7 +70,7 @@ export default function BookingFlightPage() {
 
   // Initialize passenger info
   useEffect(() => {
-    const passengerList: PassengerInfo[] = [];
+    const passengerList: FlightPassenger[] = [];
 
     // Add adults (require CCCD)
     for (let i = 0; i < adults; i++) {
@@ -75,7 +80,7 @@ export default function BookingFlightPage() {
         email: i === 0 && user?.email ? user.email : undefined,
         gender: "Nam",
         dateOfBirth: "",
-        identityNumber: "", // Required for adults
+        identityNumber: "",
         nationality: "Vietnam"
       });
     }
@@ -86,7 +91,7 @@ export default function BookingFlightPage() {
         fullName: "",
         gender: "Nam",
         dateOfBirth: "",
-        identityNumber: undefined, // Not required for children
+        identityNumber: undefined,
         nationality: "Vietnam"
       });
     }
@@ -97,7 +102,7 @@ export default function BookingFlightPage() {
         fullName: "",
         gender: "Nam",
         dateOfBirth: "",
-        identityNumber: undefined, // Not required for infants
+        identityNumber: undefined,
         nationality: "Vietnam"
       });
     }
@@ -124,7 +129,7 @@ export default function BookingFlightPage() {
 
   const updatePassenger = (
     index: number,
-    field: keyof PassengerInfo,
+    field: keyof FlightPassenger,
     value: string
   ) => {
     setPassengers((prev) =>
@@ -132,55 +137,6 @@ export default function BookingFlightPage() {
         i === index ? { ...passenger, [field]: value } : passenger
       )
     );
-  };
-
-  const getPassengerTypeLabel = (type: "adult" | "child" | "infant") => {
-    switch (type) {
-      case "adult":
-        return "Người lớn";
-      case "child":
-        return "Trẻ em";
-      case "infant":
-        return "Em bé";
-      default:
-        return "";
-    }
-  };
-
-  // Apply discount code
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) {
-      toast.error("Vui lòng nhập mã giảm giá!");
-      return;
-    }
-
-    setApplyingDiscount(true);
-    try {
-      const response = await discountService.validateDiscount(
-        discountCode.trim().toUpperCase()
-      );
-
-      if (response.success && response.data) {
-        setAppliedDiscount(response.data);
-        toast.success("Áp dụng mã giảm giá thành công!");
-      } else {
-        setAppliedDiscount(null);
-        toast.error(response.message || "Mã giảm giá không hợp lệ!");
-      }
-    } catch (error) {
-      console.error("Validate discount error:", error);
-      setAppliedDiscount(null);
-      toast.error("Có lỗi xảy ra khi kiểm tra mã giảm giá!");
-    } finally {
-      setApplyingDiscount(false);
-    }
-  };
-
-  // Remove applied discount
-  const handleRemoveDiscount = () => {
-    setAppliedDiscount(null);
-    setDiscountCode("");
-    toast.success("Đã xóa mã giảm giá!");
   };
 
   // Calculate discount amount
@@ -213,46 +169,11 @@ export default function BookingFlightPage() {
     }
 
     // Validate passenger information
-    const hasEmptyFields = passengers.some((passenger, index) => {
-      // First passenger (contact person - always adult)
-      if (index === 0) {
-        return (
-          !passenger.fullName.trim() ||
-          !passenger.phoneNumber?.trim() ||
-          !passenger.email?.trim() ||
-          !passenger.gender.trim() ||
-          !passenger.dateOfBirth.trim() ||
-          !passenger.identityNumber?.trim()
-        );
-      }
-
-      // Other passengers
-      // Adults need CCCD, but children and infants don't
-      const isAdult = index < adults;
-      if (isAdult) {
-        return (
-          !passenger.fullName.trim() ||
-          !passenger.gender.trim() ||
-          !passenger.dateOfBirth.trim() ||
-          !passenger.identityNumber?.trim()
-        );
-      } else {
-        // Children and infants don't need CCCD
-        return (
-          !passenger.fullName.trim() ||
-          !passenger.gender.trim() ||
-          !passenger.dateOfBirth.trim()
-        );
-      }
-    });
-
-    if (hasEmptyFields) {
-      toast.error("Vui lòng nhập đầy đủ thông tin tất cả hành khách!");
+    if (!validateFlightPassengers(passengers, adults)) {
       return;
     }
 
-    if (!paymentMethod) {
-      toast.error("Vui lòng chọn hình thức thanh toán!");
+    if (!validatePaymentMethod(paymentMethod)) {
       return;
     }
 
@@ -282,12 +203,8 @@ export default function BookingFlightPage() {
       // Calculate total amount with age-based pricing
       const numTickets = adults + children + infants;
       const baseTicketPrice = selectedClass.price;
-      const pricePerTicket = baseTicketPrice; // Keep for backend compatibility
+      const pricePerTicket = baseTicketPrice;
 
-      // Age-based pricing:
-      // Adults (12+ years): 100% of ticket price
-      // Children (2-11 years): 90% of ticket price
-      // Infants (under 2 years): 10% of ticket price
       const adultsTotal = adults * baseTicketPrice;
       const childrenTotal = children * (baseTicketPrice * 0.9);
       const infantsTotal = infants * (baseTicketPrice * 0.1);
@@ -374,10 +291,7 @@ export default function BookingFlightPage() {
               momoOrderId: momoResponse.data.orderId
             };
 
-            localStorage.setItem(
-              "pendingFlightBooking",
-              JSON.stringify(bookingData)
-            );
+            localStorage.setItem("pendingBooking", JSON.stringify(bookingData));
             toast.success("Đang chuyển hướng đến trang thanh toán MoMo...");
             paymentService.redirectToMoMoPayment(momoResponse.data.payUrl);
             return;
@@ -432,10 +346,7 @@ export default function BookingFlightPage() {
               zalopayTransId: zalopayResponse.data.app_trans_id
             };
 
-            localStorage.setItem(
-              "pendingFlightBooking",
-              JSON.stringify(bookingData)
-            );
+            localStorage.setItem("pendingBooking", JSON.stringify(bookingData));
             toast.success("Đang chuyển hướng đến trang thanh toán ZaloPay...");
             window.location.href = zalopayResponse.data.order_url;
             return;
@@ -464,7 +375,7 @@ export default function BookingFlightPage() {
         finalTotal,
         discountCode: appliedDiscount?.code,
         status: "pending",
-        passengers,
+        passengers: passengers as any,
         note: bookingNote,
         paymentMethod
       });
@@ -527,64 +438,42 @@ export default function BookingFlightPage() {
     (c) => c.className.toLowerCase() === seatClass.toLowerCase()
   );
   const baseTicketPrice = selectedClass?.price || 0;
-  const numTickets = adults + children + infants;
-
-  // Age-based pricing calculation for display
-  const adultsPrice = baseTicketPrice; // 100%
-  const childrenPrice = baseTicketPrice * 0.9; // 90%
-  const infantsPrice = baseTicketPrice * 0.1; // 10%
-
-  const adultsTotal = adults * adultsPrice;
-  const childrenTotal = children * childrenPrice;
-  const infantsTotal = infants * infantsPrice;
-  const totalFlightPrice = adultsTotal + childrenTotal + infantsTotal;
-
-  // Calculate add-ons for display
-  const baggageTotal = extraBaggage * EXTRA_BAGGAGE_PRICE;
-  const insuranceTotal = insurance ? numTickets * INSURANCE_PRICE : 0;
-  const prioritySeatTotal = prioritySeat ? numTickets * PRIORITY_SEAT_PRICE : 0;
-  const addOnsTotal = baggageTotal + insuranceTotal + prioritySeatTotal;
-
-  const subtotalWithAddons = totalFlightPrice + addOnsTotal;
-  const finalTotal = calculateFinalTotal(subtotalWithAddons);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-blue-100">
       <Header />
-
-      <div className="py-8 px-4 mt-20">
-        <div className="container mx-auto max-w-4xl">
+      <div className="py-8 mt-16 sm:mt-20">
+        <div className="container mx-auto px-4 max-w-4xl">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-sky-600 to-blue-600 text-white p-6">
               <h1 className="text-2xl font-bold mb-2">
-                Đặt vé: {flight.departureAirportId.city} →{" "}
-                {flight.arrivalAirportId.city}
+                Đặt vé máy bay: {flight.flightCode}
               </h1>
-              <div className="flex flex-col sm:flex-row sm:items-center text-blue-100 gap-2 text-sm">
-                <span className="mr-4">
-                  👥 {adults + children + infants} hành khách
+              <div className="flex items-center text-blue-100">
+                <span className="mr-4 flex items-center gap-1">
+                  <Users className="w-4 h-4" /> {adults + children + infants} hành khách
                 </span>
-                <span className="mr-4">✈️ {flight.flightCode}</span>
-                <span className="mr-4">
-                  🎫 Hạng{" "}
-                  {flight.classes?.find(
-                    (c) => c.className.toLowerCase() === seatClass.toLowerCase()
-                  )?.className ||
-                    (seatClass === "economy"
-                      ? "Phổ thông"
-                      : seatClass === "business"
-                      ? "Thương gia"
-                      : seatClass)}
-                </span>
-                {(extraBaggage > 0 || insurance || prioritySeat) && (
-                  <span className="mr-4">➕ Có dịch vụ bổ sung</span>
-                )}
-                <span>
-                  💰 Tổng: {finalTotal.toLocaleString("vi-VN")} đ
+                <span className="flex items-center gap-1">
+                  <DollarSign className="w-4 h-4" /> Tổng:{" "}
+                  {(() => {
+                    const adultsTotal = adults * baseTicketPrice;
+                    const childrenTotal = children * (baseTicketPrice * 0.9);
+                    const infantsTotal = infants * (baseTicketPrice * 0.1);
+                    const totalFlightPrice = adultsTotal + childrenTotal + infantsTotal;
+                    const numTickets = adults + children + infants;
+                    const baggageTotal = extraBaggage * EXTRA_BAGGAGE_PRICE;
+                    const insuranceTotal = insurance ? numTickets * INSURANCE_PRICE : 0;
+                    const prioritySeatTotal = prioritySeat ? numTickets * PRIORITY_SEAT_PRICE : 0;
+                    const addOnsTotal = baggageTotal + insuranceTotal + prioritySeatTotal;
+                    const subtotal = totalFlightPrice + addOnsTotal;
+                    const finalTotal = calculateFinalTotal(subtotal);
+                    return finalTotal.toLocaleString("vi-VN");
+                  })()}{" "}
+                  đ
                   {appliedDiscount && (
-                    <span className="ml-2 text-yellow-300 text-xs">
-                      (Đã giảm giá)
+                    <span className="ml-2 text-yellow-300 text-sm">
+                      (Đã áp dụng mã giảm giá)
                     </span>
                   )}
                 </span>
@@ -602,584 +491,48 @@ export default function BookingFlightPage() {
                 </p>
               </div>
 
-              {/* Passenger Information */}
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Thông tin hành khách
-                </h3>
+              {/* Passenger Information - Using Component */}
+              <FlightPassengerForm
+                passengers={passengers}
+                adults={adults}
+                children={children}
+                infants={infants}
+                updatePassenger={updatePassenger}
+              />
 
-                <div className="space-y-6">
-                  {passengers.map((passenger, index) => {
-                    // Determine passenger type based on index
-                    let passengerType: "adult" | "child" | "infant" = "adult";
-                    let passengerNumber = index + 1;
+              {/* Discount Code Section - Using Component */}
+              <DiscountCode
+                discountCode={discountCode}
+                setDiscountCode={setDiscountCode}
+                appliedDiscount={appliedDiscount}
+                setAppliedDiscount={setAppliedDiscount}
+              />
 
-                    if (index < adults) {
-                      passengerType = "adult";
-                      passengerNumber = index + 1;
-                    } else if (index < adults + children) {
-                      passengerType = "child";
-                      passengerNumber = index - adults + 1;
-                    } else {
-                      passengerType = "infant";
-                      passengerNumber = index - adults - children + 1;
-                    }
+              {/* Payment Method Selection - Using Component (No Cash for Flights) */}
+              <PaymentMethod
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                showCash={false}
+              />
 
-                    const isContactPerson = index === 0;
+              {/* Special Requests - Using Component */}
+              <SpecialRequest note={note} setNote={setNote} />
 
-                    return (
-                      <div
-                        key={index}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="flex items-center mb-4">
-                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                            {getPassengerTypeLabel(passengerType)}{" "}
-                            {passengerNumber}
-                          </span>
-                          {isContactPerson && (
-                            <span className="ml-2 text-xs text-gray-500">
-                              (Người liên hệ)
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {/* Full Name */}
-                          <div className="lg:col-span-1">
-                            <label className="block font-semibold mb-1 text-gray-700">
-                              Họ và tên *
-                            </label>
-                            <input
-                              type="text"
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                              value={passenger.fullName}
-                              onChange={(e) =>
-                                updatePassenger(
-                                  index,
-                                  "fullName",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Nhập họ và tên"
-                              required
-                            />
-                          </div>
-
-                          {/* Gender */}
-                          <div className="lg:col-span-1">
-                            <label className="block font-semibold mb-1 text-gray-700">
-                              Giới tính *
-                            </label>
-                            <select
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                              value={passenger.gender}
-                              onChange={(e) =>
-                                updatePassenger(index, "gender", e.target.value)
-                              }
-                              required
-                            >
-                              <option value="" className="text-gray-400">
-                                Chọn giới tính
-                              </option>
-                              <option value="Nam" className="text-gray-900">
-                                Nam
-                              </option>
-                              <option value="Nữ" className="text-gray-900">
-                                Nữ
-                              </option>
-                            </select>
-                          </div>
-
-                          {/* Date of Birth */}
-                          <div className="lg:col-span-1">
-                            <label className="block font-semibold mb-1 text-gray-700">
-                              Ngày sinh *
-                            </label>
-                            <input
-                              type="date"
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                              value={passenger.dateOfBirth}
-                              onChange={(e) =>
-                                updatePassenger(
-                                  index,
-                                  "dateOfBirth",
-                                  e.target.value
-                                )
-                              }
-                              required
-                            />
-                          </div>
-
-                          {/* CCCD - Only for adults */}
-                          {passengerType === "adult" && (
-                            <div className="lg:col-span-1">
-                              <label className="block font-semibold mb-1 text-gray-700">
-                                CCCD/CMND *
-                              </label>
-                              <input
-                                type="text"
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                                value={passenger.identityNumber || ""}
-                                onChange={(e) =>
-                                  updatePassenger(
-                                    index,
-                                    "identityNumber",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Nhập số CCCD/CMND (9 hoặc 12 số)"
-                                required
-                              />
-                            </div>
-                          )}
-
-                          {/* Phone (only for contact person) */}
-                          {isContactPerson && (
-                            <div className="lg:col-span-2">
-                              <label className="block font-semibold mb-1 text-gray-700">
-                                Số điện thoại *
-                              </label>
-                              <input
-                                type="tel"
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                                value={passenger.phoneNumber || ""}
-                                onChange={(e) =>
-                                  updatePassenger(
-                                    index,
-                                    "phoneNumber",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Nhập số điện thoại"
-                                required
-                              />
-                            </div>
-                          )}
-
-                          {/* Email (only for contact person) */}
-                          {isContactPerson && (
-                            <div className="lg:col-span-2">
-                              <label className="block font-semibold mb-1 text-gray-700">
-                                Email *
-                              </label>
-                              <input
-                                type="email"
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                                value={passenger.email || ""}
-                                onChange={(e) =>
-                                  updatePassenger(
-                                    index,
-                                    "email",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Nhập email"
-                                required
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Discount Code Section */}
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Mã giảm giá (không bắt buộc)
-                </h3>
-
-                {!appliedDiscount ? (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400 uppercase"
-                      value={discountCode}
-                      onChange={(e) =>
-                        setDiscountCode(e.target.value.toUpperCase())
-                      }
-                      placeholder="Nhập mã giảm giá"
-                      disabled={applyingDiscount}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyDiscount}
-                      disabled={applyingDiscount || !discountCode.trim()}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                    >
-                      {applyingDiscount ? (
-                        <span className="flex items-center">
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Đang kiểm tra...
-                        </span>
-                      ) : (
-                        "Áp dụng"
-                      )}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-green-600 font-bold">✓</span>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-green-800">
-                            Mã giảm giá: {appliedDiscount.code}
-                          </p>
-                          <p className="text-sm text-green-700">
-                            {appliedDiscount.description}
-                          </p>
-                          <p className="text-sm text-green-600 font-medium">
-                            Giảm:{" "}
-                            {appliedDiscount.discountType === "percentage"
-                              ? `${appliedDiscount.value}%`
-                              : `${appliedDiscount.value.toLocaleString(
-                                  "vi-VN"
-                                )} đ`}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleRemoveDiscount}
-                        className="text-red-500 hover:text-red-700 font-medium text-sm"
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Payment Method Selection */}
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Hình thức thanh toán
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Momo Payment */}
-                  <div
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      paymentMethod === "momo"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
-                    onClick={() => setPaymentMethod("momo")}
-                  >
-                    <div className="flex items-center mb-2">
-                      <input
-                        type="radio"
-                        id="momo"
-                        name="paymentMethod"
-                        value="momo"
-                        checked={paymentMethod === "momo"}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="mr-3 text-blue-600"
-                      />
-                      <img
-                        src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png"
-                        alt="MoMo"
-                        className="w-6 h-6 mr-2 object-contain"
-                      />
-                      <label
-                        htmlFor="momo"
-                        className="font-semibold text-gray-800 cursor-pointer"
-                      >
-                        MoMo
-                      </label>
-                    </div>
-                    <p className="text-sm text-gray-600 ml-8">
-                      Thanh toán qua ví điện tử MoMo
-                    </p>
-                  </div>
-
-                  {/* ZaloPay Payment */}
-                  <div
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      paymentMethod === "zalopay"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
-                    onClick={() => setPaymentMethod("zalopay")}
-                  >
-                    <div className="flex items-center mb-2">
-                      <input
-                        type="radio"
-                        id="zalopay"
-                        name="paymentMethod"
-                        value="zalopay"
-                        checked={paymentMethod === "zalopay"}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="mr-3 text-blue-600"
-                      />
-                      <img
-                        src="https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png"
-                        alt="ZaloPay"
-                        className="w-6 h-6 mr-2 object-contain"
-                      />
-                      <label
-                        htmlFor="zalopay"
-                        className="font-semibold text-gray-800 cursor-pointer"
-                      >
-                        ZaloPay
-                      </label>
-                    </div>
-                    <p className="text-sm text-gray-600 ml-8">
-                      Thanh toán qua ví điện tử ZaloPay
-                    </p>
-                  </div>
-
-                  {/* Bank Transfer */}
-                  <div
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      paymentMethod === "bank_transfer"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
-                    onClick={() => setPaymentMethod("bank_transfer")}
-                  >
-                    <div className="flex items-center mb-2">
-                      <input
-                        type="radio"
-                        id="bank_transfer"
-                        name="paymentMethod"
-                        value="bank_transfer"
-                        checked={paymentMethod === "bank_transfer"}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="mr-3 text-blue-600"
-                      />
-                      <div className="text-2xl mr-2">🏦</div>
-                      <label
-                        htmlFor="bank_transfer"
-                        className="font-semibold text-gray-800 cursor-pointer"
-                      >
-                        Chuyển khoản
-                      </label>
-                    </div>
-                    <p className="text-sm text-gray-600 ml-8">
-                      Chuyển khoản ngân hàng
-                    </p>
-                  </div>
-                </div>
-
-                {/* Payment Information Display */}
-                {paymentMethod === "momo" && (
-                  <div className="mt-4 p-4 bg-pink-50 border border-pink-200 rounded-lg">
-                    <h4 className="font-semibold text-pink-800 mb-2 flex items-center">
-                      <div className="w-5 h-5 mr-2 bg-pink-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                        M
-                      </div>
-                      Thông tin thanh toán MoMo
-                    </h4>
-                    <div className="text-sm text-pink-700">
-                      <p className="mb-1">
-                        <strong>Số điện thoại:</strong> 0376549230
-                      </p>
-                      <p className="mb-1">
-                        <strong>Tên tài khoản:</strong> Nguyễn Tiến Phát
-                      </p>
-                      <p className="text-xs text-pink-600 mt-2">
-                        * Sau khi đặt vé, bạn sẽ nhận được thông báo với thông
-                        tin chi tiết để thanh toán
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === "bank_transfer" && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
-                      <div className="text-blue-600 mr-2">🏦</div>
-                      Thông tin chuyển khoản
-                    </h4>
-                    <div className="text-sm text-blue-700 space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="mb-1">
-                            <strong>Ngân hàng:</strong> Ngân hàng TMCP Tiên
-                            Phong
-                          </p>
-                          <p className="mb-1">
-                            <strong>Số tài khoản:</strong> 6886 8686 547
-                          </p>
-                          <p className="mb-1">
-                            <strong>Chủ tài khoản:</strong> NGUYEN TIEN PHAT
-                          </p>
-                        </div>
-                        <div>
-                          <p className="mb-1">
-                            <strong>Chi nhánh:</strong> TPBank - Chi nhánh
-                            TP.HCM
-                          </p>
-                          <p className="text-xs text-blue-600 mt-2">
-                            * Vui lòng ghi rõ nội dung chuyển khoản theo hướng
-                            dẫn sau khi đặt vé
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Special Requests */}
-              <div className="mb-6">
-                <label className="block font-semibold mb-2 text-gray-700">
-                  Yêu cầu đặc biệt (không bắt buộc)
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400"
-                  rows={3}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Nhập yêu cầu đặc biệt của bạn..."
-                />
-              </div>
-
-              {/* Flight Summary */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-800 mb-3">
-                  Chi tiết đặt vé
-                </h3>
-                <div className="space-y-2 text-sm text-black">
-                  <div className="flex justify-between">
-                    <span>Hạng ghế:</span>
-                    <span className="font-medium capitalize">
-                      {flight.classes?.find(
-                        (c) =>
-                          c.className.toLowerCase() === seatClass.toLowerCase()
-                      )?.className ||
-                        (seatClass === "economy"
-                          ? "Phổ thông"
-                          : seatClass === "business"
-                          ? "Thương gia"
-                          : seatClass)}
-                    </span>
-                  </div>
-                  {adults > 0 && (
-                    <div className="flex justify-between">
-                      <span>
-                        Người lớn ({adults} x{" "}
-                        {adultsPrice.toLocaleString("vi-VN")} đ)
-                      </span>
-                      <span className="font-medium">
-                        {adultsTotal.toLocaleString("vi-VN")} đ
-                      </span>
-                    </div>
-                  )}
-                  {children > 0 && (
-                    <div className="flex justify-between">
-                      <span>
-                        Trẻ em 2-11 tuổi ({children} x{" "}
-                        {childrenPrice.toLocaleString("vi-VN")} đ - 90%)
-                      </span>
-                      <span className="font-medium">
-                        {childrenTotal.toLocaleString("vi-VN")} đ
-                      </span>
-                    </div>
-                  )}
-                  {infants > 0 && (
-                    <div className="flex justify-between">
-                      <span>
-                        Em bé dưới 2 tuổi ({infants} x{" "}
-                        {infantsPrice.toLocaleString("vi-VN")} đ - 10%)
-                      </span>
-                      <span className="font-medium">
-                        {infantsTotal.toLocaleString("vi-VN")} đ
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Subtotal */}
-                  <div className="flex justify-between border-t pt-2">
-                    <span>Tạm tính vé:</span>
-                    <span className="font-medium">
-                      {totalFlightPrice.toLocaleString("vi-VN")} đ
-                    </span>
-                  </div>
-
-                  {/* Add-ons */}
-                  {extraBaggage > 0 && (
-                    <div className="flex justify-between">
-                      <span>🧳 Hành lý thêm ({extraBaggage} kiện):</span>
-                      <span className="font-medium">
-                        {baggageTotal.toLocaleString("vi-VN")} đ
-                      </span>
-                    </div>
-                  )}
-                  {insurance && (
-                    <div className="flex justify-between">
-                      <span>🛡️ Bảo hiểm ({numTickets} người):</span>
-                      <span className="font-medium">
-                        {insuranceTotal.toLocaleString("vi-VN")} đ
-                      </span>
-                    </div>
-                  )}
-                  {prioritySeat && (
-                    <div className="flex justify-between">
-                      <span>💺 Chỗ ngồi ưu tiên ({numTickets} người):</span>
-                      <span className="font-medium">
-                        {prioritySeatTotal.toLocaleString("vi-VN")} đ
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Subtotal with add-ons */}
-                  {addOnsTotal > 0 && (
-                    <div className="flex justify-between border-t pt-2">
-                      <span>Tổng phụ:</span>
-                      <span className="font-medium">
-                        {subtotalWithAddons.toLocaleString("vi-VN")} đ
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Discount */}
-                  {appliedDiscount &&
-                    calculateDiscountAmount(subtotalWithAddons) > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span>Giảm giá ({appliedDiscount.code}):</span>
-                        <span className="font-medium">
-                          -
-                          {calculateDiscountAmount(
-                            subtotalWithAddons
-                          ).toLocaleString("vi-VN")}{" "}
-                          đ
-                        </span>
-                      </div>
-                    )}
-
-                  {/* Final Total */}
-                  <div className="border-t pt-2 flex justify-between text-lg font-bold text-sky-600">
-                    <span>Tổng tiền:</span>
-                    <span>{finalTotal.toLocaleString("vi-VN")} đ</span>
-                  </div>
-                </div>
-              </div>
+              {/* Flight Summary - Using Component */}
+              <FlightPriceSummary
+                adults={adults}
+                children={children}
+                infants={infants}
+                baseTicketPrice={baseTicketPrice}
+                extraBaggage={extraBaggage}
+                insurance={insurance}
+                prioritySeat={prioritySeat}
+                EXTRA_BAGGAGE_PRICE={EXTRA_BAGGAGE_PRICE}
+                INSURANCE_PRICE={INSURANCE_PRICE}
+                PRIORITY_SEAT_PRICE={PRIORITY_SEAT_PRICE}
+                appliedDiscount={appliedDiscount}
+                calculateDiscountAmount={calculateDiscountAmount}
+              />
 
               {/* Submit Button */}
               <button
@@ -1219,7 +572,6 @@ export default function BookingFlightPage() {
           </div>
         </div>
       </div>
-
       <Footer />
     </div>
   );

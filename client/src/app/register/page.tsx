@@ -7,16 +7,24 @@ import { toast } from "sonner";
 import { authService } from "@/services/authService";
 import { useLoading } from "@/contexts/LoadingContext";
 import { LoadingSpinner } from "@/components/Loading";
-import { GoogleSignInButton } from "@/components/Auth";
+import {
+  GoogleSignInButton,
+  PasswordStrength,
+  AnimatedInput,
+  HoverButton
+} from "@/components/Auth";
+import { validateRegistration } from "@/lib/validation";
 
 export default function Register() {
   const [isVisible, setIsVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [showPasswordStrength, setShowPasswordStrength] = useState(false);
   const router = useRouter();
   const { startLoading, stopLoading } = useLoading();
 
@@ -32,16 +40,39 @@ export default function Register() {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
     setError("");
+    // Clear field error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    // Show password strength when user starts typing password
+    if (name === "password") {
+      setShowPasswordStrength(value.length > 0);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validation
+    const validation = validateRegistration(formData);
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
+      setError("Vui lòng kiểm tra lại thông tin");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
+      setFieldErrors({ confirmPassword: "Mật khẩu không khớp!" });
       setError("Mật khẩu không khớp!");
       return;
     }
@@ -49,6 +80,7 @@ export default function Register() {
     setIsLoading(true);
     startLoading("auth");
     setError("");
+    setFieldErrors({});
 
     try {
       const result = await authService.register({
@@ -69,6 +101,16 @@ export default function Register() {
           );
         }, 1000);
       } else {
+        // Handle server validation errors
+        if (result.errors && Array.isArray(result.errors)) {
+          const errors: Record<string, string> = {};
+          result.errors.forEach((err: any) => {
+            if (err.field) {
+              errors[err.field] = err.message;
+            }
+          });
+          setFieldErrors(errors);
+        }
         setError(result.message);
       }
     } catch (error) {
@@ -106,6 +148,36 @@ export default function Register() {
 
   const nextStep = () => {
     if (currentStep < 1) {
+      // Validate step 1 fields before moving to next step
+      const errors: Record<string, string> = {};
+
+      // Import validation functions
+      const { validateFullName, validateEmail } = require("@/lib/validation");
+
+      // Validate full name
+      const fullNameValidation = validateFullName(formData.fullName);
+      if (!fullNameValidation.isValid) {
+        errors.fullName = fullNameValidation.message;
+      }
+
+      // Validate email
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.isValid) {
+        errors.email = emailValidation.message;
+      }
+
+      // If there are errors, show them and don't proceed
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        toast.error("Vui lòng kiểm tra lại thông tin", {
+          description: "Họ tên và email chưa đúng định dạng",
+          duration: 3000
+        });
+        return;
+      }
+
+      // Clear errors and proceed to next step
+      setFieldErrors({});
       setCurrentStep(currentStep + 1);
     }
   };
@@ -177,9 +249,16 @@ export default function Register() {
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8 relative z-10">
             <Link href="/" className="inline-block mb-4 sm:mb-6">
-              <span className="text-2xl sm:text-3xl font-bold text-gray-800">
-                🌎 LuTrip
-              </span>
+              <div className="flex items-center justify-center gap-2">
+                <img
+                  src="/images/logo/logo-lutrip.png"
+                  alt="LuTrip Logo"
+                  className="w-10 h-10 sm:w-12 sm:h-12"
+                />
+                <span className="text-2xl sm:text-3xl font-bold text-gray-800">
+                  LuTrip
+                </span>
+              </div>
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
               {emailSent ? "Kiểm Tra Email" : "Đăng Ký"}
@@ -289,65 +368,61 @@ export default function Register() {
                     style={{ transform: `translateX(-${currentStep * 100}%)` }}
                   >
                     {/* Step 1: Personal Info */}
-                    <div className="w-full flex-shrink-0 space-y-4 sm:space-y-6">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="fullName"
-                          value={formData.fullName}
-                          onChange={handleChange}
-                          placeholder="Họ và tên"
-                          required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
-                        />
-                      </div>
+                    <div className="w-full flex-shrink-0 space-y-4 sm:space-y-6 pt-2">
+                      <AnimatedInput
+                        name="fullName"
+                        label="Họ và tên (VD: Nguyễn A)"
+                        type="text"
+                        value={formData.fullName}
+                        onChange={handleChange}
+                        error={fieldErrors.fullName}
+                      />
 
-                      <div className="relative">
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          placeholder="Email"
-                          required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
-                        />
-                      </div>
+                      <AnimatedInput
+                        name="email"
+                        label="Email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        error={fieldErrors.email}
+                      />
 
-                      <button
+                      <HoverButton
                         type="button"
                         onClick={nextStep}
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg text-sm sm:text-base"
+                        variant="purple"
                       >
                         Tiếp theo
-                      </button>
+                      </HoverButton>
                     </div>
 
                     {/* Step 2: Password */}
-                    <div className="w-full flex-shrink-0 space-y-4 sm:space-y-6">
-                      <div className="relative">
-                        <input
-                          type="password"
+                    <div className="w-full flex-shrink-0 space-y-4 sm:space-y-6 pt-2">
+                      <div>
+                        <AnimatedInput
                           name="password"
+                          label="Mật khẩu"
+                          type="password"
                           value={formData.password}
                           onChange={handleChange}
-                          placeholder="Mật khẩu"
-                          required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
+                          error={fieldErrors.password}
+                        />
+                        {/* Password Strength Indicator */}
+                        <PasswordStrength
+                          password={formData.password}
+                          show={showPasswordStrength}
                         />
                       </div>
 
-                      <div className="relative">
-                        <input
-                          type="password"
-                          name="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleChange}
-                          placeholder="Xác nhận mật khẩu"
-                          required
-                          className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 text-sm sm:text-base"
-                        />
-                      </div>
+                      <AnimatedInput
+                        name="confirmPassword"
+                        label="Xác nhận mật khẩu"
+                        type="password"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        onPaste={(e) => e.preventDefault()}
+                        error={fieldErrors.confirmPassword}
+                      />
 
                       <div className="flex space-x-3 sm:space-x-4">
                         <button
@@ -357,13 +432,15 @@ export default function Register() {
                         >
                           Quay lại
                         </button>
-                        <button
-                          type="submit"
-                          disabled={isLoading}
-                          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-300 shadow-lg text-sm sm:text-base disabled:opacity-50"
-                        >
-                          {isLoading ? "Đang đăng ký..." : "Đăng Ký"}
-                        </button>
+                        <div className="flex-1">
+                          <HoverButton
+                            type="submit"
+                            disabled={isLoading}
+                            variant="purple"
+                          >
+                            {isLoading ? "Đang đăng ký..." : "Đăng Ký"}
+                          </HoverButton>
+                        </div>
                       </div>
                     </div>
                   </div>

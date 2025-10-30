@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Flight } from "@/services/flightService";
 import Link from "next/link";
+import { Plane } from "lucide-react";
 
 interface SearchParams {
   from: string;
@@ -355,7 +356,7 @@ export default function FlightSearchResults({
                           <div className="flex items-center justify-center w-full">
                             <div className="flex-1 border-t border-gray-300"></div>
                             <div className="px-2">
-                              <span className="text-sky-500">✈️</span>
+                              <Plane className="w-5 h-5 text-sky-500" />
                             </div>
                             <div className="flex-1 border-t border-gray-300"></div>
                           </div>
