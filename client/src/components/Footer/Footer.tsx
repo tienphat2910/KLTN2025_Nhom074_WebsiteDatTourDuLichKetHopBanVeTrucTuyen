@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Handshake, Heart } from "lucide-react";
+import { FaGooglePlay, FaApple } from "react-icons/fa";
 
 export default function Footer() {
   const [openSections, setOpenSections] = useState<string[]>([]);
@@ -222,49 +224,32 @@ export default function Footer() {
                 isOpen("app") ? "block" : "hidden lg:block"
               }`}
             >
-              <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
+              <div className="flex flex-col gap-3 mb-4 md:mb-6">
+                {/* Google Play */}
                 <a
                   href="#"
-                  className="block bg-slate-700 hover:bg-slate-600 transition-colors rounded-lg p-2 md:p-3 border border-slate-600"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-600 bg-black px-4 py-3 text-white shadow-lg transition-all hover:bg-white hover:text-black hover:border-slate-400"
                 >
-                  <div className="flex items-center space-x-2 md:space-x-3">
-                    <div className="w-6 md:w-8 h-6 md:h-8 bg-gradient-to-r from-green-500 to-green-600 rounded flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-3 md:w-5 h-3 md:h-5 text-white"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-400">TẢI TRÊN</div>
-                      <div className="text-xs md:text-sm font-semibold">
-                        Google Play
-                      </div>
-                    </div>
+                  <FaGooglePlay className="text-2xl flex-shrink-0" />
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-xs font-medium">Tải xuống trên</span>
+                    <span className="text-base md:text-lg font-semibold">
+                      Google Play
+                    </span>
                   </div>
                 </a>
+
+                {/* App Store */}
                 <a
                   href="#"
-                  className="block bg-slate-700 hover:bg-slate-600 transition-colors rounded-lg p-2 md:p-3 border border-slate-600"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-600 bg-black px-4 py-3 text-white shadow-lg transition-all hover:bg-white hover:text-black hover:border-slate-400"
                 >
-                  <div className="flex items-center space-x-2 md:space-x-3">
-                    <div className="w-6 md:w-8 h-6 md:h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-3 md:w-5 h-3 md:h-5 text-white"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M18.71,19.5C17.88,20.74 17,21.95 15.66,21.97C14.32,22 13.89,21.18 12.37,21.18C10.84,21.18 10.37,21.95 9.09,22C7.79,22.05 6.8,20.68 5.96,19.47C4.25,17 2.94,12.45 4.7,9.39C5.57,7.87 7.13,6.91 8.82,6.88C10.1,6.86 11.32,7.75 12.11,7.75C12.89,7.75 14.37,6.68 15.92,6.84C16.57,6.87 18.39,7.1 19.56,8.82C19.47,8.88 17.39,10.1 17.41,12.63C17.44,15.65 20.06,16.66 20.09,16.67C20.06,16.74 19.67,18.11 18.71,19.5M13,3.5C13.73,2.67 14.94,2.04 15.94,2C16.07,3.17 15.6,4.35 14.9,5.19C14.21,6.04 13.07,6.7 11.95,6.61C11.8,5.46 12.36,4.26 13,3.5Z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-400">TẢI TRÊN</div>
-                      <div className="text-xs md:text-sm font-semibold">
-                        App Store
-                      </div>
-                    </div>
+                  <FaApple className="text-2xl flex-shrink-0" />
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-xs font-medium">Tải về trên</span>
+                    <span className="text-base md:text-lg font-semibold">
+                      App Store
+                    </span>
                   </div>
                 </a>
               </div>
@@ -332,54 +317,46 @@ export default function Footer() {
       <div className="border-t border-slate-700">
         <div className="container mx-auto px-4 py-6 md:py-8">
           <div className="text-center mb-4 md:mb-6">
-            <h3 className="text-base md:text-lg font-semibold mb-4 md:mb-6 text-blue-400">
-              🤝 Hợp tác với LuTrip
+            <h3 className="text-base md:text-lg font-semibold mb-4 md:mb-6 text-blue-400 flex items-center justify-center gap-2">
+              <Handshake className="w-5 h-5" />
+              Hợp tác với LuTrip
             </h3>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
             {/* IATA */}
-            <div className="flex items-center space-x-2 bg-slate-700 px-3 md:px-4 py-2 rounded-lg">
-              <div className="w-8 md:w-10 h-6 md:h-8 bg-white rounded flex items-center justify-center">
-                <span className="text-xs font-bold text-slate-800">IATA</span>
-              </div>
-              <span className="text-xs md:text-sm text-slate-300">
-                Certified Travel Agent
-              </span>
+            <div className="flex items-center justify-center bg-slate-700 px-3 md:px-4 py-3 md:py-4 rounded-lg">
+              <img
+                src="https://ik.imagekit.io/tvlk/image/imageResource/2017/12/13/1513150321127-5096be77d2a19401b476853e54ba2cc6.svg?tr=h-35,q-75"
+                alt="IATA"
+                className="h-6 md:h-8 w-auto object-contain"
+              />
             </div>
 
-            {/* Security */}
-            <div className="flex items-center space-x-2 bg-slate-700 px-3 md:px-4 py-2 rounded-lg">
-              <div className="w-6 md:w-8 h-6 md:h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <svg
-                  className="w-3 md:w-4 h-3 md:h-4 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11.5C15.4,11.5 16,12.1 16,12.7V16.2C16,16.8 15.4,17.3 14.8,17.3H9.2C8.6,17.3 8,16.8 8,16.2V12.8C8,12.2 8.6,11.7 9.2,11.7V10.1C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,9.5V11.4H13.5V9.5C13.5,8.7 12.8,8.2 12,8.2Z" />
-                </svg>
-              </div>
-              <span className="text-xs md:text-sm text-slate-300 hidden sm:inline">
-                Đã Đăng Ký Bộ Công Thương
-              </span>
-              <span className="text-xs text-slate-300 sm:hidden">
-                Bộ Công Thương
-              </span>
+            {/* Bộ Công Thương */}
+            <div className="flex items-center justify-center bg-slate-700 px-3 md:px-4 py-3 md:py-4 rounded-lg">
+              <img
+                src="https://ik.imagekit.io/tvlk/image/imageResource/2019/09/23/1569229181629-eeb038ad844874f951326d0a8534bf48.png?tr=q-75,w-100"
+                alt="Bộ Công Thương"
+                className="h-6 md:h-8 w-auto object-contain"
+              />
             </div>
 
-            {/* SSL */}
-            <div className="flex items-center space-x-2 bg-slate-700 px-3 md:px-4 py-2 rounded-lg">
-              <div className="w-6 md:w-8 h-6 md:h-8 bg-blue-600 rounded flex items-center justify-center">
-                <svg
-                  className="w-3 md:w-4 h-3 md:h-4 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M16.5,7V6.5C16.5,4 14.5,2 12,2C9.5,2 7.5,4 7.5,6.5V7H6V18H18V7H16.5M12,3.5C13.7,3.5 15,4.8 15,6.5V7H9V6.5C9,4.8 10.3,3.5 12,3.5Z" />
-                </svg>
-              </div>
-              <span className="text-xs md:text-sm text-slate-300">
-                SSL Secured
-              </span>
+            {/* MoMo */}
+            <div className="flex items-center justify-center bg-slate-700 px-3 md:px-4 py-3 md:py-4 rounded-lg">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png"
+                alt="MoMo"
+                className="h-6 md:h-8 w-auto object-contain"
+              />
+            </div>
+
+            {/* ZaloPay */}
+            <div className="flex items-center justify-center bg-slate-700 px-3 md:px-4 py-3 md:py-4 rounded-lg">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/vi/7/77/ZaloPay_Logo.png"
+                alt="ZaloPay"
+                className="h-6 md:h-8 w-auto object-contain"
+              />
             </div>
           </div>
         </div>
@@ -390,16 +367,27 @@ export default function Footer() {
         <div className="container mx-auto px-4 py-4 md:py-6">
           <div className="flex flex-col md:flex-row justify-between items-center text-center md:text-left">
             <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4 md:mb-0">
-              <div className="text-xl md:text-2xl font-bold text-blue-400">
-                🌎 LuTrip
+              <div className="flex items-center space-x-2">
+                <img
+                  src="/images/logo/logo-lutrip.png"
+                  alt="LuTrip Logo"
+                  className="w-8 h-8 md:w-10 md:h-10"
+                />
+                <span className="text-xl md:text-2xl font-bold text-blue-400">
+                  LuTrip
+                </span>
               </div>
               <p className="text-slate-400 text-xs md:text-sm">
                 Đồng hành cùng bạn khám phá Việt Nam
               </p>
             </div>
             <div className="text-slate-400 text-xs md:text-sm text-center md:text-right">
-              <p>© 2024 LuTrip. All rights reserved.</p>
-              <p className="mt-1">Made with ❤️ for travelers in Vietnam</p>
+              <p>© 2025 LuTrip. All rights reserved.</p>
+              <p className="mt-1 flex items-center justify-center md:justify-end gap-1">
+                Made with{" "}
+                <Heart className="w-3 h-3 md:w-4 md:h-4 text-red-500 fill-red-500" />{" "}
+                for travelers in Vietnam
+              </p>
             </div>
           </div>
         </div>

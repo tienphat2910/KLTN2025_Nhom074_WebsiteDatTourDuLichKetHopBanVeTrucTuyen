@@ -7,6 +7,21 @@ import Footer from "@/components/Footer";
 import { Flight, flightService } from "@/services/flightService";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import Link from "next/link";
+import {
+  Plane,
+  PlaneTakeoff,
+  PlaneLanding,
+  Clock,
+  CalendarDays,
+  Users,
+  Luggage,
+  ShieldCheck,
+  Armchair,
+  CheckCircle2,
+  Ticket,
+  Tag
+} from "lucide-react";
+import { FaTicketAlt } from "react-icons/fa";
 
 export default function FlightDetailPage() {
   const { id } = useParams();
@@ -172,7 +187,7 @@ export default function FlightDetailPage() {
         </div>
         <div className="relative z-10 text-center">
           <div className="flex flex-col items-center justify-center">
-            <div className="text-5xl md:text-6xl mb-2">✈️</div>
+            <Plane className="w-12 h-12 md:w-16 md:h-16 mb-2 text-white" />
             <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-xl mb-2">
               Chi tiết chuyến bay
             </h1>
@@ -203,7 +218,7 @@ export default function FlightDetailPage() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">🛫</span>
+                    <PlaneTakeoff className="w-6 h-6 md:w-8 md:h-8" />
                     <div className="text-center sm:text-left">
                       <div className="font-bold text-lg md:text-xl">
                         {flight.departureAirportId.city}
@@ -216,12 +231,12 @@ export default function FlightDetailPage() {
                   <div className="flex items-center justify-center">
                     <div className="flex items-center gap-2 text-sky-200">
                       <div className="w-8 h-px bg-sky-200"></div>
-                      <span className="text-lg">✈️</span>
+                      <Plane className="w-5 h-5" />
                       <div className="w-8 h-px bg-sky-200"></div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">🛬</span>
+                    <PlaneLanding className="w-6 h-6 md:w-8 md:h-8" />
                     <div className="text-center sm:text-left">
                       <div className="font-bold text-lg md:text-xl">
                         {flight.arrivalAirportId.city}
@@ -319,7 +334,7 @@ export default function FlightDetailPage() {
               {/* Flight Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl mb-1">⏱️</div>
+                  <Clock className="w-8 h-8 mx-auto mb-1 text-sky-600" />
                   <div className="text-xs text-gray-600">Thời lượng</div>
                   <div className="font-semibold text-sky-700">
                     {Math.floor(flight.durationMinutes / 60)}h{" "}
@@ -327,21 +342,21 @@ export default function FlightDetailPage() {
                   </div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl mb-1">✈️</div>
+                  <Plane className="w-8 h-8 mx-auto mb-1 text-sky-600" />
                   <div className="text-xs text-gray-600">Máy bay</div>
                   <div className="font-semibold text-sky-700">
                     {flight.aircraft?.model || "Đang cập nhật"}
                   </div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl mb-1">📊</div>
+                  <CheckCircle2 className="w-8 h-8 mx-auto mb-1 text-green-600" />
                   <div className="text-xs text-gray-600">Trạng thái</div>
                   <div className="font-semibold text-green-700">
                     {flight.status}
                   </div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl mb-1">🎫</div>
+                  <Armchair className="w-8 h-8 mx-auto mb-1 text-sky-600" />
                   <div className="text-xs text-gray-600">Ghế trống</div>
                   <div className="font-semibold text-sky-700">
                     {flight.classes?.find((c) => c.className === "Economy")
@@ -519,7 +534,10 @@ export default function FlightDetailPage() {
                   {/* Age-based Pricing Info */}
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="text-xs text-blue-800">
-                      <strong>📋 Chính sách giá vé:</strong>
+                      <strong>
+                        <Tag className="inline-block w-4 h-4 mr-1 text-current" />
+                        Chính sách giá vé:
+                      </strong>
                       <ul className="mt-1 ml-4 space-y-1">
                         <li>• Người lớn (≥12 tuổi): 100% giá vé</li>
                         <li>• Trẻ em (2-11 tuổi): 90% giá vé</li>
@@ -540,7 +558,8 @@ export default function FlightDetailPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="font-semibold text-gray-800 flex items-center gap-2">
-                            🧳 Hành lý ký gửi thêm
+                            <Luggage className="w-5 h-5 text-sky-600" />
+                            Hành lý ký gửi thêm
                           </div>
                           <div className="text-sm text-gray-600">
                             {EXTRA_BAGGAGE_PRICE.toLocaleString("vi-VN")} đ/kiện
@@ -583,7 +602,8 @@ export default function FlightDetailPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="font-semibold text-gray-800 flex items-center gap-2">
-                            🛡️ Bảo hiểm du lịch
+                            <ShieldCheck className="w-5 h-5 text-sky-600" />
+                            Bảo hiểm du lịch
                           </div>
                           <div className="text-sm text-gray-600">
                             {INSURANCE_PRICE.toLocaleString("vi-VN")} đ/người
@@ -610,7 +630,8 @@ export default function FlightDetailPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="font-semibold text-gray-800 flex items-center gap-2">
-                            💺 Chọn chỗ ngồi ưu tiên
+                            <Armchair className="w-5 h-5 text-sky-600" />
+                            Chọn chỗ ngồi ưu tiên
                           </div>
                           <div className="text-sm text-gray-600">
                             {PRIORITY_SEAT_PRICE.toLocaleString("vi-VN")}{" "}

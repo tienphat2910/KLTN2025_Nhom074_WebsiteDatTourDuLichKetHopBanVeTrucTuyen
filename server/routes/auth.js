@@ -5,6 +5,7 @@ const { uploadAvatar } = require('../utils/cloudinaryUpload'); // Updated import
 const { createFirebaseUser, signInFirebaseUser, sendFirebaseEmailVerification, signInWithGoogleCredential } = require('../utils/firebaseAuth');
 const { generateOTP, sendOTPEmail } = require('../utils/emailService');
 const { validateEmail } = require('../utils/emailValidation');
+const { validateRegistration, validateLogin } = require('../utils/validation');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const { notifyUserRegistered } = require('../utils/socketHandler');
@@ -53,11 +54,14 @@ router.post('/register', async (req, res) => {
     try {
         const { email, password, fullName } = req.body;
 
-        // Validation
-        if (!email || !password || !fullName) {
+        // Validate input with regex
+        const validation = validateRegistration({ email, password, fullName });
+        if (!validation.isValid) {
             return res.status(400).json({
                 success: false,
-                message: 'Email, mật khẩu và họ tên là bắt buộc'
+                message: 'Dữ liệu không hợp lệ',
+                errors: validation.errors,
+                passwordStrength: validation.passwordStrength
             });
         }
 
@@ -66,7 +70,7 @@ router.post('/register', async (req, res) => {
         if (!emailValidation.isValid) {
             return res.status(400).json({
                 success: false,
-                message: emailValidation.error || 'Email không hợp lệ'
+                message: emailValidation.message
             });
         }
 
@@ -345,11 +349,13 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validation
-        if (!email || !password) {
+        // Validate input with regex
+        const validation = validateLogin({ email, password });
+        if (!validation.isValid) {
             return res.status(400).json({
                 success: false,
-                message: 'Email và mật khẩu là bắt buộc'
+                message: 'Dữ liệu không hợp lệ',
+                errors: validation.errors
             });
         }
 

@@ -8,12 +8,18 @@ import { authService } from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLoading } from "@/contexts/LoadingContext";
 import { LoadingSpinner } from "@/components/Loading";
-import { GoogleSignInButton } from "@/components/Auth";
+import {
+  GoogleSignInButton,
+  AnimatedInput,
+  HoverButton
+} from "@/components/Auth";
+import { validateLogin } from "@/lib/validation";
 
 export default function Login() {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -46,13 +52,36 @@ export default function Login() {
       [e.target.name]: e.target.value
     });
     setError("");
+    // Clear field error when user types
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[e.target.name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validation
+    const validation = validateLogin({
+      email: formData.email,
+      password: formData.password
+    });
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
+      toast.error("Vui lòng kiểm tra lại thông tin đăng nhập", {
+        duration: 3000
+      });
+      return;
+    }
+
     setIsLoading(true);
     startLoading("auth");
     setError("");
+    setFieldErrors({});
 
     try {
       const result = await authService.login({
@@ -111,8 +140,17 @@ export default function Login() {
         }
         router.push(decodeURIComponent(targetPath));
       } else {
-        // Check if error is EMAIL_NOT_VERIFIED
-        if (result.code === "EMAIL_NOT_VERIFIED") {
+        // Handle server validation errors
+        if (result.errors && result.errors.length > 0) {
+          const errors: Record<string, string> = {};
+          result.errors.forEach((error) => {
+            errors[error.field] = error.message;
+          });
+          setFieldErrors(errors);
+          toast.error("Thông tin đăng nhập không hợp lệ", {
+            duration: 3000
+          });
+        } else if (result.code === "EMAIL_NOT_VERIFIED") {
           toast.error("Email chưa được xác thực", {
             description: "Đang chuyển đến trang xác thực...",
             duration: 2000
@@ -191,9 +229,16 @@ export default function Login() {
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
             <Link href="/" className="inline-block mb-4 sm:mb-6">
-              <span className="text-2xl sm:text-3xl font-bold text-gray-800">
-                🌎 LuTrip
-              </span>
+              <div className="flex items-center justify-center gap-2">
+                <img
+                  src="/images/logo/logo-lutrip.png"
+                  alt="LuTrip Logo"
+                  className="w-10 h-10 sm:w-12 sm:h-12"
+                />
+                <span className="text-2xl sm:text-3xl font-bold text-gray-800">
+                  LuTrip
+                </span>
+              </div>
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
               Đăng Nhập
@@ -213,34 +258,29 @@ export default function Login() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Email Field */}
-            <div
-              className="relative auth-slide-left"
-              style={{ animationDelay: "0.1s" }}
-            >
-              <input
-                type="email"
+            <div className="auth-slide-left" style={{ animationDelay: "0.1s" }}>
+              <AnimatedInput
                 name="email"
+                label="Email"
+                type="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Email"
-                required
-                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 text-sm sm:text-base"
+                error={fieldErrors.email}
               />
             </div>
 
             {/* Password Field */}
             <div
-              className="relative auth-slide-right"
+              className="auth-slide-right"
               style={{ animationDelay: "0.2s" }}
             >
-              <input
-                type="password"
+              <AnimatedInput
                 name="password"
+                label="Mật khẩu"
+                type="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Mật khẩu"
-                required
-                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 text-sm sm:text-base"
+                error={fieldErrors.password}
               />
             </div>
 
@@ -255,13 +295,9 @@ export default function Login() {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-lg shadow-lg text-sm sm:text-base disabled:opacity-50 transition-all duration-300"
-            >
+            <HoverButton type="submit" disabled={isLoading}>
               {isLoading ? "Đang đăng nhập..." : "Đăng Nhập"}
-            </button>
+            </HoverButton>
           </form>
 
           {/* Divider */}

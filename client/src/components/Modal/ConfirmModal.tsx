@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { AlertTriangle, Info, AlertCircle } from "lucide-react";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -41,21 +42,21 @@ export default function ConfirmModal({
     switch (type) {
       case "danger":
         return {
-          icon: "⚠️",
+          icon: AlertCircle,
           iconBg: "bg-red-100",
           iconColor: "text-red-600",
           confirmBtn: "bg-red-600 hover:bg-red-700"
         };
       case "info":
         return {
-          icon: "ℹ️",
+          icon: Info,
           iconBg: "bg-blue-100",
           iconColor: "text-blue-600",
           confirmBtn: "bg-blue-600 hover:bg-blue-700"
         };
       default:
         return {
-          icon: "⚠️",
+          icon: AlertTriangle,
           iconBg: "bg-yellow-100",
           iconColor: "text-yellow-600",
           confirmBtn: "bg-yellow-600 hover:bg-yellow-700"
@@ -64,6 +65,7 @@ export default function ConfirmModal({
   };
 
   const styles = getTypeStyles();
+  const IconComponent = styles.icon;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -81,7 +83,7 @@ export default function ConfirmModal({
               <div
                 className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full ${styles.iconBg} sm:h-10 sm:w-10`}
               >
-                <span className="text-xl sm:text-lg">{styles.icon}</span>
+                <IconComponent className={`h-6 w-6 ${styles.iconColor}`} />
               </div>
               <div className="sm:ml-4">
                 <h3 className="text-xl font-semibold leading-6 text-gray-900 sm:text-base">
