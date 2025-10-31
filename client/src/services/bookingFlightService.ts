@@ -41,6 +41,8 @@ export interface BookingFlightPayload {
   note?: string;
   paymentMethod?: string;
   bookingId?: string;
+  scheduleId?: string | null;
+  selectedSeats?: string[]; // Add selected seats
 }
 
 export const bookingFlightService = {

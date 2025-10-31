@@ -447,4 +447,77 @@ router.delete('/:id', admin, async (req, res) => {
     }
 });
 
+// Get seat map for a specific flight schedule
+router.get('/:id/seats', async (req, res) => {
+    try {
+        const { scheduleId } = req.query;
+        if (!scheduleId) {
+            return res.status(400).json({ success: false, message: 'scheduleId query parameter is required' });
+        }
+
+        const schedule = await FlightSchedule.findById(scheduleId);
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: 'Schedule not found' });
+        }
+
+        // If seatMap doesn't exist yet, return an empty array (client may render default map)
+        res.json({ success: true, data: schedule.seatMap || [] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Reserve seats for a schedule (mark as reserved and decrement remainingSeats)
+router.post('/:id/reserve-seats', async (req, res) => {
+    try {
+        const { scheduleId, seats, bookingFlightId, bookingId } = req.body;
+        if (!scheduleId || !Array.isArray(seats) || seats.length === 0) {
+            return res.status(400).json({ success: false, message: 'scheduleId and seats[] are required' });
+        }
+
+        const schedule = await FlightSchedule.findById(scheduleId);
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: 'Schedule not found' });
+        }
+
+        // If seatMap is empty, initialize a default A321 map (32 rows, A-F)
+        if (!schedule.seatMap || schedule.seatMap.length === 0) {
+            const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+            const map = [];
+            for (let r = 1; r <= 32; r++) {
+                cols.forEach(c => map.push({ seatNumber: `${r}${c}`, status: 'available' }));
+            }
+            schedule.seatMap = map;
+        }
+
+        // Check availability
+        const unavailable = seats.filter(s => {
+            const entry = schedule.seatMap.find(sm => sm.seatNumber === s);
+            return !entry || entry.status !== 'available';
+        });
+
+        if (unavailable.length > 0) {
+            return res.status(400).json({ success: false, message: `Some seats are not available: ${unavailable.join(', ')}` });
+        }
+
+        // Mark seats as reserved
+        seats.forEach(s => {
+            const entry = schedule.seatMap.find(sm => sm.seatNumber === s);
+            if (entry) {
+                entry.status = 'reserved';
+                if (bookingId) entry.bookingId = bookingId;
+                if (bookingFlightId) entry.bookingFlightId = bookingFlightId;
+            }
+        });
+
+        // Decrement remainingSeats
+        schedule.remainingSeats = Math.max(0, schedule.remainingSeats - seats.length);
+        await schedule.save();
+
+        res.json({ success: true, data: schedule });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 module.exports = router;

@@ -92,5 +92,33 @@ export const flightService = {
   getFlightById: async (id: string): Promise<Flight> => {
     const response = await axios.get(`${API_URL}/flights/${id}`);
     return response.data.success ? response.data.data : response.data;
+  },
+
+  // Get seat map for a specific flight schedule
+  getSeatMap: async (flightId: string, scheduleId: string): Promise<any[]> => {
+    const response = await axios.get(`${API_URL}/flights/${flightId}/seats`, {
+      params: { scheduleId }
+    });
+    return response.data.success ? response.data.data : [];
+  },
+
+  // Reserve seats for a schedule (called by server booking service, not client directly in current flow)
+  reserveSeats: async (
+    flightId: string,
+    scheduleId: string,
+    seats: string[],
+    bookingFlightId?: string,
+    bookingId?: string
+  ): Promise<any> => {
+    const response = await axios.post(
+      `${API_URL}/flights/${flightId}/reserve-seats`,
+      {
+        scheduleId,
+        seats,
+        bookingFlightId,
+        bookingId
+      }
+    );
+    return response.data;
   }
 };

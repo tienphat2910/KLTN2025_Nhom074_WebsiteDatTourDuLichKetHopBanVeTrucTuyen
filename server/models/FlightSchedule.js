@@ -45,6 +45,16 @@ const flightScheduleSchema = new mongoose.Schema({
         type: String,
         default: ''
     }
+    ,
+    // Optional seat map per schedule. Persist per-seat status so we can reserve specific seats.
+    seatMap: [
+        {
+            seatNumber: { type: String, required: true },
+            status: { type: String, enum: ['available', 'reserved', 'blocked'], default: 'available' },
+            bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
+            bookingFlightId: { type: mongoose.Schema.Types.ObjectId, ref: 'BookingFlight', default: null }
+        }
+    ]
 }, {
     timestamps: true
 });
