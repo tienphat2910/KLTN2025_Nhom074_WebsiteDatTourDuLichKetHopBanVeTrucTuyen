@@ -38,12 +38,12 @@ import { cancellationRequestService } from "@/services/cancellationRequestServic
 
 const sidebarItems = [
   {
-    title: "Dashboard",
+    title: "Tổng quan",
     href: "/admin",
     icon: LayoutDashboard
   },
   {
-    title: "Users",
+    title: "Người dùng",
     href: "/admin/users",
     icon: Users
   },
@@ -53,50 +53,40 @@ const sidebarItems = [
     icon: Package
   },
   {
-    title: "Flights",
+    title: "Chuyến bay",
     href: "/admin/flights",
     icon: Plane
   },
   {
-    title: "Activities",
+    title: "Hoạt động",
     href: "/admin/activities",
     icon: Activity
   },
   {
-    title: "Destinations",
+    title: "Điểm đến",
     href: "/admin/destinations",
     icon: MapPin
   },
   {
-    title: "Bookings",
+    title: "Đặt chỗ",
     href: "/admin/bookings",
     icon: Calendar
   },
   {
-    title: "Cancellation Requests",
+    title: "Yêu cầu hủy",
     href: "/admin/cancellation-requests",
     icon: AlertCircle,
     showBadge: true
   },
   {
-    title: "Discounts",
+    title: "Mã giảm giá",
     href: "/admin/discounts",
     icon: Percent
   },
   {
-    title: "Payments",
-    href: "/admin/payments",
-    icon: CreditCard
-  },
-  {
-    title: "Analytics",
+    title: "Thống kê",
     href: "/admin/analytics",
     icon: BarChart3
-  },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: Settings
   }
 ];
 
