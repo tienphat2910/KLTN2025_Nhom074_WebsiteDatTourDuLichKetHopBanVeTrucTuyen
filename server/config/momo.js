@@ -4,7 +4,7 @@ module.exports = {
     orderInfo: 'pay with MoMo',
     partnerCode: 'MOMO',
     redirectUrl: 'http://localhost:3000/payment/success', // Client URL for success redirect
-    ipnUrl: 'https://696fe6b5da5e.ngrok-free.app/api/payment/momo/callback', // Server callback URL
+    ipnUrl: 'https://99d82aae1214.ngrok-free.app/api/payment/momo/callback', // Server callback URL
     requestType: 'payWithMethod',
     extraData: '',
     orderGroupId: '',

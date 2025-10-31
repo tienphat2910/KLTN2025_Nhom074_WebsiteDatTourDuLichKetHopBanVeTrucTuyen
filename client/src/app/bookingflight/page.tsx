@@ -17,9 +17,12 @@ import {
   SpecialRequest,
   validateFlightPassengers,
   validatePaymentMethod,
-  FlightPassenger,
+  FlightPassenger
 } from "@/components/Booking/Common";
-import { FlightPassengerForm, FlightPriceSummary } from "@/components/Booking/Flight";
+import {
+  FlightPassengerForm,
+  FlightPriceSummary
+} from "@/components/Booking/Flight";
 
 export default function BookingFlightPage() {
   const searchParams = useSearchParams();
@@ -27,6 +30,7 @@ export default function BookingFlightPage() {
   const { isAuthenticated, user, isAuthLoading } = useAuth();
 
   const flightId = searchParams.get("flightId");
+  const scheduleId = searchParams.get("scheduleId");
   const adults = Number(searchParams.get("adults") || 1);
   const children = Number(searchParams.get("children") || 0);
   const infants = Number(searchParams.get("infants") || 0);
@@ -36,6 +40,10 @@ export default function BookingFlightPage() {
   const extraBaggage = Number(searchParams.get("extraBaggage") || 0);
   const insurance = searchParams.get("insurance") === "true";
   const prioritySeat = searchParams.get("prioritySeat") === "true";
+  const selectedSeatsParam = searchParams.get("selectedSeats") || "";
+  const selectedSeats = selectedSeatsParam
+    ? selectedSeatsParam.split(",").filter(Boolean)
+    : [];
 
   // Pricing constants for add-ons
   const EXTRA_BAGGAGE_PRICE = 200000;
@@ -223,6 +231,14 @@ export default function BookingFlightPage() {
       const discountAmount = calculateDiscountAmount(subtotalWithAddons);
       const finalTotal = calculateFinalTotal(subtotalWithAddons);
 
+      // Assign selected seats to passengers (if seats were chosen)
+      const passengersWithSeats = passengers.map((p, index) => {
+        if (selectedSeats.length > index) {
+          return { ...p, seatNumber: selectedSeats[index] };
+        }
+        return p;
+      });
+
       // Prepare note with add-ons information
       let bookingNote = note;
       const addOnsInfo = [];
@@ -266,10 +282,11 @@ export default function BookingFlightPage() {
               numTickets,
               pricePerTicket,
               totalFlightPrice,
-              passengers,
+              passengers: passengersWithSeats,
               note: bookingNote,
               discountCode: appliedDiscount?.code,
-              discountAmount
+              discountAmount,
+              scheduleId
             })
           });
 
@@ -285,13 +302,17 @@ export default function BookingFlightPage() {
               finalTotal,
               discountCode: appliedDiscount?.code,
               status: "pending",
-              passengers,
+              passengers: passengersWithSeats,
               note: bookingNote,
               paymentMethod,
-              momoOrderId: momoResponse.data.orderId
+              momoOrderId: momoResponse.data.orderId,
+              scheduleId
             };
 
-            localStorage.setItem("pendingBooking", JSON.stringify(bookingData));
+            localStorage.setItem(
+              "pendingFlightBooking",
+              JSON.stringify(bookingData)
+            );
             toast.success("Đang chuyển hướng đến trang thanh toán MoMo...");
             paymentService.redirectToMoMoPayment(momoResponse.data.payUrl);
             return;
@@ -321,10 +342,11 @@ export default function BookingFlightPage() {
               numTickets,
               pricePerTicket,
               totalFlightPrice,
-              passengers,
+              passengers: passengersWithSeats,
               note: bookingNote,
               discountCode: appliedDiscount?.code,
-              discountAmount
+              discountAmount,
+              scheduleId
             })
           });
 
@@ -340,13 +362,17 @@ export default function BookingFlightPage() {
               finalTotal,
               discountCode: appliedDiscount?.code,
               status: "pending",
-              passengers,
+              passengers: passengersWithSeats,
               note: bookingNote,
               paymentMethod,
-              zalopayTransId: zalopayResponse.data.app_trans_id
+              zalopayTransId: zalopayResponse.data.app_trans_id,
+              scheduleId
             };
 
-            localStorage.setItem("pendingBooking", JSON.stringify(bookingData));
+            localStorage.setItem(
+              "pendingFlightBooking",
+              JSON.stringify(bookingData)
+            );
             toast.success("Đang chuyển hướng đến trang thanh toán ZaloPay...");
             window.location.href = zalopayResponse.data.order_url;
             return;
@@ -375,9 +401,10 @@ export default function BookingFlightPage() {
         finalTotal,
         discountCode: appliedDiscount?.code,
         status: "pending",
-        passengers: passengers as any,
+        passengers: passengersWithSeats as any,
         note: bookingNote,
-        paymentMethod
+        paymentMethod,
+        scheduleId
       });
 
       if (res.success) {
@@ -452,7 +479,8 @@ export default function BookingFlightPage() {
               </h1>
               <div className="flex items-center text-blue-100">
                 <span className="mr-4 flex items-center gap-1">
-                  <Users className="w-4 h-4" /> {adults + children + infants} hành khách
+                  <Users className="w-4 h-4" /> {adults + children + infants}{" "}
+                  hành khách
                 </span>
                 <span className="flex items-center gap-1">
                   <DollarSign className="w-4 h-4" /> Tổng:{" "}
@@ -460,12 +488,18 @@ export default function BookingFlightPage() {
                     const adultsTotal = adults * baseTicketPrice;
                     const childrenTotal = children * (baseTicketPrice * 0.9);
                     const infantsTotal = infants * (baseTicketPrice * 0.1);
-                    const totalFlightPrice = adultsTotal + childrenTotal + infantsTotal;
+                    const totalFlightPrice =
+                      adultsTotal + childrenTotal + infantsTotal;
                     const numTickets = adults + children + infants;
                     const baggageTotal = extraBaggage * EXTRA_BAGGAGE_PRICE;
-                    const insuranceTotal = insurance ? numTickets * INSURANCE_PRICE : 0;
-                    const prioritySeatTotal = prioritySeat ? numTickets * PRIORITY_SEAT_PRICE : 0;
-                    const addOnsTotal = baggageTotal + insuranceTotal + prioritySeatTotal;
+                    const insuranceTotal = insurance
+                      ? numTickets * INSURANCE_PRICE
+                      : 0;
+                    const prioritySeatTotal = prioritySeat
+                      ? numTickets * PRIORITY_SEAT_PRICE
+                      : 0;
+                    const addOnsTotal =
+                      baggageTotal + insuranceTotal + prioritySeatTotal;
                     const subtotal = totalFlightPrice + addOnsTotal;
                     const finalTotal = calculateFinalTotal(subtotal);
                     return finalTotal.toLocaleString("vi-VN");

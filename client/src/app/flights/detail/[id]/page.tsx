@@ -11,17 +11,23 @@ import {
   Plane,
   PlaneTakeoff,
   PlaneLanding,
-  Clock,
-  CalendarDays,
   Users,
   Luggage,
   ShieldCheck,
   Armchair,
-  CheckCircle2,
-  Ticket,
-  Tag
+  Tag,
+  DollarSign
 } from "lucide-react";
-import { FaTicketAlt } from "react-icons/fa";
+import SeatMapModal from "@/components/flight/SeatMapModal";
+import FlightInfoSection from "@/components/flight/FlightInfoSection";
+import ClassSelector from "@/components/flight/ClassSelector";
+
+const bannerImages = [
+  "/images/banner-flight.webp",
+  "https://amadeus.com/content/dam/amadeus/images/en/blog/2022/10/bamboo-airways-aircraft-787.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/1/1e/VietJet_Air_Airbus_A321neo_VN-A653_Perth_2024_%2801%29.jpg",
+  "https://owa.bestprice.vn/images/articles/uploads/di-may-bay-vietravel-airlines-co-an-toan-khong-60b8a65a9e1d0.jpg"
+];
 
 export default function FlightDetailPage() {
   const { id } = useParams();
@@ -29,6 +35,11 @@ export default function FlightDetailPage() {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentBanner, setCurrentBanner] = useState("");
+
+  // Selected schedule (user must pick a schedule to book)
+  const [selectedSchedule, setSelectedSchedule] = useState<any | null>(null);
+  const [seatMap, setSeatMap] = useState<any[]>([]); // Seat availability from server
 
   // Booking options
   const [selectedClass, setSelectedClass] = useState<string>("economy");
@@ -40,11 +51,52 @@ export default function FlightDetailPage() {
   const [extraBaggage, setExtraBaggage] = useState(0);
   const [insurance, setInsurance] = useState(false);
   const [prioritySeat, setPrioritySeat] = useState(false);
+  const [showSeatMap, setShowSeatMap] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
 
   // Pricing constants for add-ons
   const EXTRA_BAGGAGE_PRICE = 200000; // 200k per bag
   const INSURANCE_PRICE = 150000; // 150k per person
-  const PRIORITY_SEAT_PRICE = 100000; // 100k per person
+  const PRIORITY_SEAT_BASE_PRICE = 100000; // Base price
+
+  // Seat pricing based on position
+  const getSeatPrice = (seat: string) => {
+    const row = parseInt(seat.substring(0, seat.length - 1));
+    const letter = seat[seat.length - 1];
+
+    // Emergency exit rows (more legroom) - rows 1, 12, 13
+    if (row === 1 || row === 12 || row === 13) {
+      return 300000;
+    }
+    // Front rows (1-5) - faster exit
+    if (row <= 5) {
+      return 200000;
+    }
+    // Window and aisle seats
+    if (letter === "A" || letter === "F" || letter === "K") {
+      return 150000; // Window
+    }
+    if (letter === "C" || letter === "D" || letter === "H" || letter === "J") {
+      return 120000; // Aisle
+    }
+    // Middle seats (B, E)
+    return 100000;
+  };
+
+  // Check if a seat is occupied from server seat map
+  const isSeatOccupied = (seatCode: string): boolean => {
+    if (!seatMap || seatMap.length === 0) {
+      return false; // If no seat map, all available
+    }
+    const entry = seatMap.find((s: any) => s.seatNumber === seatCode);
+    return entry ? entry.status !== "available" : false;
+  };
+
+  // Set random banner on mount
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * bannerImages.length);
+    setCurrentBanner(bannerImages[randomIndex]);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -58,6 +110,11 @@ export default function FlightDetailPage() {
           const firstClass = data.classes[0].className.toLowerCase();
           setSelectedClass(firstClass);
         }
+
+        // Auto-select the first upcoming schedule (if any)
+        if (data.upcomingSchedules && data.upcomingSchedules.length > 0) {
+          setSelectedSchedule(data.upcomingSchedules[0]);
+        }
       } catch (err) {
         setError("Không tìm thấy chuyến bay");
       } finally {
@@ -67,6 +124,26 @@ export default function FlightDetailPage() {
     fetchFlight();
   }, [id]);
 
+  // Fetch seat map when a schedule is selected and seat map modal opens
+  useEffect(() => {
+    if (!showSeatMap || !selectedSchedule || !id) {
+      return;
+    }
+    const fetchSeatMap = async () => {
+      try {
+        const map = await flightService.getSeatMap(
+          id as string,
+          selectedSchedule._id
+        );
+        setSeatMap(map);
+      } catch (err) {
+        console.error("Error loading seat map:", err);
+        setSeatMap([]); // Fallback to empty (client will generate default)
+      }
+    };
+    fetchSeatMap();
+  }, [showSeatMap, selectedSchedule, id]);
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString("vi-VN", {
@@ -74,6 +151,7 @@ export default function FlightDetailPage() {
       minute: "2-digit"
     });
   };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN");
@@ -104,11 +182,39 @@ export default function FlightDetailPage() {
     const insuranceTotal = insurance
       ? (adults + children + infants) * INSURANCE_PRICE
       : 0;
-    const prioritySeatTotal = prioritySeat
-      ? (adults + children + infants) * PRIORITY_SEAT_PRICE
-      : 0;
+    const prioritySeatTotal = selectedSeats.reduce(
+      (total, seat) => total + getSeatPrice(seat),
+      0
+    );
 
     return ticketTotal + baggageTotal + insuranceTotal + prioritySeatTotal;
+  };
+
+  const handleSeatSelect = (seat: string) => {
+    const totalPassengers = adults + children + infants;
+
+    if (selectedSeats.includes(seat)) {
+      // Deselect seat
+      setSelectedSeats(selectedSeats.filter((s) => s !== seat));
+    } else {
+      // Select seat (check limit)
+      if (selectedSeats.length < totalPassengers) {
+        setSelectedSeats([...selectedSeats, seat]);
+      } else {
+        alert(
+          `Bạn chỉ có thể chọn tối đa ${totalPassengers} ghế (theo số hành khách)`
+        );
+      }
+    }
+  };
+
+  const handleCloseSeatMap = () => {
+    setShowSeatMap(false);
+    if (selectedSeats.length > 0) {
+      setPrioritySeat(true);
+    } else {
+      setPrioritySeat(false);
+    }
   };
 
   const handleBookNow = () => {
@@ -116,6 +222,11 @@ export default function FlightDetailPage() {
       alert(
         "Chuyến bay này chưa có hạng vé nào. Vui lòng chọn chuyến bay khác."
       );
+      return;
+    }
+
+    if (!selectedSchedule) {
+      alert("Vui lòng chọn lịch bay (ngày/giờ) trước khi đặt vé.");
       return;
     }
 
@@ -129,8 +240,10 @@ export default function FlightDetailPage() {
     }
 
     const totalPrice = calculateTotalPrice();
+    const selectedSeatsParam =
+      selectedSeats.length > 0 ? selectedSeats.join(",") : "";
     router.push(
-      `/bookingflight?flightId=${id}&adults=${adults}&children=${children}&infants=${infants}&seatClass=${selectedClass}&extraBaggage=${extraBaggage}&insurance=${insurance}&prioritySeat=${prioritySeat}&totalPrice=${totalPrice}`
+      `/bookingflight?flightId=${id}&scheduleId=${selectedSchedule._id}&adults=${adults}&children=${children}&infants=${infants}&seatClass=${selectedClass}&extraBaggage=${extraBaggage}&insurance=${insurance}&prioritySeat=${prioritySeat}&selectedSeats=${selectedSeatsParam}&totalPrice=${totalPrice}`
     );
   };
 
@@ -174,12 +287,12 @@ export default function FlightDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-blue-100">
       <Header />
       {/* Hero section */}
-      <div className="relative h-56 md:h-72 lg:h-80 w-full flex items-center justify-center">
+      <div className="relative h-56 md:h-72 lg:h-80 w-full flex items-center justify-center mt-20">
         <div className="absolute inset-0">
           <div
             className="w-full h-full bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: "url('/images/banner-flight.webp')",
+              backgroundImage: `url('${currentBanner}')`,
               filter: "brightness(0.4)"
             }}
           ></div>
@@ -332,38 +445,7 @@ export default function FlightDetailPage() {
               </div>
 
               {/* Flight Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <Clock className="w-8 h-8 mx-auto mb-1 text-sky-600" />
-                  <div className="text-xs text-gray-600">Thời lượng</div>
-                  <div className="font-semibold text-sky-700">
-                    {Math.floor(flight.durationMinutes / 60)}h{" "}
-                    {flight.durationMinutes % 60}m
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <Plane className="w-8 h-8 mx-auto mb-1 text-sky-600" />
-                  <div className="text-xs text-gray-600">Máy bay</div>
-                  <div className="font-semibold text-sky-700">
-                    {flight.aircraft?.model || "Đang cập nhật"}
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <CheckCircle2 className="w-8 h-8 mx-auto mb-1 text-green-600" />
-                  <div className="text-xs text-gray-600">Trạng thái</div>
-                  <div className="font-semibold text-green-700">
-                    {flight.status}
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <Armchair className="w-8 h-8 mx-auto mb-1 text-sky-600" />
-                  <div className="text-xs text-gray-600">Ghế trống</div>
-                  <div className="font-semibold text-sky-700">
-                    {flight.classes?.find((c) => c.className === "Economy")
-                      ?.availableSeats || 0}
-                  </div>
-                </div>
-              </div>
+              <FlightInfoSection flight={flight} />
 
               {/* Booking Section */}
               <div className="border-t pt-6">
@@ -372,83 +454,11 @@ export default function FlightDetailPage() {
                 </h3>
 
                 {/* Class Selection */}
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Chọn hạng vé
-                  </label>
-                  <div
-                    className={`grid gap-4 ${
-                      flight.classes && flight.classes.length > 1
-                        ? "grid-cols-1 sm:grid-cols-2"
-                        : "grid-cols-1"
-                    }`}
-                  >
-                    {flight.classes?.map((flightClass) => {
-                      const className = flightClass.className;
-                      const classKey = className.toLowerCase();
-                      const isEconomy = classKey === "economy";
-
-                      return (
-                        <div
-                          key={flightClass._id}
-                          onClick={() => setSelectedClass(classKey)}
-                          className={`cursor-pointer ${
-                            isEconomy
-                              ? "bg-gradient-to-r from-sky-50 to-blue-50"
-                              : "bg-gradient-to-r from-amber-50 to-orange-50"
-                          } border-2 rounded-xl p-4 transition-all duration-300 ${
-                            selectedClass === classKey
-                              ? isEconomy
-                                ? "border-sky-500 shadow-lg scale-105"
-                                : "border-amber-500 shadow-lg scale-105"
-                              : isEconomy
-                              ? "border-sky-200 hover:border-sky-400"
-                              : "border-amber-200 hover:border-amber-400"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <h4
-                              className={`font-semibold ${
-                                isEconomy ? "text-sky-800" : "text-amber-800"
-                              }`}
-                            >
-                              {className === "Economy"
-                                ? "Phổ thông"
-                                : className === "Business"
-                                ? "Thương gia"
-                                : className}
-                            </h4>
-                            <input
-                              type="radio"
-                              checked={selectedClass === classKey}
-                              onChange={() => setSelectedClass(classKey)}
-                              className={`w-5 h-5 ${
-                                isEconomy ? "text-sky-600" : "text-amber-600"
-                              }`}
-                            />
-                          </div>
-                          <div
-                            className={`text-2xl font-bold mb-1 ${
-                              isEconomy ? "text-sky-600" : "text-amber-600"
-                            }`}
-                          >
-                            {flightClass.price?.toLocaleString("vi-VN") ||
-                              "N/A"}{" "}
-                            đ
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Còn {flightClass.availableSeats || 0} ghế
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {(!flight.classes || flight.classes.length === 0) && (
-                    <div className="text-center py-4 text-gray-500">
-                      Chưa có thông tin hạng vé
-                    </div>
-                  )}
-                </div>
+                <ClassSelector
+                  classes={flight.classes}
+                  selectedClass={selectedClass}
+                  onSelectClass={setSelectedClass}
+                />
 
                 {/* Passenger Count */}
                 <div className="mb-6">
@@ -620,9 +630,9 @@ export default function FlightDetailPage() {
 
                     {/* Priority Seat */}
                     <div
-                      onClick={() => setPrioritySeat(!prioritySeat)}
+                      onClick={() => setShowSeatMap(true)}
                       className={`cursor-pointer bg-gray-50 rounded-lg p-4 border-2 transition-all ${
-                        prioritySeat
+                        prioritySeat || selectedSeats.length > 0
                           ? "border-sky-500 bg-sky-50"
                           : "border-transparent"
                       }`}
@@ -634,16 +644,16 @@ export default function FlightDetailPage() {
                             Chọn chỗ ngồi ưu tiên
                           </div>
                           <div className="text-sm text-gray-600">
-                            {PRIORITY_SEAT_PRICE.toLocaleString("vi-VN")}{" "}
-                            đ/người
+                            {selectedSeats.length > 0
+                              ? `Đã chọn ${
+                                  selectedSeats.length
+                                } ghế: ${selectedSeats.join(", ")}`
+                              : "Từ 100,000 đ/ghế (tuỳ vị trí)"}
                           </div>
                         </div>
-                        <input
-                          type="checkbox"
-                          checked={prioritySeat}
-                          onChange={(e) => setPrioritySeat(e.target.checked)}
-                          className="w-5 h-5 text-sky-600 rounded"
-                        />
+                        <div className="text-sky-600 font-semibold">
+                          Chọn ghế →
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -762,16 +772,19 @@ export default function FlightDetailPage() {
                         </span>
                       </div>
                     )}
-                    {prioritySeat && (
+                    {selectedSeats.length > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">
-                          Chỗ ngồi ưu tiên ({adults + children + infants} người)
+                          Chỗ ngồi ưu tiên ({selectedSeats.length} ghế:{" "}
+                          {selectedSeats.join(", ")})
                         </span>
                         <span className="font-medium">
-                          {(
-                            (adults + children + infants) *
-                            PRIORITY_SEAT_PRICE
-                          ).toLocaleString("vi-VN")}{" "}
+                          {selectedSeats
+                            .reduce(
+                              (total, seat) => total + getSeatPrice(seat),
+                              0
+                            )
+                            .toLocaleString("vi-VN")}{" "}
                           đ
                         </span>
                       </div>
@@ -805,6 +818,24 @@ export default function FlightDetailPage() {
           </div>
         </div>
       </section>
+
+      <SeatMapModal
+        show={showSeatMap}
+        onClose={handleCloseSeatMap}
+        flight={flight}
+        selectedClass={selectedClass}
+        selectedSeats={selectedSeats}
+        onSeatSelect={handleSeatSelect}
+        onConfirm={handleCloseSeatMap}
+        onClearSelection={() => {
+          setSelectedSeats([]);
+          setPrioritySeat(false);
+        }}
+        getSeatPrice={getSeatPrice}
+        isSeatOccupied={isSeatOccupied}
+        maxSeats={adults + children + infants}
+      />
+
       <Footer />
     </div>
   );

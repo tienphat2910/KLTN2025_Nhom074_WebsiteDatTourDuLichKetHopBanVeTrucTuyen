@@ -39,7 +39,7 @@ const calculateSeatsOccupied = (passengers) => {
 // Create a new booking flight with passengers
 router.post('/', auth, async (req, res) => {
     try {
-        const { passengers, bookingId, ...bookingFlightData } = req.body;
+        const { passengers, bookingId, scheduleId, ...bookingFlightData } = req.body;
 
         // Calculate seats to deduct (adults + children, NOT infants)
         const seatsToDeduct = calculateSeatsOccupied(passengers);
@@ -70,6 +70,50 @@ router.post('/', auth, async (req, res) => {
         // Create the booking flight
         const bookingFlight = new BookingFlight({ ...bookingFlightData, bookingId });
         await bookingFlight.save();
+
+        // If scheduleId provided and passengers have seat numbers, reserve seats in FlightSchedule
+        if (scheduleId && passengers && passengers.length > 0) {
+            const seatsToReserve = passengers
+                .filter(p => p.seatNumber)
+                .map(p => p.seatNumber);
+
+            if (seatsToReserve.length > 0) {
+                const FlightSchedule = require('../models/FlightSchedule');
+                const schedule = await FlightSchedule.findById(scheduleId);
+
+                if (schedule) {
+                    // Initialize seat map if empty
+                    if (!schedule.seatMap || schedule.seatMap.length === 0) {
+                        const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+                        const map = [];
+                        for (let r = 1; r <= 32; r++) {
+                            cols.forEach(c => map.push({ seatNumber: `${r}${c}`, status: 'available' }));
+                        }
+                        schedule.seatMap = map;
+                    }
+
+                    // Mark seats as reserved
+                    seatsToReserve.forEach(seatNum => {
+                        const entry = schedule.seatMap.find(sm => sm.seatNumber === seatNum);
+                        if (entry && entry.status === 'available') {
+                            entry.status = 'reserved';
+                            entry.bookingId = bookingId;
+                            entry.bookingFlightId = bookingFlight._id;
+                        }
+                    });
+
+                    // Decrement remainingSeats (only for seats that were available)
+                    const actualReserved = seatsToReserve.filter(seatNum => {
+                        const entry = schedule.seatMap.find(sm => sm.seatNumber === seatNum);
+                        return entry && entry.status === 'reserved';
+                    }).length;
+
+                    schedule.remainingSeats = Math.max(0, schedule.remainingSeats - actualReserved);
+                    await schedule.save();
+                    console.log(`✅ Reserved ${actualReserved} seats: ${seatsToReserve.join(', ')}`);
+                }
+            }
+        }
 
         // Generate QR code for the flight booking
         try {

@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Flight, flightService } from "@/services/flightService";
 import FlightSearchForm from "@/components/flight/FlightSearchForm";
 import FlightSearchResults from "@/components/flight/FlightSearchResults";
+
+const bannerImages = [
+  "/images/banner-flight.webp",
+  "https://amadeus.com/content/dam/amadeus/images/en/blog/2022/10/bamboo-airways-aircraft-787.jpg",
+  "https://upload.wikimedia.org/wikipedia/commons/1/1e/VietJet_Air_Airbus_A321neo_VN-A653_Perth_2024_%2801%29.jpg",
+  "https://owa.bestprice.vn/images/articles/uploads/di-may-bay-vietravel-airlines-co-an-toan-khong-60b8a65a9e1d0.jpg"
+];
 
 export default function Flights() {
   const [isVisible, setIsVisible] = useState(false);
@@ -13,6 +20,7 @@ export default function Flights() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentBanner, setCurrentBanner] = useState("");
 
   // Search parameters
   const [isRoundTrip, setIsRoundTrip] = useState(false);
@@ -22,6 +30,12 @@ export default function Flights() {
   const [returnDate, setReturnDate] = useState("");
   const [passengerCount, setPassengerCount] = useState(1);
   const [seatClass, setSeatClass] = useState("economy");
+
+  // Set random banner on mount
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * bannerImages.length);
+    setCurrentBanner(bannerImages[randomIndex]);
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,8 +76,8 @@ export default function Flights() {
           <div
             className="w-full h-full bg-cover bg-center bg-no-repeat transform scale-105 transition-transform duration-[12s] ease-linear"
             style={{
-              backgroundImage: "url('/images/banner-flight.webp')",
-              filter: "brightness(0.3)"
+              backgroundImage: `url('${currentBanner}')`,
+              filter: "brightness(0.7)"
             }}
           ></div>
           <div className="absolute inset-0 bg-gradient-to-br from-sky-900/50 via-blue-900/40 to-indigo-900/50"></div>
