@@ -52,6 +52,11 @@ export default function FlightPassengerForm({
                   (Người liên hệ)
                 </span>
               )}
+              {passenger.seatNumber && (
+                <span className="ml-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                  Ghế: {passenger.seatNumber}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

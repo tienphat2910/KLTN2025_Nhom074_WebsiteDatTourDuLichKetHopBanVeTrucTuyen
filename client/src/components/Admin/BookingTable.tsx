@@ -25,6 +25,7 @@ import {
 import { Receipt, Loader2, Trash2 } from "lucide-react";
 import { BookingDetailModal } from "@/components/Booking/BookingDetailModal";
 import { FlightBookingDetailModal } from "@/components/Admin/FlightBookingDetailModal";
+import { RoundTripFlightBookingDetailModal } from "@/components/Admin/RoundTripFlightBookingDetailModal";
 import { TourBookingDetailModal } from "@/components/Admin/TourBookingDetailModal";
 import { ActivityBookingDetailModal } from "@/components/Admin/ActivityBookingDetailModal";
 import { Booking } from "@/services/bookingService";
@@ -117,6 +118,15 @@ export function BookingTable({
                 const TypeIcon = typeConfig.icon;
                 const StatusIcon = statusInfo.icon;
 
+                // Debug log for flight bookings
+                if (booking.bookingType === "flight") {
+                  console.log(`Booking ${booking._id}:`, {
+                    isRoundTrip: booking.isRoundTrip,
+                    actualTotal: booking.actualTotal,
+                    totalPrice: booking.totalPrice
+                  });
+                }
+
                 return (
                   <TableRow key={booking._id}>
                     <TableCell className="font-mono text-sm">
@@ -140,7 +150,9 @@ export function BookingTable({
                       {formatDate(booking.bookingDate)}
                     </TableCell>
                     <TableCell className="font-semibold text-green-600">
-                      {formatCurrency(booking.totalPrice)}
+                      {formatCurrency(
+                        booking.actualTotal || booking.totalPrice
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
@@ -161,7 +173,14 @@ export function BookingTable({
                     <TableCell>
                       <div className="flex items-center gap-2 justify-end">
                         {booking.bookingType === "flight" ? (
-                          <FlightBookingDetailModal booking={booking} />
+                          // Check if it's a round trip flight booking
+                          booking.isRoundTrip ? (
+                            <RoundTripFlightBookingDetailModal
+                              booking={booking}
+                            />
+                          ) : (
+                            <FlightBookingDetailModal booking={booking} />
+                          )
                         ) : booking.bookingType === "tour" ? (
                           <TourBookingDetailModal booking={booking} />
                         ) : booking.bookingType === "activity" ? (

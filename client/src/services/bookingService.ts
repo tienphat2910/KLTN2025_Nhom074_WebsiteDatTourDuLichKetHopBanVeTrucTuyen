@@ -28,6 +28,8 @@ export interface Booking {
   };
   bookingDate: string;
   totalPrice: number;
+  actualTotal?: number; // For flight bookings with discounts
+  isRoundTrip?: boolean; // For flight bookings
   status: "pending" | "confirmed" | "cancelled" | "completed";
   bookingType: "tour" | "activity" | "flight";
   createdAt: string;
@@ -110,6 +112,7 @@ export interface FlightBookingDetail {
   qrCode?: string;
   qrCodePublicId?: string;
   flightCode: string;
+  selectedSeats?: string[];
   passengers?: Array<{
     _id: string;
     fullName: string;
@@ -122,9 +125,18 @@ export interface FlightBookingDetail {
   updatedAt: string;
 }
 
+export interface RoundTripFlightBookingDetail {
+  isRoundTrip: boolean;
+  flights: FlightBookingDetail[];
+  outboundFlight: FlightBookingDetail;
+  returnFlight: FlightBookingDetail | null;
+  totalPrice: number;
+  totalDiscount: number;
+}
+
 export interface FlightBookingResponse {
   success: boolean;
-  data: FlightBookingDetail;
+  data: FlightBookingDetail & Partial<RoundTripFlightBookingDetail>;
   message?: string;
 }
 

@@ -49,6 +49,7 @@ export interface FlightPassenger {
   dateOfBirth: string;
   identityNumber?: string;
   nationality?: string;
+  seatNumber?: string;
 }
 
 export const validateFlightPassengers = (

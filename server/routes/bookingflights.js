@@ -39,12 +39,25 @@ const calculateSeatsOccupied = (passengers) => {
 // Create a new booking flight with passengers
 router.post('/', auth, async (req, res) => {
     try {
-        const { passengers, bookingId, scheduleId, ...bookingFlightData } = req.body;
+        const { passengers, bookingId, scheduleId, isRoundTrip, returnFlightId, returnFlightCode,
+            returnFlightClassId, returnScheduleId, returnPassengers, returnFlightPrice,
+            outboundFlightPrice, selectedSeats, ...bookingFlightData } = req.body;
+
+        console.log('📥 Received booking request:', {
+            isRoundTrip,
+            scheduleId,
+            returnScheduleId,
+            passengersCount: passengers?.length,
+            returnPassengersCount: returnPassengers?.length,
+            outboundSeats: passengers?.map(p => p.seatNumber).filter(Boolean),
+            returnSeats: returnPassengers?.map(p => p.seatNumber).filter(Boolean),
+            selectedSeats
+        });
 
         // Calculate seats to deduct (adults + children, NOT infants)
         const seatsToDeduct = calculateSeatsOccupied(passengers);
 
-        // Update available seats in FlightClass
+        // Update available seats in FlightClass for outbound flight
         if (bookingFlightData.flightClassId && seatsToDeduct > 0) {
             const flightClass = await FlightClass.findById(bookingFlightData.flightClassId);
 
@@ -67,9 +80,15 @@ router.post('/', auth, async (req, res) => {
             await flightClass.save();
         }
 
-        // Create the booking flight
-        const bookingFlight = new BookingFlight({ ...bookingFlightData, bookingId });
+        // Create the outbound booking flight
+        const bookingFlight = new BookingFlight({
+            ...bookingFlightData,
+            bookingId,
+            totalFlightPrice: outboundFlightPrice || bookingFlightData.totalFlightPrice,
+            selectedSeats: passengers?.map(p => p.seatNumber).filter(Boolean) || []
+        });
         await bookingFlight.save();
+        console.log('✅ Created outbound BookingFlight:', bookingFlight._id);
 
         // If scheduleId provided and passengers have seat numbers, reserve seats in FlightSchedule
         if (scheduleId && passengers && passengers.length > 0) {
@@ -127,22 +146,130 @@ router.post('/', auth, async (req, res) => {
                 bookingFlight.qrCode = qrResult.qrCodeUrl;
                 bookingFlight.qrCodePublicId = qrResult.qrCodePublicId;
                 await bookingFlight.save();
-                console.log('✅ QR code generated for flight booking');
+                console.log('✅ QR code generated for outbound flight booking');
             }
         } catch (qrError) {
             console.error('❌ QR code generation failed:', qrError);
             // Continue even if QR generation fails
         }
 
+        // Handle return flight for round trip
+        let returnBookingFlight = null;
+        if (isRoundTrip && returnFlightId && returnScheduleId && returnPassengers) {
+            console.log('🔄 Creating return flight booking...');
+
+            // Update available seats for return flight class
+            if (returnFlightClassId && seatsToDeduct > 0) {
+                const returnFlightClass = await FlightClass.findById(returnFlightClassId);
+                if (returnFlightClass) {
+                    if (returnFlightClass.availableSeats >= seatsToDeduct) {
+                        returnFlightClass.availableSeats -= seatsToDeduct;
+                        await returnFlightClass.save();
+                    }
+                }
+            }
+
+            // Create return booking flight
+            returnBookingFlight = new BookingFlight({
+                bookingId,
+                flightId: returnFlightId,
+                flightCode: returnFlightCode,
+                flightClassId: returnFlightClassId,
+                numTickets: bookingFlightData.numTickets,
+                pricePerTicket: bookingFlightData.pricePerTicket,
+                totalFlightPrice: returnFlightPrice || 0,
+                discountAmount: 0,
+                finalTotal: returnFlightPrice || 0,
+                status: bookingFlightData.status,
+                paymentMethod: bookingFlightData.paymentMethod,
+                selectedSeats: returnPassengers?.map(p => p.seatNumber).filter(Boolean) || []
+            });
+            await returnBookingFlight.save();
+            console.log('✅ Created return BookingFlight:', returnBookingFlight._id);
+
+            // Reserve seats for return flight
+            const returnSeatsToReserve = returnPassengers
+                .filter(p => p.seatNumber)
+                .map(p => p.seatNumber);
+
+            if (returnSeatsToReserve.length > 0) {
+                const FlightSchedule = require('../models/FlightSchedule');
+                const returnSchedule = await FlightSchedule.findById(returnScheduleId);
+
+                if (returnSchedule) {
+                    // Initialize seat map if empty
+                    if (!returnSchedule.seatMap || returnSchedule.seatMap.length === 0) {
+                        const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+                        const map = [];
+                        for (let r = 1; r <= 32; r++) {
+                            cols.forEach(c => map.push({ seatNumber: `${r}${c}`, status: 'available' }));
+                        }
+                        returnSchedule.seatMap = map;
+                    }
+
+                    // Mark seats as reserved
+                    returnSeatsToReserve.forEach(seatNum => {
+                        const entry = returnSchedule.seatMap.find(sm => sm.seatNumber === seatNum);
+                        if (entry && entry.status === 'available') {
+                            entry.status = 'reserved';
+                            entry.bookingId = bookingId;
+                            entry.bookingFlightId = returnBookingFlight._id;
+                        }
+                    });
+
+                    const actualReserved = returnSeatsToReserve.filter(seatNum => {
+                        const entry = returnSchedule.seatMap.find(sm => sm.seatNumber === seatNum);
+                        return entry && entry.status === 'reserved';
+                    }).length;
+
+                    returnSchedule.remainingSeats = Math.max(0, returnSchedule.remainingSeats - actualReserved);
+                    await returnSchedule.save();
+                    console.log(`✅ Reserved ${actualReserved} return flight seats: ${returnSeatsToReserve.join(', ')}`);
+                }
+            }
+
+            // Generate QR code for return flight
+            try {
+                const returnQrResult = await generateQRCode({
+                    bookingId: returnBookingFlight._id.toString(),
+                    bookingType: 'flight',
+                    code: returnBookingFlight.flightCode
+                });
+
+                if (returnQrResult.success) {
+                    returnBookingFlight.qrCode = returnQrResult.qrCodeUrl;
+                    returnBookingFlight.qrCodePublicId = returnQrResult.qrCodePublicId;
+                    await returnBookingFlight.save();
+                    console.log('✅ QR code generated for return flight booking');
+                }
+            } catch (qrError) {
+                console.error('❌ Return flight QR code generation failed:', qrError);
+            }
+
+            // Create passenger records for return flight
+            if (returnPassengers && returnPassengers.length > 0) {
+                const returnPassengerDocs = returnPassengers.map(passenger => ({
+                    ...passenger,
+                    bookingFlightId: returnBookingFlight._id
+                }));
+                await FlightPassenger.insertMany(returnPassengerDocs);
+                console.log('✅ Created return flight passengers');
+            }
+        }
+
         // Update booking totalPrice with the flight price
         const booking = await Booking.findById(bookingId);
         if (booking) {
-            booking.totalPrice = bookingFlight.totalFlightPrice || 0;
+            // For round trip, sum both flights
+            const totalPrice = isRoundTrip && returnBookingFlight
+                ? (bookingFlight.totalFlightPrice || 0) + (returnBookingFlight.totalFlightPrice || 0)
+                : (bookingFlight.totalFlightPrice || 0);
+            booking.totalPrice = totalPrice;
             await booking.save();
-            console.log(`✅ Booking totalPrice updated to ${bookingFlight.totalFlightPrice}`);
+            console.log(`✅ Booking totalPrice updated to ${totalPrice}`);
         }
 
-        // Create passenger records if provided
+        // Create passenger records for outbound flight
         let createdPassengers = [];
         if (passengers && passengers.length > 0) {
             const passengerDocs = passengers.map(passenger => ({
@@ -195,7 +322,8 @@ router.post('/', auth, async (req, res) => {
                     }
                 }
 
-                await sendFlightBookingEmail(user.email, {
+                // Prepare email data
+                const emailData = {
                     booking: booking,
                     flightBooking: {
                         ...flightData,
@@ -206,7 +334,49 @@ router.post('/', auth, async (req, res) => {
                         email: user.email,
                         phone: user.phone
                     }
-                });
+                };
+
+                // Add return flight data if round trip
+                if (isRoundTrip && returnBookingFlight) {
+                    const populatedReturnBookingFlight = await BookingFlight.findById(returnBookingFlight._id)
+                        .populate({
+                            path: 'flightId',
+                            populate: [
+                                { path: 'airlineId', model: 'Airline' },
+                                { path: 'departureAirportId', model: 'Airport' },
+                                { path: 'arrivalAirportId', model: 'Airport' }
+                            ]
+                        })
+                        .populate('flightClassId');
+
+                    const returnFlightData = populatedReturnBookingFlight.toObject();
+                    if (returnFlightData.flightId) {
+                        returnFlightData.flightId.airline = returnFlightData.flightId.airlineId;
+                        returnFlightData.flightId.departureAirport = returnFlightData.flightId.departureAirportId;
+                        returnFlightData.flightId.arrivalAirport = returnFlightData.flightId.arrivalAirportId;
+
+                        const hours = Math.floor(returnFlightData.flightId.durationMinutes / 60);
+                        const minutes = returnFlightData.flightId.durationMinutes % 60;
+                        returnFlightData.flightId.duration = hours > 0
+                            ? `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`
+                            : `${minutes}m`;
+
+                        if (returnFlightData.flightId.aircraft?.model) {
+                            returnFlightData.flightId.aircraft = returnFlightData.flightId.aircraft.model;
+                        }
+                    }
+
+                    // Get return flight passengers
+                    const returnFlightPassengers = await FlightPassenger.find({ bookingFlightId: returnBookingFlight._id });
+
+                    emailData.returnFlightBooking = {
+                        ...returnFlightData,
+                        passengers: returnFlightPassengers
+                    };
+                    console.log('✅ Added return flight data to email');
+                }
+
+                await sendFlightBookingEmail(user.email, emailData);
                 console.log('✅ Flight booking confirmation email sent');
             } else {
                 console.log('⚠️ Cannot send email - booking or user not found');
@@ -217,13 +387,21 @@ router.post('/', auth, async (req, res) => {
             // Don't fail the booking if email fails
         }
 
+        const responseData = {
+            bookingFlight,
+            passengers: createdPassengers
+        };
+
+        if (isRoundTrip && returnBookingFlight) {
+            responseData.returnBookingFlight = returnBookingFlight;
+            responseData.message = `Đặt vé khứ hồi thành công. Đã trừ ${seatsToDeduct} ghế cho mỗi chuyến.`;
+        } else {
+            responseData.message = `Đặt vé thành công. Đã trừ ${seatsToDeduct} ghế.`;
+        }
+
         res.status(201).json({
             success: true,
-            data: {
-                bookingFlight,
-                passengers: createdPassengers
-            },
-            message: `Đặt vé thành công. Đã trừ ${seatsToDeduct} ghế.`
+            data: responseData
         });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
@@ -361,78 +539,93 @@ router.get('/booking/:bookingId/details', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin chuyến bay' });
         }
 
-        // For now, return the first flight booking (assuming single flight per booking)
-        // In the future, this could return multiple flights
-        const bookingFlight = bookingFlights[0];
+        // Check if this is a round trip (2 flights)
+        const isRoundTrip = bookingFlights.length > 1;
 
-        // Get passengers for this booking flight
-        const passengers = await FlightPassenger.find({ bookingFlightId: bookingFlight._id });
+        // Transform booking flights into detail format
+        const flightBookingDetails = await Promise.all(bookingFlights.map(async (bookingFlight) => {
+            // Get passengers for this booking flight
+            const passengers = await FlightPassenger.find({ bookingFlightId: bookingFlight._id });
 
-        // Transform the data to match frontend expectations
-        const flightBookingDetail = {
-            _id: bookingFlight._id,
-            bookingId: bookingFlight.bookingId,
-            flightId: {
-                _id: bookingFlight.flightId._id,
+            return {
+                _id: bookingFlight._id,
+                bookingId: bookingFlight.bookingId,
+                flightId: {
+                    _id: bookingFlight.flightId._id,
+                    flightCode: bookingFlight.flightCode,
+                    airline: bookingFlight.flightId.airlineId ? {
+                        _id: bookingFlight.flightId.airlineId._id,
+                        name: bookingFlight.flightId.airlineId.name,
+                        code: bookingFlight.flightId.airlineId.code,
+                        logo: bookingFlight.flightId.airlineId.logo
+                    } : null,
+                    departureAirport: bookingFlight.flightId.departureAirportId ? {
+                        _id: bookingFlight.flightId.departureAirportId._id,
+                        name: bookingFlight.flightId.departureAirportId.name,
+                        code: bookingFlight.flightId.departureAirportId.iata,
+                        city: bookingFlight.flightId.departureAirportId.city,
+                        country: "Việt Nam"
+                    } : null,
+                    arrivalAirport: bookingFlight.flightId.arrivalAirportId ? {
+                        _id: bookingFlight.flightId.arrivalAirportId._id,
+                        name: bookingFlight.flightId.arrivalAirportId.name,
+                        code: bookingFlight.flightId.arrivalAirportId.iata,
+                        city: bookingFlight.flightId.arrivalAirportId.city,
+                        country: "Việt Nam"
+                    } : null,
+                    departureTime: bookingFlight.flightId.departureTime,
+                    arrivalTime: bookingFlight.flightId.arrivalTime,
+                    duration: `${Math.floor(bookingFlight.flightId.durationMinutes / 60)}h ${bookingFlight.flightId.durationMinutes % 60}m`,
+                    aircraft: bookingFlight.flightId.aircraft?.model || null
+                },
+                flightClassId: {
+                    _id: bookingFlight.flightClassId._id,
+                    name: bookingFlight.flightClassId.className,
+                    code: bookingFlight.flightClassId.className,
+                    description: `Hạng ${bookingFlight.flightClassId.className} - Hành lý: ${bookingFlight.flightClassId.cabinBaggage}kg xách tay, ${bookingFlight.flightClassId.baggageAllowance}kg ký gửi`,
+                    amenities: bookingFlight.flightClassId.amenities || []
+                },
+                numTickets: bookingFlight.numTickets,
+                pricePerTicket: bookingFlight.pricePerTicket,
+                totalFlightPrice: bookingFlight.totalFlightPrice,
+                status: bookingFlight.status,
+                note: bookingFlight.note,
+                paymentMethod: bookingFlight.paymentMethod,
+                discountCode: bookingFlight.discountCode,
+                discountAmount: bookingFlight.discountAmount,
+                qrCode: bookingFlight.qrCode,
+                qrCodePublicId: bookingFlight.qrCodePublicId,
                 flightCode: bookingFlight.flightCode,
-                airline: bookingFlight.flightId.airlineId ? {
-                    _id: bookingFlight.flightId.airlineId._id,
-                    name: bookingFlight.flightId.airlineId.name,
-                    code: bookingFlight.flightId.airlineId.code,
-                    logo: bookingFlight.flightId.airlineId.logo
-                } : null,
-                departureAirport: bookingFlight.flightId.departureAirportId ? {
-                    _id: bookingFlight.flightId.departureAirportId._id,
-                    name: bookingFlight.flightId.departureAirportId.name,
-                    code: bookingFlight.flightId.departureAirportId.iata,
-                    city: bookingFlight.flightId.departureAirportId.city,
-                    country: "Việt Nam" // Default for now
-                } : null,
-                arrivalAirport: bookingFlight.flightId.arrivalAirportId ? {
-                    _id: bookingFlight.flightId.arrivalAirportId._id,
-                    name: bookingFlight.flightId.arrivalAirportId.name,
-                    code: bookingFlight.flightId.arrivalAirportId.iata,
-                    city: bookingFlight.flightId.arrivalAirportId.city,
-                    country: "Việt Nam" // Default for now
-                } : null,
-                departureTime: bookingFlight.flightId.departureTime,
-                arrivalTime: bookingFlight.flightId.arrivalTime,
-                duration: `${Math.floor(bookingFlight.flightId.durationMinutes / 60)}h ${bookingFlight.flightId.durationMinutes % 60}m`,
-                aircraft: bookingFlight.flightId.aircraft?.model || null
-            },
-            flightClassId: {
-                _id: bookingFlight.flightClassId._id,
-                name: bookingFlight.flightClassId.className,
-                code: bookingFlight.flightClassId.className,
-                description: `Hạng ${bookingFlight.flightClassId.className} - Hành lý: ${bookingFlight.flightClassId.cabinBaggage}kg xách tay, ${bookingFlight.flightClassId.baggageAllowance}kg ký gửi`,
-                amenities: bookingFlight.flightClassId.amenities || []
-            },
-            numTickets: bookingFlight.numTickets,
-            pricePerTicket: bookingFlight.pricePerTicket,
-            totalFlightPrice: bookingFlight.totalFlightPrice,
-            status: bookingFlight.status,
-            note: bookingFlight.note,
-            paymentMethod: bookingFlight.paymentMethod,
-            discountCode: bookingFlight.discountCode,
-            discountAmount: bookingFlight.discountAmount,
-            qrCode: bookingFlight.qrCode,
-            qrCodePublicId: bookingFlight.qrCodePublicId,
-            flightCode: bookingFlight.flightCode,
-            passengers: passengers.map(passenger => ({
-                _id: passenger._id,
-                fullName: passenger.fullName,
-                dateOfBirth: passenger.dateOfBirth,
-                gender: passenger.gender,
-                passportNumber: passenger.passportNumber,
-                seatNumber: passenger.seatNumber
-            })),
-            createdAt: bookingFlight.createdAt,
-            updatedAt: bookingFlight.updatedAt
-        };
+                selectedSeats: bookingFlight.selectedSeats || [],
+                passengers: passengers.map(passenger => ({
+                    _id: passenger._id,
+                    fullName: passenger.fullName,
+                    dateOfBirth: passenger.dateOfBirth,
+                    gender: passenger.gender,
+                    passportNumber: passenger.passportNumber,
+                    seatNumber: passenger.seatNumber
+                })),
+                createdAt: bookingFlight.createdAt,
+                updatedAt: bookingFlight.updatedAt
+            };
+        }));
+
+        // Calculate total price across all flights
+        const totalPrice = flightBookingDetails.reduce((sum, flight) => sum + flight.totalFlightPrice, 0);
+        const totalDiscount = flightBookingDetails.reduce((sum, flight) => sum + (flight.discountAmount || 0), 0);
 
         res.json({
             success: true,
-            data: flightBookingDetail
+            data: {
+                isRoundTrip,
+                flights: flightBookingDetails,
+                outboundFlight: flightBookingDetails[0],
+                returnFlight: isRoundTrip ? flightBookingDetails[1] : null,
+                totalPrice,
+                totalDiscount,
+                // Keep backward compatibility - return first flight
+                ...flightBookingDetails[0]
+            }
         });
     } catch (error) {
         console.error('Get flight booking details error:', error);

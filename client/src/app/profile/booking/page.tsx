@@ -31,6 +31,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BookingDetailModal } from "@/components/Booking/BookingDetailModal";
 import { FlightBookingDetailModal } from "@/components/Admin/FlightBookingDetailModal";
+import { RoundTripFlightBookingDetailModal } from "@/components/Admin/RoundTripFlightBookingDetailModal";
 import { TourBookingDetailModal } from "@/components/Admin/TourBookingDetailModal";
 import { ActivityBookingDetailModal } from "@/components/Admin/ActivityBookingDetailModal";
 import { CancelBookingDialog } from "@/components/Booking/CancelBookingDialog";
@@ -86,6 +87,9 @@ export default function BookingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [roundTripBookings, setRoundTripBookings] = useState<Set<string>>(
+    new Set()
+  );
 
   // Load bookings
   useEffect(() => {
@@ -117,6 +121,15 @@ export default function BookingPage() {
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setBookings(sortedBookings);
+
+        // Extract round trip bookings from the response
+        const roundTripSet = new Set<string>();
+        sortedBookings.forEach((booking) => {
+          if (booking.isRoundTrip) {
+            roundTripSet.add(booking._id);
+          }
+        });
+        setRoundTripBookings(roundTripSet);
       } else {
         toast.error(response.message || "Không thể tải danh sách booking");
       }
@@ -371,7 +384,11 @@ export default function BookingPage() {
                                   Tổng tiền:
                                 </span>
                                 <span className="font-semibold text-green-600">
-                                  {formatCurrency(booking.totalPrice)}
+                                  {formatCurrency(
+                                    booking.actualTotal !== undefined
+                                      ? booking.actualTotal
+                                      : booking.totalPrice
+                                  )}
                                 </span>
                               </div>
 
@@ -400,7 +417,13 @@ export default function BookingPage() {
 
                             <div className="flex gap-2">
                               {booking.bookingType === "flight" ? (
-                                <FlightBookingDetailModal booking={booking} />
+                                roundTripBookings.has(booking._id) ? (
+                                  <RoundTripFlightBookingDetailModal
+                                    booking={booking}
+                                  />
+                                ) : (
+                                  <FlightBookingDetailModal booking={booking} />
+                                )
                               ) : booking.bookingType === "tour" ? (
                                 <TourBookingDetailModal booking={booking} />
                               ) : booking.bookingType === "activity" ? (

@@ -67,6 +67,10 @@ const bookingFlightSchema = new mongoose.Schema({
     qrCodePublicId: {
         type: String, // Cloudinary public ID for QR code
         trim: true
+    },
+    selectedSeats: {
+        type: [String], // Array of selected seat numbers
+        default: []
     }
 }, {
     timestamps: true
