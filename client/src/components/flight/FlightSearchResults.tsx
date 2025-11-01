@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Flight } from "@/services/flightService";
 import Link from "next/link";
 import { Plane } from "lucide-react";
+import FlightOptionsModal, { FlightBookingOptions } from "./FlightOptionsModal";
 
 interface SearchParams {
   from: string;
@@ -18,13 +19,28 @@ interface Props {
   loading: boolean;
   error: string | null;
   searchParams: SearchParams;
+  isRoundTrip?: boolean;
+  tripType?: "outbound" | "return";
+  onFlightSelect?: (
+    flight: Flight,
+    scheduleId: string,
+    seatClass: string,
+    options?: {
+      extraBaggage?: number;
+      insurance?: boolean;
+      selectedSeats?: string[];
+    }
+  ) => void;
 }
 
 export default function FlightSearchResults({
   results,
   loading,
   error,
-  searchParams
+  searchParams,
+  isRoundTrip = false,
+  tripType = "outbound",
+  onFlightSelect
 }: Props) {
   const [sortBy, setSortBy] = useState<"price" | "duration" | "departure">(
     "price"
@@ -34,6 +50,10 @@ export default function FlightSearchResults({
   const [maxPrice, setMaxPrice] = useState<number>(5000000);
   const [selectedStops, setSelectedStops] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Modal state
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
 
   // Filter and sort results
   const filteredResults = results
@@ -396,18 +416,34 @@ export default function FlightSearchResults({
                               } ghế trống`}
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
-                          <Link
-                            href={`/flights/detail/${flight._id}`}
-                            className="px-4 py-2 border border-sky-500 text-sky-600 rounded-lg hover:bg-sky-50 transition-colors text-center"
-                          >
-                            Chi tiết
-                          </Link>
-                          <Link
-                            href={`/bookingflight?flightId=${flight._id}&adults=${searchParams.passengers}&children=0&infants=0&seatClass=${searchParams.seatClass}`}
-                            className="px-6 py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all text-center"
-                          >
-                            Đặt vé
-                          </Link>
+                          {!onFlightSelect && (
+                            <Link
+                              href={`/flights/detail/${flight._id}`}
+                              className="px-4 py-2 border border-sky-500 text-sky-600 rounded-lg hover:bg-sky-50 transition-colors text-center"
+                            >
+                              Chi tiết
+                            </Link>
+                          )}
+                          {onFlightSelect ? (
+                            <button
+                              onClick={() => {
+                                setSelectedFlight(flight);
+                                setShowOptionsModal(true);
+                              }}
+                              className="px-6 py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all text-center font-semibold"
+                            >
+                              {tripType === "outbound"
+                                ? "Chọn chuyến đi"
+                                : "Chọn chuyến về"}
+                            </button>
+                          ) : (
+                            <Link
+                              href={`/bookingflight?flightId=${flight._id}&adults=${searchParams.passengers}&children=0&infants=0&seatClass=${searchParams.seatClass}`}
+                              className="px-6 py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all text-center"
+                            >
+                              Đặt vé
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -418,6 +454,39 @@ export default function FlightSearchResults({
           )}
         </div>
       </div>
+
+      {/* Flight Options Modal */}
+      {selectedFlight && onFlightSelect && (
+        <FlightOptionsModal
+          flight={selectedFlight}
+          isOpen={showOptionsModal}
+          onClose={() => {
+            setShowOptionsModal(false);
+            setSelectedFlight(null);
+          }}
+          onConfirm={(options: FlightBookingOptions) => {
+            onFlightSelect(
+              selectedFlight,
+              options.scheduleId,
+              options.seatClass,
+              {
+                extraBaggage: options.extraBaggage,
+                insurance: options.insurance,
+                selectedSeats: options.selectedSeats
+              }
+            );
+            setShowOptionsModal(false);
+            setSelectedFlight(null);
+          }}
+          defaultSeatClass={searchParams.seatClass}
+          defaultPassengers={{
+            adults: searchParams.passengers,
+            children: 0,
+            infants: 0
+          }}
+          tripType={tripType}
+        />
+      )}
     </div>
   );
 }

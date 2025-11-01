@@ -4,6 +4,7 @@ const Booking = require(path.resolve(__dirname, '../../models/Booking'));
 const User = require(path.resolve(__dirname, '../../models/User'));
 const admin = require(path.resolve(__dirname, '../../middleware/admin'));
 const { notifyBookingCreated, notifyPaymentCompleted, notifyBookingUpdated, notifyBookingCancelled } = require(path.resolve(__dirname, '../../utils/socketHandler'));
+const { autoCompleteBookings } = require(path.resolve(__dirname, '../../utils/autoCompleteBookings'));
 const router = express.Router();
 
 // Get all bookings for admin with user info
@@ -57,13 +58,35 @@ router.get('/', admin, async (req, res) => {
         }
 
         // Transform data to have 'user' field for frontend compatibility
-        const transformedBookings = filteredBookings.map(booking => {
+        // For flight bookings, enrich with round trip status and actual total
+        const BookingFlight = require(path.resolve(__dirname, '../../models/BookingFlight'));
+
+        const transformedBookings = await Promise.all(filteredBookings.map(async (booking) => {
             const bookingObj = booking.toObject();
-            return {
+            const transformed = {
                 ...bookingObj,
                 user: bookingObj.userId // Add 'user' field as alias for populated userId
             };
-        });
+
+            // If it's a flight booking, check if it's round trip and get total with discounts
+            if (booking.bookingType === 'flight') {
+                const flightBookings = await BookingFlight.find({ bookingId: booking._id });
+
+                if (flightBookings.length > 0) {
+                    // Check if round trip (2 flights)
+                    transformed.isRoundTrip = flightBookings.length > 1;
+
+                    // Calculate actual total (sum of all flight prices)
+                    const totalFlightPrice = flightBookings.reduce((sum, fb) => sum + fb.totalFlightPrice, 0);
+                    const totalDiscount = flightBookings.reduce((sum, fb) => sum + (fb.discountAmount || 0), 0);
+
+                    // Override totalPrice with actual amount after discount
+                    transformed.actualTotal = totalFlightPrice - totalDiscount;
+                }
+            }
+
+            return transformed;
+        }));
 
         res.json({
             success: true,
@@ -260,6 +283,28 @@ router.post('/create-test-data', admin, async (req, res) => {
     } catch (error) {
         console.error('Create test data error:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Manually trigger auto-complete bookings (admin only)
+router.post('/auto-complete', admin, async (req, res) => {
+    try {
+        console.log('📞 Manual trigger: Auto-complete bookings requested by admin');
+        const result = await autoCompleteBookings();
+
+        res.json({
+            success: result.success,
+            message: result.success
+                ? `Đã kiểm tra ${result.totalChecked} bookings, hoàn thành ${result.completedCount} bookings`
+                : 'Có lỗi xảy ra khi auto-complete bookings',
+            data: result
+        });
+    } catch (error) {
+        console.error('Manual auto-complete error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 });
 

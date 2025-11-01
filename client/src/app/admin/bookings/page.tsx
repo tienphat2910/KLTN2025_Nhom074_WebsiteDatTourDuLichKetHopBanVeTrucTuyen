@@ -947,6 +947,49 @@ export default function AdminBookingPage() {
     }
   };
 
+  // Auto-complete bookings function
+  const handleAutoComplete = async () => {
+    try {
+      const token = localStorage.getItem("lutrip_admin_token");
+      if (!token) {
+        toast.error("Không có quyền admin");
+        return;
+      }
+
+      toast.info("Đang kiểm tra và hoàn thành booking...");
+
+      const response = await fetch(
+        `${env.API_BASE_URL}/admin/bookings/auto-complete`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast.success(result.message);
+
+        // Reload data if any bookings were completed
+        if (result.data.completedCount > 0) {
+          const status = statusFilter === "all" ? undefined : statusFilter;
+          const type = typeFilter === "all" ? undefined : typeFilter;
+          loadBookings(currentPage, status, type);
+          loadStats();
+        }
+      } else {
+        toast.error(result.message || "Không thể auto-complete bookings");
+      }
+    } catch (error) {
+      console.error("Auto-complete error:", error);
+      toast.error("Lỗi kết nối server");
+    }
+  };
+
   return (
     <AdminLayout
       title="Quản lý Booking"
@@ -962,6 +1005,7 @@ export default function AdminBookingPage() {
           onRefreshStats={loadStats}
           onExportExcel={handleExportExcel}
           onGenerateReport={handleGenerateReport}
+          onAutoComplete={handleAutoComplete}
         />
 
         {/* Statistics Cards */}

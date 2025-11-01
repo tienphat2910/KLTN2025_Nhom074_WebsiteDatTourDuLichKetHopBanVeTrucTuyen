@@ -23,6 +23,11 @@ interface Props {
   seatClass: string;
   setSeatClass: (v: string) => void;
   handleSearch: (e: React.FormEvent) => void;
+  onPassengerChange?: (
+    adults: number,
+    children: number,
+    infants: number
+  ) => void;
 }
 
 export default function FlightSearchForm({
@@ -40,7 +45,8 @@ export default function FlightSearchForm({
   setPassengerCount,
   seatClass,
   setSeatClass,
-  handleSearch
+  handleSearch,
+  onPassengerChange
 }: Props) {
   const [directOnly, setDirectOnly] = useState(false);
 
@@ -445,6 +451,9 @@ export default function FlightSearchForm({
                     e.stopPropagation();
                     setShowPassengerPopup(false);
                     setPassengerCount(adult);
+                    if (onPassengerChange) {
+                      onPassengerChange(adult, child, infant);
+                    }
                   }}
                 >
                   Xong

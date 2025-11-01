@@ -689,6 +689,9 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
     try {
         const transporter = createTransporter();
 
+        // Check if this is a round trip booking
+        const isRoundTrip = bookingData.returnFlightBooking && bookingData.returnFlightBooking.flightId;
+
         const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -712,6 +715,10 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
         .flight-route .airport-code { font-size: 32px; font-weight: bold; color: #10b981; }
         .flight-route .airport-name { color: #666; font-size: 14px; margin-top: 5px; }
         .flight-route .arrow { flex: 0 0 60px; color: #10b981; font-size: 24px; }
+        .flight-type-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #0ea5e9; color: white; margin-bottom: 10px; }
+        .return-flight { background: #fff7ed; border: 2px solid #f97316; }
+        .return-flight .airport-code { color: #f97316; }
+        .return-flight .arrow { color: #f97316; }
         .info-section { margin: 25px 0; }
         .info-section h3 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 15px; }
         .info-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
@@ -724,6 +731,11 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
         .status-pending { background: #fff3cd; color: #856404; }
         .status-confirmed { background: #d1ecf1; color: #0c5460; }
         .passenger-item { background: #f8f9fa; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 3px solid #10b981; }
+        .qr-section { text-align: center; background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+        .qr-item { background: white; padding: 15px; border-radius: 8px; border: 2px solid #e5e7eb; }
+        .qr-item h4 { margin: 0 0 10px 0; color: #10b981; font-size: 16px; }
+        .qr-item.return h4 { color: #f97316; }
         .footer { background: #10b981; text-align: center; color: white; padding: 20px; font-size: 14px; }
         .footer a { color: #ffd369; text-decoration: none; }
         @media screen and (max-width: 600px) {
@@ -733,6 +745,7 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
             .info-label { margin-bottom: 5px; }
             .flight-route .airports { flex-direction: column; }
             .flight-route .arrow { transform: rotate(90deg); margin: 10px 0; }
+            .qr-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -741,7 +754,7 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
         <div class="header">
             <img src="https://res.cloudinary.com/de5rurcwt/image/upload/v1760700010/logo-lutrip_vdnkd3.png" alt="LuTrip Logo" />
             <h1>LuTrip - Khám phá Việt Nam</h1>
-            <p>Xác nhận đặt vé máy bay thành công</p>
+            <p>Xác nhận đặt vé máy bay ${isRoundTrip ? 'khứ hồi ' : ''}thành công</p>
         </div>
 
         <div class="success-icon">
@@ -758,10 +771,13 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
             <div class="booking-id">
                 <div>Mã đặt vé: <strong>#${bookingData.booking._id.toString().slice(-8).toUpperCase()}</strong></div>
                 <div style="margin-top: 8px;">Trạng thái: <span class="status-badge status-${bookingData.flightBooking.status}">${bookingData.flightBooking.status === 'pending' ? 'Chờ xác nhận' : bookingData.flightBooking.status === 'confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}</span></div>
+                ${isRoundTrip ? '<div style="margin-top: 8px;"><span class="flight-type-badge">✈️ KHỨ HỒI</span></div>' : ''}
             </div>
 
+            <!-- OUTBOUND FLIGHT -->
             <div class="flight-route">
-                <div><strong>Thông tin chuyến bay</strong></div>
+                <div><strong>${isRoundTrip ? '🛫 CHUYẾN ĐI' : 'Thông tin chuyến bay'}</strong></div>
+                <div style="margin: 5px 0; color: #666; font-size: 13px;">Mã chuyến bay: <strong>${bookingData.flightBooking.flightId.flightCode}</strong></div>
                 <div class="airports">
                     <div class="airport">
                         <div class="airport-code">${bookingData.flightBooking.flightId.departureAirport.iata}</div>
@@ -776,20 +792,46 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
                     </div>
                 </div>
                 <div style="color: #666; font-size: 14px; margin-top: 10px;">
-                    Thời gian bay: ${bookingData.flightBooking.flightId.duration}
+                    Hãng bay: ${bookingData.flightBooking.flightId.airline.name} | Thời gian bay: ${bookingData.flightBooking.flightId.duration}
                 </div>
+                ${bookingData.flightBooking.selectedSeats && bookingData.flightBooking.selectedSeats.length > 0 ? `
+                <div style="color: #666; font-size: 14px; margin-top: 8px; background: #f0fdf4; padding: 8px; border-radius: 4px;">
+                    <strong>Ghế đã chọn:</strong> ${bookingData.flightBooking.selectedSeats.join(', ')}
+                </div>
+                ` : ''}
             </div>
 
+            ${isRoundTrip && bookingData.returnFlightBooking ? `
+            <!-- RETURN FLIGHT -->
+            <div class="flight-route return-flight">
+                <div><strong>🛬 CHUYẾN VỀ</strong></div>
+                <div style="margin: 5px 0; color: #666; font-size: 13px;">Mã chuyến bay: <strong>${bookingData.returnFlightBooking.flightId.flightCode}</strong></div>
+                <div class="airports">
+                    <div class="airport">
+                        <div class="airport-code">${bookingData.returnFlightBooking.flightId.departureAirport.iata}</div>
+                        <div class="airport-name">${bookingData.returnFlightBooking.flightId.departureAirport.city}</div>
+                        <div style="margin-top: 10px; font-size: 16px; font-weight: 500;">${formatDate(bookingData.returnFlightBooking.flightId.departureTime)}</div>
+                    </div>
+                    <div class="arrow">✈️</div>
+                    <div class="airport">
+                        <div class="airport-code">${bookingData.returnFlightBooking.flightId.arrivalAirport.iata}</div>
+                        <div class="airport-name">${bookingData.returnFlightBooking.flightId.arrivalAirport.city}</div>
+                        <div style="margin-top: 10px; font-size: 16px; font-weight: 500;">${formatDate(bookingData.returnFlightBooking.flightId.arrivalTime)}</div>
+                    </div>
+                </div>
+                <div style="color: #666; font-size: 14px; margin-top: 10px;">
+                    Hãng bay: ${bookingData.returnFlightBooking.flightId.airline.name} | Thời gian bay: ${bookingData.returnFlightBooking.flightId.duration}
+                </div>
+                ${bookingData.returnFlightBooking.selectedSeats && bookingData.returnFlightBooking.selectedSeats.length > 0 ? `
+                <div style="color: #666; font-size: 14px; margin-top: 8px; background: #fff7ed; padding: 8px; border-radius: 4px;">
+                    <strong>Ghế đã chọn:</strong> ${bookingData.returnFlightBooking.selectedSeats.join(', ')}
+                </div>
+                ` : ''}
+            </div>
+            ` : ''}
+
             <div class="info-section">
-                <h3>✈️ Chi tiết Chuyến bay</h3>
-                <div class="info-row">
-                    <div class="info-label">Số hiệu:</div>
-                    <div class="info-value"><strong>${bookingData.flightBooking.flightId.flightCode}</strong></div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Hãng bay:</div>
-                    <div class="info-value">${bookingData.flightBooking.flightId.airline.name}</div>
-                </div>
+                <h3>✈️ Chi tiết Vé</h3>
                 <div class="info-row">
                     <div class="info-label">Hạng vé:</div>
                     <div class="info-value">${bookingData.flightBooking.flightClassId.className}</div>
@@ -821,7 +863,7 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
             </div>
 
             <div class="info-section">
-                <h3>👨‍👩‍👧‍👦 Danh sách Hành khách (${bookingData.flightBooking.passengers?.length || bookingData.flightBooking.numTickets})</h3>
+                <h3>👨‍👩‍👧‍👦 Danh sách Hành khách ${isRoundTrip ? '- Chuyến đi' : ''} (${bookingData.flightBooking.passengers?.length || bookingData.flightBooking.numTickets})</h3>
                 <div class="info-row">
                     <div class="info-label">Số lượng vé:</div>
                     <div class="info-value">${bookingData.flightBooking.numTickets} vé × ${formatCurrency(bookingData.flightBooking.pricePerTicket)}</div>
@@ -835,13 +877,32 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
                         <div style="margin-top: 5px; color: #666; font-size: 13px;">
                             Ngày sinh: ${formatDateOnly(p.dateOfBirth)} | Giới tính: ${p.gender === 'male' || p.gender === 'Male' || p.gender === 'Nam' ? 'Nam' : 'Nữ'}
                             ${p.passportNumber ? ` | Hộ chiếu: ${p.passportNumber}` : ''}
-                            ${p.seatNumber ? ` | Ghế: ${p.seatNumber}` : ''}
+                            ${p.seatNumber ? ` | <strong style="color: #10b981;">Ghế: ${p.seatNumber}</strong>` : ''}
                         </div>
                     </div>
                     `).join('')}
                 </div>
                 ` : ''}
             </div>
+
+            ${isRoundTrip && bookingData.returnFlightBooking?.passengers && bookingData.returnFlightBooking.passengers.length > 0 ? `
+            <div class="info-section">
+                <h3>👨‍👩‍👧‍👦 Danh sách Hành khách - Chuyến về (${bookingData.returnFlightBooking.passengers.length})</h3>
+                <div style="margin-top: 15px;">
+                    <strong>Chi tiết hành khách:</strong>
+                    ${bookingData.returnFlightBooking.passengers.map((p, idx) => `
+                    <div class="passenger-item">
+                        <strong>${idx + 1}. ${p.fullName}</strong>
+                        <div style="margin-top: 5px; color: #666; font-size: 13px;">
+                            Ngày sinh: ${formatDateOnly(p.dateOfBirth)} | Giới tính: ${p.gender === 'male' || p.gender === 'Male' || p.gender === 'Nam' ? 'Nam' : 'Nữ'}
+                            ${p.passportNumber ? ` | Hộ chiếu: ${p.passportNumber}` : ''}
+                            ${p.seatNumber ? ` | <strong style="color: #f97316;">Ghế: ${p.seatNumber}</strong>` : ''}
+                        </div>
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
 
             <div class="info-section">
                 <h3>💰 Thông tin Thanh toán</h3>
@@ -854,10 +915,22 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
                             'Chưa xác định'
             }</div>
                 </div>
-                ${bookingData.flightBooking.discountAmount > 0 ? `
+                ${isRoundTrip ? `
                 <div class="info-row">
-                    <div class="info-label">Giảm giá:</div>
-                    <div class="info-value" style="color: #dc2626;">-${formatCurrency(bookingData.flightBooking.discountAmount)}</div>
+                    <div class="info-label">Giá chuyến đi:</div>
+                    <div class="info-value">${formatCurrency(bookingData.flightBooking.totalFlightPrice)}</div>
+                </div>
+                ${bookingData.returnFlightBooking ? `
+                <div class="info-row">
+                    <div class="info-label">Giá chuyến về:</div>
+                    <div class="info-value">${formatCurrency(bookingData.returnFlightBooking.totalFlightPrice)}</div>
+                </div>
+                ` : ''}
+                ` : ''}
+                ${bookingData.flightBooking.discountAmount > 0 || (bookingData.returnFlightBooking && bookingData.returnFlightBooking.discountAmount > 0) ? `
+                <div class="info-row">
+                    <div class="info-label">Tổng giảm giá:</div>
+                    <div class="info-value" style="color: #dc2626;">-${formatCurrency((bookingData.flightBooking.discountAmount || 0) + (bookingData.returnFlightBooking?.discountAmount || 0))}</div>
                 </div>
                 ` : ''}
                 ${bookingData.flightBooking.note ? `
@@ -870,15 +943,35 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
 
             <div class="total-price">
                 <div class="label">Tổng tiền</div>
-                <div class="amount">${formatCurrency(bookingData.flightBooking.totalFlightPrice)}</div>
+                <div class="amount">${formatCurrency(bookingData.booking.totalPrice || bookingData.flightBooking.totalFlightPrice)}</div>
             </div>
 
-            ${bookingData.flightBooking.qrCode ? `
-            <div class="info-section" style="text-align: center; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+            ${bookingData.flightBooking.qrCode || (isRoundTrip && bookingData.returnFlightBooking?.qrCode) ? `
+            <div class="qr-section">
                 <h3 style="margin-bottom: 15px;">🎫 Mã QR Boarding Pass</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Vui lòng xuất trình mã QR khi check-in</p>
+                
+                ${isRoundTrip ? `
+                <div class="qr-grid">
+                    ${bookingData.flightBooking.qrCode ? `
+                    <div class="qr-item">
+                        <h4>🛫 Chuyến đi</h4>
+                        <img src="${bookingData.flightBooking.qrCode}" alt="QR Code Outbound" style="width: 180px; height: 180px; margin: 10px auto; display: block; border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;">
+                        <p style="margin-top: 10px; color: #666; font-size: 13px;">${bookingData.flightBooking.flightCode}</p>
+                    </div>
+                    ` : ''}
+                    ${bookingData.returnFlightBooking?.qrCode ? `
+                    <div class="qr-item return">
+                        <h4>🛬 Chuyến về</h4>
+                        <img src="${bookingData.returnFlightBooking.qrCode}" alt="QR Code Return" style="width: 180px; height: 180px; margin: 10px auto; display: block; border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;">
+                        <p style="margin-top: 10px; color: #666; font-size: 13px;">${bookingData.returnFlightBooking.flightCode}</p>
+                    </div>
+                    ` : ''}
+                </div>
+                ` : `
                 <img src="${bookingData.flightBooking.qrCode}" alt="QR Code" style="width: 200px; height: 200px; margin: 10px auto; display: block; border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;">
-                <p style="margin-top: 10px; color: #666; font-size: 14px;">Vui lòng xuất trình mã QR này khi check-in</p>
-                <p style="color: #666; font-size: 13px;">Mã chuyến bay: <strong>${bookingData.flightBooking.flightCode}</strong></p>
+                <p style="margin-top: 10px; color: #666; font-size: 13px;">Mã chuyến bay: <strong>${bookingData.flightBooking.flightCode}</strong></p>
+                `}
             </div>
             ` : ''}
 
@@ -888,6 +981,7 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
                     <li>Có mặt tại sân bay trước 2 giờ (chuyến quốc tế) hoặc 1.5 giờ (chuyến nội địa)</li>
                     <li>Mang theo CMND/CCCD hoặc hộ chiếu hợp lệ</li>
                     <li>In hoặc lưu email xác nhận này để làm thủ tục</li>
+                    ${isRoundTrip ? '<li>Lưu ý thời gian check-in cho cả 2 chuyến bay</li>' : ''}
                     <li>Liên hệ hotline nếu cần hỗ trợ: <strong>1900-xxxx</strong></li>
                 </ul>
             </div>
@@ -909,7 +1003,7 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
         const mailOptions = {
             from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: userEmail,
-            subject: `✈️ Xác nhận đặt vé máy bay #${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
+            subject: `✈️ Xác nhận đặt vé máy bay ${isRoundTrip ? 'khứ hồi ' : ''}#${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
             html: htmlContent
         };
 

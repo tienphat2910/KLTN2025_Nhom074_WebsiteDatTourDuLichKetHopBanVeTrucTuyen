@@ -50,7 +50,7 @@ export function AdminLayout({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Check authentication immediately
+  // Check authentication
   useEffect(() => {
     if (!isAuthLoading) {
       const token = localStorage.getItem("lutrip_admin_token");
@@ -62,20 +62,6 @@ export function AdminLayout({
       }
     }
   }, [user, isAuthLoading, router]);
-
-  // Don't render anything while loading or if not authenticated
-  if (isAuthLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
-      </div>
-    );
-  }
-
-  const token = localStorage.getItem("lutrip_admin_token");
-  if (!token || !user || user.role !== "admin") {
-    return null; // Don't render anything while redirecting
-  }
 
   useEffect(() => {
     // Connect to socket when admin logs in
@@ -253,6 +239,20 @@ export function AdminLayout({
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Don't render anything while loading or if not authenticated
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  const token = localStorage.getItem("lutrip_admin_token");
+  if (!token || !user || user.role !== "admin") {
+    return null; // Don't render anything while redirecting
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">

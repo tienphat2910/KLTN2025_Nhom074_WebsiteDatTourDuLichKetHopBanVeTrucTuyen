@@ -61,16 +61,36 @@ router.get('/', auth, async (req, res) => {
         const bookings = await Booking.find({ userId: req.user._id })
             .populate('userId', 'fullName email phone');
 
-        // Transform data to have 'user' field for frontend compatibility
-        const transformedBookings = bookings.map(booking => {
+        // For flight bookings, get additional info about round trip status
+        const BookingFlight = require('../models/BookingFlight');
+        const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
             const bookingObj = booking.toObject();
-            return {
+            const transformed = {
                 ...bookingObj,
                 user: bookingObj.userId // Add 'user' field as alias for populated userId
             };
-        });
 
-        res.json({ success: true, data: transformedBookings });
+            // If it's a flight booking, check if it's round trip and get total with discounts
+            if (booking.bookingType === 'flight') {
+                const flightBookings = await BookingFlight.find({ bookingId: booking._id });
+
+                if (flightBookings.length > 0) {
+                    // Check if round trip (2 flights)
+                    transformed.isRoundTrip = flightBookings.length > 1;
+
+                    // Calculate actual total (sum of all flight prices)
+                    const totalFlightPrice = flightBookings.reduce((sum, fb) => sum + fb.totalFlightPrice, 0);
+                    const totalDiscount = flightBookings.reduce((sum, fb) => sum + (fb.discountAmount || 0), 0);
+
+                    // Override totalPrice with actual amount after discount
+                    transformed.actualTotal = totalFlightPrice - totalDiscount;
+                }
+            }
+
+            return transformed;
+        }));
+
+        res.json({ success: true, data: enrichedBookings });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
