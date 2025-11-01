@@ -1,7 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Upload, X, Plus, Minus } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  Upload,
+  X,
+  Plus,
+  Minus,
+  Image as ImageIcon,
+  Loader2,
+  Search
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +34,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Activity } from "@/types/activity";
 import { Destination, destinationService } from "@/services/destinationService";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { env } from "@/config/env";
 
 interface ActivityFormData {
   name: string;
@@ -120,7 +130,24 @@ export function ActivityModal({
   const [isLoading, setIsLoading] = useState(false);
   const [newFeature, setNewFeature] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
-  const [detailItems, setDetailItems] = useState<number[]>([1]); // Start with only item 1
+  const [detailItems, setDetailItems] = useState<number[]>([1]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImages, setUploadingImages] = useState<string[]>([]);
+  const [destinationSearch, setDestinationSearch] = useState("");
+
+  // Format currency helper
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat("vi-VN").format(value);
+  };
+
+  const parseCurrency = (value: string): number => {
+    return parseInt(value.replace(/\D/g, "")) || 0;
+  };
+
+  // Time helper - convert "HH:mm" to string
+  const formatTimeString = (time: string): string => {
+    return time; // Already in "HH:mm" format
+  };
 
   // Load destinations on mount
   useEffect(() => {
@@ -257,8 +284,21 @@ export function ActivityModal({
       return;
     }
 
+    if (!formData.location.name.trim() || !formData.location.address.trim()) {
+      toast.error("Vui lòng nhập đầy đủ thông tin địa điểm");
+      return;
+    }
+
     if (!formData.price.retail.adult || formData.price.retail.adult <= 0) {
       toast.error("Vui lòng nhập giá vé người lớn");
+      return;
+    }
+
+    if (
+      !formData.operating_hours.mon_to_sat.trim() ||
+      !formData.operating_hours.sunday_holidays.trim()
+    ) {
+      toast.error("Vui lòng nhập giờ hoạt động");
       return;
     }
 
@@ -308,6 +348,112 @@ export function ActivityModal({
     }));
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    toast.info(`Đang tải ${files.length} ảnh lên Cloudinary...`);
+
+    // Create preview URLs for uploading images
+    const previewUrls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith("image/")) {
+        const previewUrl = URL.createObjectURL(file);
+        previewUrls.push(previewUrl);
+      }
+    }
+
+    // Add preview URLs to show loading state
+    setUploadingImages(previewUrls);
+
+    try {
+      // Create FormData to upload files
+      const uploadFormData = new FormData();
+      let validFileCount = 0;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          toast.error(`File ${file.name} không phải là hình ảnh`);
+          continue;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`File ${file.name} quá lớn (tối đa 5MB)`);
+          continue;
+        }
+
+        uploadFormData.append("images", file);
+        validFileCount++;
+        console.log(`Added file ${i + 1}:`, file.name, file.type, file.size);
+      }
+
+      console.log(`Total valid files to upload: ${validFileCount}`);
+
+      if (validFileCount === 0) {
+        toast.error("Không có file hợp lệ để upload");
+        setUploadingImages([]);
+        return;
+      }
+
+      // Get activity ID or use 'new' for new activities
+      const activityId = activity?._id || "new";
+      uploadFormData.append("activityId", activityId);
+
+      console.log(
+        "Uploading to:",
+        `${env.API_BASE_URL}/activities/upload-images`
+      );
+      console.log("Activity ID:", activityId);
+
+      // Upload to server (which will upload to Cloudinary)
+      const response = await fetch(
+        `${env.API_BASE_URL}/activities/upload-images`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem(
+              "lutrip_admin_token"
+            )}`
+          },
+          body: uploadFormData
+        }
+      );
+
+      console.log("Response status:", response.status);
+      const result = await response.json();
+      console.log("Response data:", result);
+
+      if (result.success && result.urls) {
+        setFormData((prev) => ({
+          ...prev,
+          gallery: [...prev.gallery, ...result.urls]
+        }));
+        toast.success(`Đã thêm ${result.urls.length} hình ảnh từ Cloudinary`);
+
+        // Cleanup preview URLs
+        previewUrls.forEach((url) => URL.revokeObjectURL(url));
+        setUploadingImages([]);
+      } else {
+        toast.error(result.message || "Upload thất bại");
+        setUploadingImages([]);
+      }
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast.error("Lỗi khi upload hình ảnh");
+      setUploadingImages([]);
+    } finally {
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const addDetailItem = () => {
     const nextItem = Math.max(...detailItems) + 1;
     if (nextItem <= 7) {
@@ -353,7 +499,7 @@ export function ActivityModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {activity ? "Chỉnh sửa hoạt động" : "Tạo hoạt động mới"}
@@ -399,19 +545,55 @@ export function ActivityModal({
                 <Label htmlFor="destinationId">Điểm đến *</Label>
                 <Select
                   value={formData.destinationId}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, destinationId: value })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, destinationId: value });
+                    setDestinationSearch("");
+                  }}
+                  required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn điểm đến" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {destinations.map((dest) => (
-                      <SelectItem key={dest._id} value={dest._id}>
-                        {dest.name}
-                      </SelectItem>
-                    ))}
+                  <SelectContent className="max-h-[300px]">
+                    <div className="sticky top-0 bg-white p-2 border-b z-10">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          placeholder="Tìm điểm đến..."
+                          className="h-9 pl-9"
+                          value={destinationSearch}
+                          onChange={(e) => setDestinationSearch(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-[200px] overflow-y-auto p-1">
+                      {destinations
+                        .filter((dest) =>
+                          destinationSearch === ""
+                            ? true
+                            : dest.name
+                                .toLowerCase()
+                                .includes(destinationSearch.toLowerCase())
+                        )
+                        .map((dest) => (
+                          <SelectItem key={dest._id} value={dest._id}>
+                            {dest.name}
+                          </SelectItem>
+                        ))}
+                      {destinations.filter((dest) =>
+                        destinationSearch === ""
+                          ? true
+                          : dest.name
+                              .toLowerCase()
+                              .includes(destinationSearch.toLowerCase())
+                      ).length === 0 && (
+                        <div className="p-4 text-center text-sm text-gray-500">
+                          Không tìm thấy điểm đến
+                        </div>
+                      )}
+                    </div>
                   </SelectContent>
                 </Select>
               </div>
@@ -436,7 +618,9 @@ export function ActivityModal({
             <h3 className="text-lg font-semibold">Thông tin địa điểm</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="location-name">Tên địa điểm</Label>
+                <Label htmlFor="location-name">
+                  Tên địa điểm <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="location-name"
                   value={formData.location.name}
@@ -447,10 +631,13 @@ export function ActivityModal({
                     })
                   }
                   placeholder="Ví dụ: Vinpearl Land"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="location-address">Địa chỉ</Label>
+                <Label htmlFor="location-address">
+                  Địa chỉ <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="location-address"
                   value={formData.location.address}
@@ -464,6 +651,7 @@ export function ActivityModal({
                     })
                   }
                   placeholder="Số nhà, đường, quận/huyện"
+                  required
                 />
               </div>
             </div>
@@ -474,12 +662,13 @@ export function ActivityModal({
             <h3 className="text-lg font-semibold">Giá vé</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="price-adult">Người lớn *</Label>
+                <Label htmlFor="price-adult">
+                  Người lớn (VNĐ) <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="price-adult"
-                  type="number"
-                  min="0"
-                  value={formData.price.retail.adult}
+                  type="text"
+                  value={formatCurrency(formData.price.retail.adult)}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -487,7 +676,7 @@ export function ActivityModal({
                         ...formData.price,
                         retail: {
                           ...formData.price.retail,
-                          adult: Number(e.target.value)
+                          adult: parseCurrency(e.target.value)
                         }
                       }
                     })
@@ -497,12 +686,11 @@ export function ActivityModal({
                 />
               </div>
               <div>
-                <Label htmlFor="price-child">Trẻ em</Label>
+                <Label htmlFor="price-child">Trẻ em (VNĐ)</Label>
                 <Input
                   id="price-child"
-                  type="number"
-                  min="0"
-                  value={formData.price.retail.child}
+                  type="text"
+                  value={formatCurrency(formData.price.retail.child)}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -510,7 +698,7 @@ export function ActivityModal({
                         ...formData.price,
                         retail: {
                           ...formData.price.retail,
-                          child: Number(e.target.value)
+                          child: parseCurrency(e.target.value)
                         }
                       }
                     })
@@ -519,12 +707,11 @@ export function ActivityModal({
                 />
               </div>
               <div>
-                <Label htmlFor="price-baby">Em bé</Label>
+                <Label htmlFor="price-baby">Em bé (VNĐ)</Label>
                 <Input
                   id="price-baby"
-                  type="number"
-                  min="0"
-                  value={formData.price.retail.baby}
+                  type="text"
+                  value={formatCurrency(formData.price.retail.baby)}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -532,7 +719,7 @@ export function ActivityModal({
                         ...formData.price,
                         retail: {
                           ...formData.price.retail,
-                          baby: Number(e.target.value)
+                          baby: parseCurrency(e.target.value)
                         }
                       }
                     })
@@ -541,12 +728,11 @@ export function ActivityModal({
                 />
               </div>
               <div>
-                <Label htmlFor="price-senior">Người cao tuổi</Label>
+                <Label htmlFor="price-senior">Người cao tuổi (VNĐ)</Label>
                 <Input
                   id="price-senior"
-                  type="number"
-                  min="0"
-                  value={formData.price.retail.senior}
+                  type="text"
+                  value={formatCurrency(formData.price.retail.senior)}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -554,7 +740,7 @@ export function ActivityModal({
                         ...formData.price,
                         retail: {
                           ...formData.price.retail,
-                          senior: Number(e.target.value)
+                          senior: parseCurrency(e.target.value)
                         }
                       }
                     })
@@ -563,12 +749,11 @@ export function ActivityModal({
                 />
               </div>
               <div>
-                <Label htmlFor="price-locker">Tủ khóa</Label>
+                <Label htmlFor="price-locker">Tủ khóa (VNĐ)</Label>
                 <Input
                   id="price-locker"
-                  type="number"
-                  min="0"
-                  value={formData.price.retail.locker}
+                  type="text"
+                  value={formatCurrency(formData.price.retail.locker)}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -576,7 +761,7 @@ export function ActivityModal({
                         ...formData.price,
                         retail: {
                           ...formData.price.retail,
-                          locker: Number(e.target.value)
+                          locker: parseCurrency(e.target.value)
                         }
                       }
                     })
@@ -607,9 +792,12 @@ export function ActivityModal({
             <h3 className="text-lg font-semibold">Giờ hoạt động</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="hours-weekday">Thứ 2 - Thứ 7</Label>
+                <Label htmlFor="hours-weekday">
+                  Thứ 2 - Thứ 7 <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="hours-weekday"
+                  type="text"
                   value={formData.operating_hours.mon_to_sat}
                   onChange={(e) =>
                     setFormData({
@@ -621,12 +809,16 @@ export function ActivityModal({
                     })
                   }
                   placeholder="Ví dụ: 08:00 - 18:00"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="hours-weekend">Chủ nhật & Lễ</Label>
+                <Label htmlFor="hours-weekend">
+                  Chủ nhật & Lễ <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="hours-weekend"
+                  type="text"
                   value={formData.operating_hours.sunday_holidays}
                   onChange={(e) =>
                     setFormData({
@@ -638,12 +830,14 @@ export function ActivityModal({
                     })
                   }
                   placeholder="Ví dụ: 08:00 - 20:00"
+                  required
                 />
               </div>
               <div>
                 <Label htmlFor="hours-cutoff">Ngưng bán vé</Label>
                 <Input
                   id="hours-cutoff"
+                  type="text"
                   value={formData.operating_hours.ticket_cutoff}
                   onChange={(e) =>
                     setFormData({
@@ -661,6 +855,7 @@ export function ActivityModal({
                 <Label htmlFor="hours-rides-end">Kết thúc trò chơi</Label>
                 <Input
                   id="hours-rides-end"
+                  type="text"
                   value={formData.operating_hours.rides_end}
                   onChange={(e) =>
                     setFormData({
@@ -675,6 +870,9 @@ export function ActivityModal({
                 />
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              * Nhập theo định dạng: HH:mm hoặc HH:mm - HH:mm
+            </p>
           </div>
 
           {/* Features */}
@@ -780,39 +978,122 @@ export function ActivityModal({
           {/* Gallery */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Hình ảnh</h3>
+
+            {/* Upload buttons */}
             <div className="flex gap-2">
-              <Input
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="Nhập URL hình ảnh..."
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addImage();
-                  }
-                }}
+              <div className="flex-1 flex gap-2">
+                <Input
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="Hoặc nhập URL hình ảnh..."
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addImage();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={addImage}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  URL
+                </Button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileUpload}
               />
-              <Button type="button" onClick={addImage} size="sm">
-                <Upload className="h-4 w-4" />
+
+              <Button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Tải ảnh lên
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+
+            <div className="text-xs text-muted-foreground">
+              <p>• Chọn nhiều ảnh cùng lúc (tối đa 5MB/ảnh)</p>
+              <p>• Hỗ trợ: JPG, PNG, GIF, WebP</p>
+              <p>• Ảnh sẽ tự động upload lên Cloudinary</p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Existing uploaded images */}
               {formData.gallery.map((url, index) => (
-                <div key={index} className="relative group">
+                <div
+                  key={`uploaded-${index}`}
+                  className="relative group aspect-video"
+                >
                   <img
                     src={url}
                     alt={`Gallery ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-lg"
+                    className="w-full h-full object-cover rounded-lg border-2 border-gray-200"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://via.placeholder.com/300x200?text=Error";
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                   >
                     <X className="h-4 w-4" />
                   </button>
+                  <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                    {index + 1}
+                  </div>
                 </div>
               ))}
+
+              {/* Uploading images preview */}
+              {uploadingImages.map((previewUrl, index) => (
+                <div
+                  key={`uploading-${index}`}
+                  className="relative aspect-video bg-gray-100 rounded-lg border-2 border-dashed border-blue-400"
+                >
+                  <img
+                    src={previewUrl}
+                    alt={`Uploading ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg opacity-50"
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" />
+                    <span className="text-xs text-blue-600 font-medium">
+                      Đang tải lên...
+                    </span>
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-blue-500/80 text-white text-xs px-2 py-1 rounded">
+                    {formData.gallery.length + index + 1}
+                  </div>
+                </div>
+              ))}
+
+              {formData.gallery.length === 0 &&
+                uploadingImages.length === 0 && (
+                  <div className="col-span-2 md:col-span-4 flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                    <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">
+                      Chưa có hình ảnh nào
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Tải ảnh lên hoặc nhập URL
+                    </p>
+                  </div>
+                )}
             </div>
           </div>
 

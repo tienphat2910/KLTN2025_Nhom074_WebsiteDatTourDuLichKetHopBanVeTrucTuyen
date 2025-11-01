@@ -20,7 +20,7 @@ export default function Activity() {
   const [keyword, setKeyword] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(5000000);
+  const [maxPrice, setMaxPrice] = useState(100000000); // Tăng lên 100 triệu
   const [selectedDestination, setSelectedDestination] = useState("");
   const [pendingDestination, setPendingDestination] =
     useState(selectedDestination);
@@ -32,13 +32,17 @@ export default function Activity() {
     axios
       .get(`${env.API_BASE_URL}/activities`)
       .then((res) => {
+        console.log("Activities API response:", res.data);
         if (res.data.success) {
           // Đảm bảo activities luôn là array
           if (Array.isArray(res.data.data)) {
+            console.log("Activities array (direct):", res.data.data);
             setActivities(res.data.data);
           } else if (Array.isArray(res.data.data.activities)) {
+            console.log("Activities array (nested):", res.data.data.activities);
             setActivities(res.data.data.activities);
           } else {
+            console.log("No activities array found");
             setActivities([]);
           }
         }
@@ -76,7 +80,6 @@ export default function Activity() {
   // Lọc theo từ khoá, địa điểm, giá
   const filteredActivities = Array.isArray(activities)
     ? activities
-        .filter((activity) => activity.popular)
         .filter((activity) =>
           keyword.trim() === ""
             ? true
@@ -94,6 +97,10 @@ export default function Activity() {
           return price >= minPrice && price <= maxPrice;
         })
     : [];
+
+  console.log("Total activities:", activities.length);
+  console.log("Filtered activities:", filteredActivities.length);
+  console.log("Filters:", { keyword, selectedDestination, minPrice, maxPrice });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">

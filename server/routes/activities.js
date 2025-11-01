@@ -3,6 +3,8 @@ const router = express.Router();
 const Activity = require('../models/Activity');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
+const { upload } = require('../middleware/upload');
+const { uploadActivityImage } = require('../utils/cloudinaryUpload');
 
 /**
  * @swagger
@@ -433,6 +435,82 @@ router.get('/slug/:slug', async (req, res, next) => {
         }
         res.json({ success: true, data: activity });
     } catch (err) {
+        next(err);
+    }
+});
+
+/**
+ * @swagger
+ * /api/activities/upload-images:
+ *   post:
+ *     summary: Upload multiple images for activities (Admin only)
+ *     tags: [Activities]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *               activityId:
+ *                 type: string
+ *                 description: ID của hoạt động (dùng 'new' cho hoạt động mới)
+ *     responses:
+ *       200:
+ *         description: Upload thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 urls:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       400:
+ *         description: Không có file nào được upload
+ */
+router.post('/upload-images', admin, (req, res, next) => {
+    console.log('Before multer - Content-Type:', req.headers['content-type']);
+    next();
+}, upload.array('images', 10), async (req, res, next) => {
+    try {
+        console.log('Upload endpoint hit');
+        console.log('req.files:', req.files);
+        console.log('req.body:', req.body);
+        console.log('Number of files:', req.files ? req.files.length : 0);
+
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Không có file nào được upload'
+            });
+        }
+
+        const activityId = req.body.activityId || 'new';
+        console.log('Activity ID:', activityId);
+
+        const uploadPromises = req.files.map(file => uploadActivityImage(file, activityId));
+        const uploadResults = await Promise.all(uploadPromises);
+
+        const urls = uploadResults.map(result => result.url);
+
+        res.json({
+            success: true,
+            urls,
+            message: `Đã upload ${urls.length} ảnh thành công`
+        });
+    } catch (err) {
+        console.error('Upload error:', err);
         next(err);
     }
 });
