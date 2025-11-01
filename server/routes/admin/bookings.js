@@ -4,6 +4,7 @@ const Booking = require(path.resolve(__dirname, '../../models/Booking'));
 const User = require(path.resolve(__dirname, '../../models/User'));
 const admin = require(path.resolve(__dirname, '../../middleware/admin'));
 const { notifyBookingCreated, notifyPaymentCompleted, notifyBookingUpdated, notifyBookingCancelled } = require(path.resolve(__dirname, '../../utils/socketHandler'));
+const { autoCompleteBookings } = require(path.resolve(__dirname, '../../utils/autoCompleteBookings'));
 const router = express.Router();
 
 // Get all bookings for admin with user info
@@ -282,6 +283,28 @@ router.post('/create-test-data', admin, async (req, res) => {
     } catch (error) {
         console.error('Create test data error:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Manually trigger auto-complete bookings (admin only)
+router.post('/auto-complete', admin, async (req, res) => {
+    try {
+        console.log('📞 Manual trigger: Auto-complete bookings requested by admin');
+        const result = await autoCompleteBookings();
+
+        res.json({
+            success: result.success,
+            message: result.success
+                ? `Đã kiểm tra ${result.totalChecked} bookings, hoàn thành ${result.completedCount} bookings`
+                : 'Có lỗi xảy ra khi auto-complete bookings',
+            data: result
+        });
+    } catch (error) {
+        console.error('Manual auto-complete error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 });
 

@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const { specs, swaggerUi } = require('./swagger');
 const { initSocket } = require('./utils/socketHandler');
+const { scheduleAutoComplete } = require('./utils/autoCompleteBookings');
 require("dotenv").config(); // Load biến môi trường từ .env
 
 const app = express();
@@ -143,3 +144,8 @@ const server = app.listen(PORT, () => {
 const io = initSocket(server);
 app.set('io', io); // Make io accessible to routes
 console.log('🔌 Socket.IO đã được khởi tạo');
+
+// Khởi động auto-complete bookings scheduler
+// Chạy mỗi 60 phút (có thể thay đổi tùy nhu cầu)
+scheduleAutoComplete(60);
+console.log('⏰ Auto-complete bookings scheduler đã được khởi động');

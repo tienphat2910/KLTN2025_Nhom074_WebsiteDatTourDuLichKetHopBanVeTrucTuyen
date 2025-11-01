@@ -118,15 +118,6 @@ export function BookingTable({
                 const TypeIcon = typeConfig.icon;
                 const StatusIcon = statusInfo.icon;
 
-                // Debug log for flight bookings
-                if (booking.bookingType === "flight") {
-                  console.log(`Booking ${booking._id}:`, {
-                    isRoundTrip: booking.isRoundTrip,
-                    actualTotal: booking.actualTotal,
-                    totalPrice: booking.totalPrice
-                  });
-                }
-
                 return (
                   <TableRow key={booking._id}>
                     <TableCell className="font-mono text-sm">
