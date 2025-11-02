@@ -250,7 +250,7 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
               Khám Phá{" "}
               <span
-                className="bg-gradient-to-r from-red-700 via-yellow-400 to-red-700 
+                className="bg-gradient-to-r from-[#D73A33] via-[#F7F719] to-[#D73A33]
                  bg-clip-text text-transparent 
                  animate-gradient-x font-extrabold"
               >
