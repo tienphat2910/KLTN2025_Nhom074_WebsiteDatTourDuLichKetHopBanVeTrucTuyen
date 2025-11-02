@@ -3,15 +3,13 @@
 import {
   Users,
   Package,
-  Plane,
   DollarSign,
   TrendingUp,
-  Calendar,
-  MapPin,
-  Activity,
   ArrowUpRight,
   ArrowDownRight,
-  RefreshCw
+  RefreshCw,
+  BarChart3,
+  Ticket
 } from "lucide-react";
 import {
   Card,
@@ -28,8 +26,12 @@ import { userService } from "@/services/userService";
 import { tourService } from "@/services/tourService";
 import { useSocket } from "@/hooks/useSocket";
 import { RecentActivities } from "./RecentActivities";
+import analyticsService from "@/services/analyticsService";
 import Link from "next/link";
 import { toast } from "sonner";
+import { ResponsiveLine } from "@nivo/line";
+import { ResponsiveBar } from "@nivo/bar";
+import { ResponsivePie } from "@nivo/pie";
 
 interface StatsCardProps {
   title: string;
@@ -41,6 +43,8 @@ interface StatsCardProps {
     isPositive: boolean;
     isPercentage?: boolean;
   };
+  bgColor?: string;
+  iconColor?: string;
 }
 
 function StatsCard({
@@ -48,32 +52,38 @@ function StatsCard({
   value,
   description,
   icon: Icon,
-  trend
+  trend,
+  bgColor = "bg-blue-500",
+  iconColor = "text-blue-500"
 }: StatsCardProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-          <span>{description}</span>
-          {trend && (
-            <div
-              className={`flex items-center ${
-                trend.isPositive ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {trend.isPositive ? (
-                <ArrowUpRight className="h-3 w-3" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3" />
+    <Card className="overflow-hidden">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <div className="flex items-baseline space-x-2">
+              <h3 className="text-3xl font-bold tracking-tight">{value}</h3>
+              {trend && (
+                <div
+                  className={`flex items-center text-sm font-medium ${
+                    trend.isPositive ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {trend.isPositive ? (
+                    <ArrowUpRight className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="h-4 w-4 mr-1" />
+                  )}
+                  <span>{trend.value}</span>
+                </div>
               )}
-              <span>{trend.value}</span>
             </div>
-          )}
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-muted">
+            <Icon className={`h-6 w-6 ${iconColor}`} />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -98,6 +108,9 @@ export function DashboardOverview() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const { socketService } = useSocket();
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(true);
 
   // Load user statistics
   const loadUserStats = async (showRefreshing = false) => {
@@ -269,9 +282,44 @@ export function DashboardOverview() {
     }
   };
 
+  // Load analytics data
+  const loadAnalyticsData = async () => {
+    try {
+      setIsLoadingAnalytics(true);
+      const [overviewRes, revenueRes] = await Promise.all([
+        analyticsService.getOverview(),
+        analyticsService.getRevenueTrends()
+      ]);
+
+      if (overviewRes) {
+        setAnalyticsData(overviewRes);
+      }
+
+      if (revenueRes && Array.isArray(revenueRes)) {
+        // Transform revenue data for line chart
+        const chartData = [
+          {
+            id: "Doanh thu",
+            color: "hsl(210, 70%, 50%)",
+            data: revenueRes.map((item: any) => ({
+              x: `Tháng ${item._id}`,
+              y: item.revenue
+            }))
+          }
+        ];
+        setRevenueData(chartData);
+      }
+    } catch (error) {
+      console.error("Load analytics error:", error);
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
+
   useEffect(() => {
     loadUserStats();
     loadTourStats();
+    loadAnalyticsData();
 
     // Set up socket connection status
     const handleConnected = () => setIsConnected(true);
@@ -385,234 +433,378 @@ export function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="space-y-2">
-        <div className="flex items-center space-x-2">
-          <h2 className="text-3xl font-bold tracking-tight">
-            Chào mừng trở lại, Quản trị viên!
-          </h2>
-          {isRefreshing && (
-            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
-          )}
-        </div>
-        <div className="flex items-center space-x-4">
-          <p className="text-muted-foreground">
-            Đây là những gì đang diễn ra với LuTrip hôm nay.
-            {isRefreshing && (
-              <span className="ml-2 text-xs text-blue-600">
-                Đang cập nhật...
-              </span>
-            )}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <div
-              className={`w-2 h-2 rounded-full ${
-                isConnected ? "bg-green-500" : "bg-red-500"
-              }`}
-            />
-            <span className="text-xs text-muted-foreground">
-              {isConnected ? "Real-time" : "Offline"}
-            </span>
+            <h2 className="text-3xl font-bold tracking-tight">
+              Dashboard Tổng Quan
+            </h2>
+            {isRefreshing && (
+              <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex items-center space-x-4">
+            <p className="text-muted-foreground">
+              Theo dõi hiệu suất kinh doanh và các chỉ số quan trọng
+            </p>
+            <div className="flex items-center space-x-2">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isConnected ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
+              <span className="text-xs text-muted-foreground">
+                {isConnected ? "Real-time" : "Offline"}
+              </span>
+            </div>
           </div>
         </div>
+        <Button
+          onClick={() => {
+            loadUserStats(true);
+            loadTourStats(true);
+            loadAnalyticsData();
+          }}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Làm mới
+        </Button>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Tổng người dùng"
+          title="Tổng Doanh Thu"
           value={
-            isLoadingStats ? "..." : (userStats?.total || 0).toLocaleString()
+            isLoadingAnalytics
+              ? "..."
+              : `${(analyticsData?.overview?.totalRevenue || 0).toLocaleString(
+                  "vi-VN"
+                )} ₫`
           }
-          description="Tổng số người dùng đã đăng ký"
+          description="Tổng doanh thu từ tất cả dịch vụ"
+          icon={DollarSign}
+          bgColor="bg-green-500"
+          iconColor="text-green-500"
+        />
+        <StatsCard
+          title="Tổng Đặt Chỗ"
+          value={
+            isLoadingAnalytics
+              ? "..."
+              : (analyticsData?.overview?.totalBookings || 0).toLocaleString()
+          }
+          description="Số lượng đặt chỗ thành công"
+          icon={Ticket}
+          bgColor="bg-blue-500"
+          iconColor="text-blue-500"
+        />
+        <StatsCard
+          title="Khách Hàng"
+          value={
+            isLoadingAnalytics
+              ? "..."
+              : (analyticsData?.overview?.totalCustomers || 0).toLocaleString()
+          }
+          description="Tổng số khách hàng đặt chỗ"
           icon={Users}
+          bgColor="bg-purple-500"
+          iconColor="text-purple-500"
           trend={
             userGrowth || { value: "0%", isPositive: true, isPercentage: true }
           }
         />
         <StatsCard
-          title="Tổng tour"
+          title="Giá Trị Trung Bình"
           value={
-            isLoadingTourStats
+            isLoadingAnalytics
               ? "..."
-              : (tourStats?.total || 0).toLocaleString()
+              : `${(
+                  analyticsData?.overview?.averageOrderValue || 0
+                ).toLocaleString("vi-VN")} ₫`
           }
-          description="Gói tour có sẵn"
-          icon={Package}
-          trend={
-            tourGrowth || { value: "0%", isPositive: true, isPercentage: true }
-          }
-        />
-        <StatsCard
-          title="Đặt vé máy bay"
-          value="856"
-          description="Tháng này"
-          icon={Plane}
-          trend={{ value: "+23.1%", isPositive: true }}
-        />
-        <StatsCard
-          title="Doanh thu"
-          value="$54,231"
-          description="Tháng này"
-          icon={DollarSign}
-          trend={{ value: "-2.4%", isPositive: false }}
+          description="Giá trị đơn hàng trung bình"
+          icon={TrendingUp}
+          bgColor="bg-orange-500"
+          iconColor="text-orange-500"
         />
       </div>
 
-      {/* Dashboard Grid */}
+      {/* Charts Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        {/* Revenue Trend Chart */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Xu Hướng Doanh Thu</CardTitle>
+            <CardDescription>
+              Biểu đồ doanh thu 12 tháng gần nhất
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              {isLoadingAnalytics ? (
+                <div className="flex items-center justify-center h-full">
+                  <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : revenueData.length > 0 ? (
+                <ResponsiveLine
+                  data={revenueData}
+                  margin={{ top: 20, right: 20, bottom: 50, left: 80 }}
+                  xScale={{ type: "point" }}
+                  yScale={{
+                    type: "linear",
+                    min: "auto",
+                    max: "auto",
+                    stacked: false
+                  }}
+                  curve="monotoneX"
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 5,
+                    tickPadding: 5,
+                    tickRotation: -45,
+                    legend: "",
+                    legendOffset: 36,
+                    legendPosition: "middle"
+                  }}
+                  axisLeft={{
+                    tickSize: 5,
+                    tickPadding: 5,
+                    tickRotation: 0,
+                    legend: "Doanh thu (₫)",
+                    legendOffset: -70,
+                    legendPosition: "middle",
+                    format: (value) => `${(value / 1000000).toFixed(0)}M`
+                  }}
+                  enablePoints={true}
+                  pointSize={8}
+                  pointColor={{ theme: "background" }}
+                  pointBorderWidth={2}
+                  pointBorderColor={{ from: "serieColor" }}
+                  enableArea={true}
+                  areaOpacity={0.1}
+                  useMesh={true}
+                  colors={{ scheme: "category10" }}
+                  tooltip={({ point }) => (
+                    <div className="bg-white px-3 py-2 shadow-lg rounded-lg border">
+                      <div className="text-sm font-medium">
+                        {point.data.xFormatted}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {Number(point.data.yFormatted).toLocaleString("vi-VN")}{" "}
+                        ₫
+                      </div>
+                    </div>
+                  )}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  Chưa có dữ liệu
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Revenue by Service Type */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Doanh Thu Theo Loại Dịch Vụ</CardTitle>
+            <CardDescription>Phân bổ doanh thu theo dịch vụ</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              {isLoadingAnalytics ? (
+                <div className="flex items-center justify-center h-full">
+                  <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : analyticsData?.revenueByType ? (
+                <ResponsivePie
+                  data={[
+                    {
+                      id: "Chuyến bay",
+                      label: "Chuyến bay",
+                      value: analyticsData.revenueByType.flights || 0,
+                      color: "hsl(210, 70%, 50%)"
+                    },
+                    {
+                      id: "Tour",
+                      label: "Tour",
+                      value: analyticsData.revenueByType.tours || 0,
+                      color: "hsl(120, 70%, 50%)"
+                    },
+                    {
+                      id: "Hoạt động",
+                      label: "Hoạt động",
+                      value: analyticsData.revenueByType.activities || 0,
+                      color: "hsl(30, 70%, 50%)"
+                    }
+                  ]}
+                  margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                  innerRadius={0.6}
+                  padAngle={2}
+                  cornerRadius={4}
+                  activeOuterRadiusOffset={8}
+                  colors={{ scheme: "category10" }}
+                  borderWidth={1}
+                  borderColor={{ from: "color", modifiers: [["darker", 0.2]] }}
+                  arcLinkLabelsSkipAngle={10}
+                  arcLinkLabelsTextColor="#333333"
+                  arcLinkLabelsThickness={2}
+                  arcLinkLabelsColor={{ from: "color" }}
+                  arcLabelsSkipAngle={10}
+                  arcLabelsTextColor="#ffffff"
+                  tooltip={({ datum }) => (
+                    <div className="bg-white px-3 py-2 shadow-lg rounded-lg border">
+                      <div className="text-sm font-medium">{datum.label}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {datum.value.toLocaleString("vi-VN")} ₫
+                      </div>
+                    </div>
+                  )}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  Chưa có dữ liệu
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Recent Bookings */}
-        <Card className="col-span-2">
+        {/* Booking Status */}
+        <Card>
           <CardHeader>
-            <CardTitle>Đặt chỗ gần đây</CardTitle>
-            <CardDescription>Hoạt động đặt chỗ mới nhất</CardDescription>
+            <CardTitle>Trạng Thái Đặt Chỗ</CardTitle>
+            <CardDescription>Phân bổ theo trạng thái</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                {
-                  id: "TUR001",
-                  customer: "Nguyen Van A",
-                  service: "Ha Long Bay Tour",
-                  amount: "$299",
-                  status: "confirmed",
-                  time: "2 hours ago"
-                },
-                {
-                  id: "FLT002",
-                  customer: "Tran Thi B",
-                  service: "SGN → HAN Flight",
-                  amount: "$150",
-                  status: "pending",
-                  time: "4 hours ago"
-                },
-                {
-                  id: "TUR003",
-                  customer: "Le Van C",
-                  service: "Sapa Trekking Tour",
-                  amount: "$189",
-                  status: "confirmed",
-                  time: "6 hours ago"
-                },
-                {
-                  id: "ACT004",
-                  customer: "Pham Thi D",
-                  service: "Cooking Class HCMC",
-                  amount: "$45",
-                  status: "completed",
-                  time: "8 hours ago"
-                }
-              ].map((booking) => (
-                <div
-                  key={booking.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{booking.customer}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {booking.service}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {booking.time}
-                    </p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <p className="text-sm font-medium">{booking.amount}</p>
-                    <Badge
-                      variant={
-                        booking.status === "confirmed"
-                          ? "default"
-                          : booking.status === "pending"
-                          ? "secondary"
-                          : "outline"
-                      }
-                      className="text-xs"
-                    >
-                      {booking.status === "confirmed"
-                        ? "Đã xác nhận"
-                        : booking.status === "pending"
-                        ? "Đang chờ"
-                        : "Hoàn thành"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Separator className="my-4" />
-            <Button variant="outline" className="w-full">
-              Xem tất cả đặt chỗ
-            </Button>
-          </CardContent>
-        </Card>
+              {analyticsData?.statusDistribution ? (
+                Object.entries(analyticsData.statusDistribution).map(
+                  ([status, count]: [string, any]) => {
+                    const statusConfig: any = {
+                      pending: { label: "Đang chờ", color: "bg-yellow-500" },
+                      confirmed: { label: "Đã xác nhận", color: "bg-blue-500" },
+                      completed: { label: "Hoàn thành", color: "bg-green-500" },
+                      cancelled: { label: "Đã hủy", color: "bg-red-500" }
+                    };
+                    const config = statusConfig[status] || {
+                      label: status,
+                      color: "bg-gray-500"
+                    };
+                    const total = Object.values(
+                      analyticsData.statusDistribution
+                    ).reduce((sum: number, val: any) => sum + val, 0) as number;
+                    const percentage =
+                      total > 0 ? ((count / total) * 100).toFixed(1) : "0";
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Thao tác nhanh</CardTitle>
-            <CardDescription>Các tác vụ quản trị thường dùng</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button className="w-full justify-start" variant="outline">
-                <Package className="mr-2 h-4 w-4" />
-                Thêm tour mới
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Plane className="mr-2 h-4 w-4" />
-                Quản lý chuyến bay
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <MapPin className="mr-2 h-4 w-4" />
-                Thêm điểm đến
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Activity className="mr-2 h-4 w-4" />
-                Tạo hoạt động
-              </Button>
-              <Link href="/admin/users">
-                <Button className="w-full justify-start" variant="outline">
-                  <Users className="mr-2 h-4 w-4" />
-                  Quản lý người dùng
-                </Button>
-              </Link>
+                    return (
+                      <div
+                        key={status}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={`w-3 h-3 rounded-full ${config.color}`}
+                          />
+                          <span className="text-sm font-medium">
+                            {config.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-muted-foreground">
+                            {count} ({percentage}%)
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                )
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  Chưa có dữ liệu
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Popular Destinations */}
+        {/* Quick Stats */}
         <Card>
           <CardHeader>
-            <CardTitle>Điểm đến phổ biến</CardTitle>
-            <CardDescription>Được đặt nhiều nhất trong tháng</CardDescription>
+            <CardTitle>Thống Kê Nhanh</CardTitle>
+            <CardDescription>Các chỉ số quan trọng</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { name: "Ha Long Bay", bookings: 234, trend: "+15%" },
-                { name: "Ho Chi Minh City", bookings: 189, trend: "+8%" },
-                { name: "Hoi An", bookings: 156, trend: "+23%" },
-                { name: "Sapa", bookings: 134, trend: "+5%" },
-                { name: "Da Nang", bookings: 98, trend: "+12%" }
-              ].map((destination, index) => (
-                <div
-                  key={destination.name}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{destination.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {destination.bookings} lượt đặt
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <Package className="h-4 w-4 text-blue-600" />
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {destination.trend}
-                  </Badge>
+                  <span className="text-sm font-medium">Tổng Tour</span>
                 </div>
-              ))}
+                <span className="text-lg font-bold">
+                  {isLoadingTourStats ? "..." : tourStats?.total || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <Users className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span className="text-sm font-medium">
+                    Người dùng hoạt động
+                  </span>
+                </div>
+                <span className="text-lg font-bold">
+                  {isLoadingStats ? "..." : userStats?.active || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-purple-100">
+                    <TrendingUp className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <span className="text-sm font-medium">Tỷ lệ hoàn thành</span>
+                </div>
+                <span className="text-lg font-bold">
+                  {isLoadingAnalytics
+                    ? "..."
+                    : analyticsData?.statusDistribution
+                    ? (() => {
+                        const total = Object.values(
+                          analyticsData.statusDistribution
+                        ).reduce(
+                          (sum: number, val: any) => sum + val,
+                          0
+                        ) as number;
+                        const completed =
+                          analyticsData.statusDistribution.completed || 0;
+                        const rate = total > 0 ? (completed / total) * 100 : 0;
+                        return `${rate.toFixed(1)}%`;
+                      })()
+                    : "0%"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-orange-100">
+                    <BarChart3 className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <span className="text-sm font-medium">Admin</span>
+                </div>
+                <span className="text-lg font-bold">
+                  {isLoadingStats ? "..." : userStats?.admins || 0}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>

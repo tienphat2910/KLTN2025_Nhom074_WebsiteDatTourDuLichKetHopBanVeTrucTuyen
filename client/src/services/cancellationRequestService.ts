@@ -35,10 +35,10 @@ class CancellationRequestService {
   private baseURL = `${env.API_BASE_URL}/cancellationrequests`;
 
   private async getAuthHeader(): Promise<HeadersInit> {
-    // Check both regular and admin tokens
+    // Prioritize admin token when available
     const token =
-      localStorage.getItem("lutrip_token") ||
-      localStorage.getItem("lutrip_admin_token");
+      localStorage.getItem("lutrip_admin_token") ||
+      localStorage.getItem("lutrip_token");
     return {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` })
@@ -60,6 +60,12 @@ class CancellationRequestService {
       }
 
       throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    }
+
+    // Handle 403 Forbidden - not admin (don't redirect, just throw error)
+    if (response.status === 403) {
+      const data = await response.json();
+      throw new Error(data.message || "Truy cập bị từ chối");
     }
 
     // Parse JSON response
@@ -150,13 +156,18 @@ class CancellationRequestService {
 
       return await this.handleResponse<CountResponse>(response);
     } catch (error) {
-      console.error("Get pending count error:", error);
+      // Silently fail for 403 (not admin) - don't log to console
+      const errorMessage = error instanceof Error ? error.message : "";
+      const isForbidden =
+        errorMessage.includes("từ chối") || errorMessage.includes("admin");
+
+      if (!isForbidden) {
+        console.error("Get pending count error:", error);
+      }
+
       return {
         success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Không thể tải số lượng yêu cầu"
+        message: errorMessage || "Không thể tải số lượng yêu cầu"
       };
     }
   }
