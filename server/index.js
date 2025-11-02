@@ -46,6 +46,7 @@ app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/cancellationrequests', require('./routes/cancellationrequests'));
 app.use('/api/admin/tours', require('./routes/admin/tours'));
 app.use('/api/admin/bookings', require('./routes/admin/bookings'));
+app.use('/api/admin/analytics', require('./routes/admin/analytics'));
 
 
 // Kết nối MongoDB

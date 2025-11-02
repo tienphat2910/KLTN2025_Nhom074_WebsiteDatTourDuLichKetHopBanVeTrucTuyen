@@ -3,6 +3,19 @@ const User = require('../models/User');
 
 const admin = async (req, res, next) => {
     try {
+        // If auth middleware already ran, req.user should exist
+        if (req.user) {
+            // Check if user has admin role
+            if (req.user.role !== 'admin') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Truy cập bị từ chối. Chỉ admin mới có quyền thực hiện thao tác này.'
+                });
+            }
+            return next();
+        }
+
+        // Fallback: verify token if auth middleware didn't run
         const token = req.header('Authorization')?.replace('Bearer ', '');
 
         if (!token) {

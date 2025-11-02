@@ -11,14 +11,13 @@ import {
   Package,
   Calendar,
   BarChart3,
-  Settings,
-  CreditCard,
   Activity,
   Menu,
-  X,
   Percent,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Tickets,
+  TentTree
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -50,7 +49,7 @@ const sidebarItems = [
   {
     title: "Tours",
     href: "/admin/tours",
-    icon: Package
+    icon: TentTree
   },
   {
     title: "Chuyến bay",
@@ -60,7 +59,7 @@ const sidebarItems = [
   {
     title: "Hoạt động",
     href: "/admin/activities",
-    icon: Activity
+    icon: Tickets
   },
   {
     title: "Điểm đến",
@@ -137,9 +136,13 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
       const response = await cancellationRequestService.getPendingCount();
       if (response.success && response.data) {
         setPendingCount(response.data.count);
+      } else {
+        // Silently fail - don't log error for permission issues
+        setPendingCount(0);
       }
     } catch (error) {
-      console.error("Load pending count error:", error);
+      // Silently fail - service already handles logging
+      setPendingCount(0);
     }
   };
 
