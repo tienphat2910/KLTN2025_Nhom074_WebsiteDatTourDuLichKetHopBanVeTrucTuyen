@@ -325,6 +325,7 @@ export default function FlightSearchResults({
                             }
                             alt={flight.airlineId.name}
                             className="w-8 h-8 object-contain"
+                            loading="lazy"
                           />
                           <div>
                             <h3 className="font-bold text-gray-800">
