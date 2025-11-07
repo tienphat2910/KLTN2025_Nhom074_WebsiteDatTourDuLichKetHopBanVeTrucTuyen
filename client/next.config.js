@@ -9,7 +9,8 @@ const nextConfig = {
             "images.unsplash.com",
             "plus.unsplash.com",
             "cloudinary.com",
-            "static.vinwonders.com"
+            "static.vinwonders.com",
+            "res.klook.com"
         ]
     }
 };

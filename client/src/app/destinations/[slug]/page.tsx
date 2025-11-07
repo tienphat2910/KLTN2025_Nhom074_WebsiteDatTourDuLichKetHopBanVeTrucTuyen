@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -14,6 +14,13 @@ import Tabs from "@/components/Destinations/Tabs";
 import HorizontalScrollSection from "@/components/Destinations/HorizontalScrollSection";
 import FilterableGrid from "@/components/Destinations/FilterableGrid";
 import ActivityCard from "@/components/Destinations/ActivityCard";
+import { getDestinationData, DestinationData } from '@/data/destinationData';
+
+// Lazy load heavy components
+const FamousPlacesSection = lazy(() => import('@/components/Destinations/FamousPlacesSection'));
+const TravelExperiencesSection = lazy(() => import('@/components/Destinations/TravelExperiencesSection'));
+const DestinationInfoSection = lazy(() => import('@/components/Destinations/DestinationInfoSection'));
+const FAQSection = lazy(() => import('@/components/Destinations/FAQSection'));
 import { Map, Plane, PartyPopper, Circle } from "lucide-react";
 
 const serviceIcons = [
@@ -59,6 +66,7 @@ export default function DestinationDetailPage() {
   const [tours, setTours] = useState<Tour[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [destinationData, setDestinationData] = useState<DestinationData | null>(null);
 
   // Mock gallery images for destination
   const galleryImages = [
@@ -82,6 +90,9 @@ export default function DestinationDetailPage() {
 
         if (response.success) {
           setDestination(response.data);
+          // Load additional destination data
+          const additionalData = getDestinationData(slug);
+          setDestinationData(additionalData);
         }
       } catch (error) {
         console.error("Error loading destination:", error);
@@ -379,6 +390,63 @@ export default function DestinationDetailPage() {
                             ))}
                           </div>
                         </div>
+                      )}
+
+                      {/* Địa điểm du lịch nổi tiếng */}
+                      {destinationData?.famousPlaces && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải địa điểm..." />
+                          </div>
+                        }>
+                          <FamousPlacesSection
+                            places={destinationData.famousPlaces}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
+                      )}
+
+                      {/* Kinh nghiệm du lịch */}
+                      {destinationData?.travelExperiences && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải kinh nghiệm..." />
+                          </div>
+                        }>
+                          <TravelExperiencesSection
+                            experiences={destinationData.travelExperiences}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
+                      )}
+
+                      {/* Thông tin du lịch */}
+                      {destinationData && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải thông tin..." />
+                          </div>
+                        }>
+                          <DestinationInfoSection
+                            info={destinationData.destinationInfo}
+                            weatherInfo={destinationData.weatherInfo}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
+                      )}
+
+                      {/* Câu hỏi thường gặp */}
+                      {destinationData?.faqs && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải câu hỏi..." />
+                          </div>
+                        }>
+                          <FAQSection
+                            faqs={destinationData.faqs}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
                       )}
                     </div>
                   ),
