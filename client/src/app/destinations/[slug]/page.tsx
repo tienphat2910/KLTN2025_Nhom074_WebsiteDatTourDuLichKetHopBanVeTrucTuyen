@@ -1,12 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense, lazy } from "react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
 import { destinationService, Destination } from "@/services/destinationService";
+import { tourService, Tour } from "@/services/tourService";
+import { activityService } from "@/services/activityService";
+import { Activity } from "@/types/activity";
+import Tabs from "@/components/Destinations/Tabs";
+import HorizontalScrollSection from "@/components/Destinations/HorizontalScrollSection";
+import FilterableGrid from "@/components/Destinations/FilterableGrid";
+import ActivityCard from "@/components/Destinations/ActivityCard";
+import { getDestinationData, DestinationData } from '@/data/destinationData';
+
+// Lazy load heavy components
+const FamousPlacesSection = lazy(() => import('@/components/Destinations/FamousPlacesSection'));
+const TravelExperiencesSection = lazy(() => import('@/components/Destinations/TravelExperiencesSection'));
+const DestinationInfoSection = lazy(() => import('@/components/Destinations/DestinationInfoSection'));
+const FAQSection = lazy(() => import('@/components/Destinations/FAQSection'));
 import { Map, Plane, PartyPopper, Circle } from "lucide-react";
 
 const serviceIcons = [
@@ -36,44 +50,10 @@ const serviceIcons = [
   }
 ];
 
-const suggestions = [
-  {
-    id: 1,
-    title: "Fansipan Sapa",
-    image:
-      "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567626/LuTrip/dulichsapa-1650268886-1480-1650277620_bcldcd.png",
-    category: "Núi",
-    isPromo: false
-  },
-  {
-    id: 2,
-    title: "Cầu Vàng Đà Nẵng",
-    image:
-      "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567624/LuTrip/anh-vinh-ha-long-59_qp6nt2.jpg",
-    category: "Cầu",
-    isPromo: true
-  },
-  {
-    id: 3,
-    title: "Đà Lạt",
-    image:
-      "https://res.cloudinary.com/de5rurcwt/image/upload/v1754567624/LuTrip/du-lich-phu-quoc-kinh-nghiem-va-thong-tin-huu-ich_eomet8.jpg",
-    category: "Thành phố",
-    isPromo: false
-  },
-  {
-    id: 4,
-    title: "Phú Quốc Sky",
-    image:
-      "https://res.cloudinary.com/de5rurcwt/image/upload/v1754568367/LuTrip/hinh-nen-viet-nam-4k35_piebu1.jpg",
-    category: "Cáp treo",
-    isPromo: true
-  }
-];
-
 export default function DestinationDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const id = searchParams.get("id");
 
@@ -82,6 +62,11 @@ export default function DestinationDetailPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState('kham-pha');
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [destinationData, setDestinationData] = useState<DestinationData | null>(null);
 
   // Mock gallery images for destination
   const galleryImages = [
@@ -105,6 +90,9 @@ export default function DestinationDetailPage() {
 
         if (response.success) {
           setDestination(response.data);
+          // Load additional destination data
+          const additionalData = getDestinationData(slug);
+          setDestinationData(additionalData);
         }
       } catch (error) {
         console.error("Error loading destination:", error);
@@ -118,6 +106,42 @@ export default function DestinationDetailPage() {
       loadDestination();
     }
   }, [slug, id]);
+
+  // Load tours and activities when destination is loaded
+  useEffect(() => {
+    const loadContent = async () => {
+      if (!destination) return;
+
+      setIsLoadingContent(true);
+      try {
+        // Load tours for this destination
+        const toursResponse = await tourService.getTours({
+          destination: destination._id,
+          limit: 20, // Load more for horizontal scroll
+        });
+
+        if (toursResponse.success) {
+          setTours(toursResponse.data.tours);
+        }
+
+        // Load activities for this destination
+        const activitiesResponse = await activityService.getActivities({
+          destinationId: destination._id,
+          limit: 20,
+        });
+
+        if (activitiesResponse.success) {
+          setActivities(activitiesResponse.data.activities);
+        }
+      } catch (error) {
+        console.error("Error loading content:", error);
+      } finally {
+        setIsLoadingContent(false);
+      }
+    };
+
+    loadContent();
+  }, [destination]);
 
   const openGallery = (index: number = 0) => {
     setSelectedImageIndex(index);
@@ -138,6 +162,14 @@ export default function DestinationDetailPage() {
     setSelectedImageIndex(
       (prev) => (prev - 1 + galleryImages.length) % galleryImages.length
     );
+  };
+
+  const handleTourClick = (tour: Tour) => {
+    router.push(`/tours/detail/${tour.slug}`);
+  };
+
+  const handleActivityClick = (activity: Activity) => {
+    router.push(`/activity/detail/${activity.slug}`);
   };
 
   if (isLoading) {
@@ -248,17 +280,8 @@ export default function DestinationDetailPage() {
 
               {/* Info badges */}
               <div className="flex flex-wrap items-center gap-3 text-white/90 text-sm">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">Thời lượng lý tưởng</span>
-                  <span className="bg-white/20 px-3 py-1 rounded-full font-semibold">
-                    3 ngày
-                  </span>
-                </div>
                 <span className="bg-white/20 px-3 py-1 rounded-full">
                   {destination.region}
-                </span>
-                <span className="bg-white/20 px-3 py-1 rounded-full">
-                  {destination.country}
                 </span>
                 {destination.popular && (
                   <span className="bg-yellow-500/90 text-yellow-900 px-3 py-1 rounded-full font-medium">
@@ -307,46 +330,144 @@ export default function DestinationDetailPage() {
         </div>
       </div>
 
-      {/* Suggestions Section */}
+      {/* Tabs Section */}
       <div className="container mx-auto px-4 pb-16">
         <div
           className={`transition-all duration-1000 delay-500 ${
             isVisible ? "animate-slide-up" : "opacity-0"
           }`}
         >
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8">
-            Gợi ý
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {suggestions.map((suggestion) => (
-              <div
-                key={suggestion.id}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer"
-              >
-                <div className="relative h-48 md:h-56">
-                  <div
-                    className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
-                    style={{ backgroundImage: `url('${suggestion.image}')` }}
-                  />
-                  {suggestion.isPromo && (
-                    <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-md text-xs font-bold flex items-center">
-                      <span className="mr-1">⚡</span>
-                      Khuyến mãi lớn
+          {isLoadingContent ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner
+                type="travel"
+                size="lg"
+                text="Đang tải nội dung..."
+              />
+            </div>
+          ) : (
+            <Tabs
+              tabs={[
+                {
+                  id: 'kham-pha',
+                  label: `Khám phá ${destination.name}`,
+                  content: (
+                    <div className="space-y-8">
+                      {/* Top tours nổi bật */}
+                      <HorizontalScrollSection
+                        title={`Top tour nổi bật ở ${destination.name}`}
+                        tours={tours.filter(tour => tour.isFeatured)}
+                        onTourClick={handleTourClick}
+                      />
+
+                      {/* Tour có giảm giá */}
+                      <HorizontalScrollSection
+                        title={`Tour khuyến mãi ở ${destination.name}`}
+                        tours={tours.filter(tour => tour.discount > 0)}
+                        onTourClick={handleTourClick}
+                      />
+
+                      {/* Tour phổ biến */}
+                      <HorizontalScrollSection
+                        title={`Tour phổ biến ở ${destination.name}`}
+                        tours={tours.slice(0, 8)} // Show first 8 tours
+                        onTourClick={handleTourClick}
+                      />
+
+                      {/* Hoạt động vui chơi hấp dẫn */}
+                      {activities.length > 0 && (
+                        <div className="bg-white rounded-xl shadow-lg p-6">
+                          <h3 className="text-xl font-bold text-gray-800 mb-4">
+                            Hoạt động vui chơi hấp dẫn ở {destination.name}
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {activities.slice(0, 4).map((activity) => (
+                              <ActivityCard
+                                key={activity._id}
+                                activity={activity}
+                                onClick={() => handleActivityClick(activity)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Địa điểm du lịch nổi tiếng */}
+                      {destinationData?.famousPlaces && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải địa điểm..." />
+                          </div>
+                        }>
+                          <FamousPlacesSection
+                            places={destinationData.famousPlaces}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
+                      )}
+
+                      {/* Kinh nghiệm du lịch */}
+                      {destinationData?.travelExperiences && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải kinh nghiệm..." />
+                          </div>
+                        }>
+                          <TravelExperiencesSection
+                            experiences={destinationData.travelExperiences}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
+                      )}
+
+                      {/* Thông tin du lịch */}
+                      {destinationData && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải thông tin..." />
+                          </div>
+                        }>
+                          <DestinationInfoSection
+                            info={destinationData.destinationInfo}
+                            weatherInfo={destinationData.weatherInfo}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
+                      )}
+
+                      {/* Câu hỏi thường gặp */}
+                      {destinationData?.faqs && (
+                        <Suspense fallback={
+                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                            <LoadingSpinner type="travel" size="md" text="Đang tải câu hỏi..." />
+                          </div>
+                        }>
+                          <FAQSection
+                            faqs={destinationData.faqs}
+                            destinationName={destination.name}
+                          />
+                        </Suspense>
+                      )}
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-white font-bold text-lg md:text-xl drop-shadow-lg">
-                      {suggestion.title}
-                    </h3>
-                    <p className="text-white/90 text-sm">
-                      {suggestion.category}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  ),
+                },
+                {
+                  id: 'vui-choi',
+                  label: 'Vui chơi & Trải nghiệm',
+                  content: (
+                    <FilterableGrid
+                      tours={tours}
+                      activities={activities}
+                      onTourClick={handleTourClick}
+                      onActivityClick={handleActivityClick}
+                    />
+                  ),
+                },
+              ]}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+          )}
         </div>
       </div>
 

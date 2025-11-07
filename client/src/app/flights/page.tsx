@@ -1,12 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Flight, flightService } from "@/services/flightService";
 import FlightSearchForm from "@/components/flight/FlightSearchForm";
-import FlightSearchResults from "@/components/flight/FlightSearchResults";
-import RoundTripFlightSelection from "@/components/flight/RoundTripFlightSelection";
+
+// Lazy load search result components
+const FlightSearchResults = lazy(() => import("@/components/flight/FlightSearchResults"));
+const RoundTripFlightSelection = lazy(() => import("@/components/flight/RoundTripFlightSelection"));
+
+// Loading component for lazy loaded components
+const SearchResultsLoading = () => (
+  <div className="flex items-center justify-center py-16">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
+      <p className="text-lg text-sky-700">Đang tải kết quả...</p>
+    </div>
+  </div>
+);
 
 const bannerImages = [
   "/images/banner-flight.webp",
@@ -154,49 +166,51 @@ export default function Flights() {
       {hasSearched && (
         <section className="py-16 px-4">
           <div className="container mx-auto">
-            {isRoundTrip ? (
-              <RoundTripFlightSelection
-                outboundFlights={searchResults}
-                returnFlights={returnSearchResults}
-                loading={loading}
-                error={error}
-                outboundSearchParams={{
-                  from: selectedDeparture,
-                  to: selectedArrival,
-                  date: departureDate,
-                  passengers: passengerCount,
-                  seatClass
-                }}
-                returnSearchParams={{
-                  from: selectedArrival,
-                  to: selectedDeparture,
-                  date: returnDate,
-                  passengers: passengerCount,
-                  seatClass
-                }}
-                adults={adults}
-                children={children}
-                infants={infants}
-              />
-            ) : (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Chuyến đi: {selectedDeparture} → {selectedArrival}
-                </h2>
-                <FlightSearchResults
-                  results={searchResults}
+            <Suspense fallback={<SearchResultsLoading />}>
+              {isRoundTrip ? (
+                <RoundTripFlightSelection
+                  outboundFlights={searchResults}
+                  returnFlights={returnSearchResults}
                   loading={loading}
                   error={error}
-                  searchParams={{
+                  outboundSearchParams={{
                     from: selectedDeparture,
                     to: selectedArrival,
                     date: departureDate,
                     passengers: passengerCount,
                     seatClass
                   }}
+                  returnSearchParams={{
+                    from: selectedArrival,
+                    to: selectedDeparture,
+                    date: returnDate,
+                    passengers: passengerCount,
+                    seatClass
+                  }}
+                  adults={adults}
+                  children={children}
+                  infants={infants}
                 />
-              </div>
-            )}
+              ) : (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                    Chuyến đi: {selectedDeparture} → {selectedArrival}
+                  </h2>
+                  <FlightSearchResults
+                    results={searchResults}
+                    loading={loading}
+                    error={error}
+                    searchParams={{
+                      from: selectedDeparture,
+                      to: selectedArrival,
+                      date: departureDate,
+                      passengers: passengerCount,
+                      seatClass
+                    }}
+                  />
+                </div>
+              )}
+            </Suspense>
           </div>
         </section>
       )}
