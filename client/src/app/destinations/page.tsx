@@ -210,8 +210,6 @@ export default function DestinationsPage() {
                       {selectedDestination.description}
                     </p>
                     <div className="flex items-center space-x-4 text-white/80 text-sm">
-                      <span>Thời lượng lý tưởng</span>
-                      <span className="font-medium">3 ngày</span>
                       <span className="bg-white/20 px-2 py-1 rounded-full text-xs">
                         {selectedDestination.region}
                       </span>
