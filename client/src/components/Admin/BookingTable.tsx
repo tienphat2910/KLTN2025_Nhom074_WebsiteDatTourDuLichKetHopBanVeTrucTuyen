@@ -37,19 +37,23 @@ interface BookingTableProps {
   isLoading: boolean;
   onStatusChange: (bookingId: string, newStatus: string) => void;
   onDeleteBooking: (bookingId: string) => void;
+  isUpdatingStatus?: boolean;
+  totalBookings?: number;
 }
 
 export function BookingTable({
   bookings,
   isLoading,
   onStatusChange,
-  onDeleteBooking
+  onDeleteBooking,
+  isUpdatingStatus = false,
+  totalBookings
 }: BookingTableProps) {
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách Booking ({bookings.length})</CardTitle>
+          <CardTitle>Danh sách Booking ({totalBookings || 0})</CardTitle>
           <CardDescription>
             Quản lý và theo dõi tất cả các đơn đặt chỗ
           </CardDescription>
@@ -68,7 +72,7 @@ export function BookingTable({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách Booking (0)</CardTitle>
+          <CardTitle>Danh sách Booking ({totalBookings || 0})</CardTitle>
           <CardDescription>
             Quản lý và theo dõi tất cả các đơn đặt chỗ
           </CardDescription>
@@ -91,7 +95,9 @@ export function BookingTable({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Danh sách Booking ({bookings.length})</CardTitle>
+        <CardTitle>
+          Danh sách Booking ({totalBookings || bookings.length})
+        </CardTitle>
         <CardDescription>
           Quản lý và theo dõi tất cả các đơn đặt chỗ
         </CardDescription>
@@ -185,6 +191,7 @@ export function BookingTable({
                           onValueChange={(value) =>
                             onStatusChange(booking._id, value)
                           }
+                          disabled={isUpdatingStatus}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue />
@@ -206,6 +213,7 @@ export function BookingTable({
                           size="sm"
                           onClick={() => onDeleteBooking(booking._id)}
                           className="text-red-600 hover:text-red-700"
+                          disabled={isUpdatingStatus}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

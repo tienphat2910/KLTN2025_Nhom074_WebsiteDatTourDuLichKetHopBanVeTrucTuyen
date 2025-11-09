@@ -17,6 +17,7 @@ import { formatCurrency, formatDate } from "@/components/Admin/bookingUtils";
 export default function AdminBookingPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+  const [paginatedBookings, setPaginatedBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -26,6 +27,7 @@ export default function AdminBookingPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalBookings, setTotalBookings] = useState(0);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [stats, setStats] = useState({
     totalBookings: 0,
     pendingBookings: 0,
@@ -47,6 +49,22 @@ export default function AdminBookingPage() {
   useEffect(() => {
     let filtered = bookings;
 
+    // Status filter (client-side for hiding completed bookings by default)
+    if (statusFilter === "all") {
+      // Hide completed bookings by default when showing all
+      filtered = filtered.filter((booking) => booking.status !== "completed");
+    } else if (statusFilter !== "all") {
+      // Apply specific status filter
+      filtered = filtered.filter((booking) => booking.status === statusFilter);
+    }
+
+    // Type filter (client-side)
+    if (typeFilter !== "all") {
+      filtered = filtered.filter(
+        (booking) => booking.bookingType === typeFilter
+      );
+    }
+
     // Search filter (client-side for now, can be moved to API later)
     if (searchTerm) {
       filtered = filtered.filter(
@@ -64,13 +82,31 @@ export default function AdminBookingPage() {
     }
 
     setFilteredBookings(filtered);
-  }, [bookings, searchTerm]);
+
+    // Recalculate pagination based on filtered results
+    const totalFiltered = filtered.length;
+    const totalPagesFiltered = Math.ceil(totalFiltered / 10); // Assuming limit is 10
+    setTotalPages(totalPagesFiltered);
+    setTotalBookings(totalFiltered);
+
+    // If current page exceeds total pages, reset to page 1
+    if (currentPage > totalPagesFiltered && totalPagesFiltered > 0) {
+      setCurrentPage(1);
+    }
+  }, [bookings, searchTerm, statusFilter, typeFilter, currentPage]);
+
+  // Paginate filtered bookings based on current page
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * 10;
+    const endIndex = startIndex + 10;
+    const paginated = filteredBookings.slice(startIndex, endIndex);
+    setPaginatedBookings(paginated);
+  }, [filteredBookings, currentPage]);
 
   // Reload bookings when status or type filter changes
   useEffect(() => {
-    const status = statusFilter === "all" ? undefined : statusFilter;
-    const type = typeFilter === "all" ? undefined : typeFilter;
-    loadBookings(1, status, type);
+    // Always load all bookings from API for client-side filtering
+    loadBookings(1, undefined, undefined);
   }, [statusFilter, typeFilter]);
 
   // Real-time updates via socket
@@ -136,9 +172,7 @@ export default function AdminBookingPage() {
       }
 
       // Reload bookings and stats with current filters
-      const status = statusFilter === "all" ? undefined : statusFilter;
-      const type = typeFilter === "all" ? undefined : typeFilter;
-      loadBookings(currentPage, status, type);
+      loadBookings(1, undefined, undefined); // Load all bookings
       loadStats();
 
       // Get booking type label
@@ -220,9 +254,7 @@ export default function AdminBookingPage() {
       }, 5000);
 
       // Reload bookings and stats with current filters
-      const status = statusFilter === "all" ? undefined : statusFilter;
-      const type = typeFilter === "all" ? undefined : typeFilter;
-      loadBookings(currentPage, status, type);
+      loadBookings(1, undefined, undefined); // Load all bookings
       loadStats();
 
       // Get status labels
@@ -294,9 +326,7 @@ export default function AdminBookingPage() {
       }
 
       // Reload bookings and stats with current filters
-      const status = statusFilter === "all" ? undefined : statusFilter;
-      const type = typeFilter === "all" ? undefined : typeFilter;
-      loadBookings(currentPage, status, type);
+      loadBookings(1, undefined, undefined); // Load all bookings
       loadStats();
 
       const paymentMethod = data.payment?.paymentMethod || "Chưa xác định";
@@ -360,9 +390,7 @@ export default function AdminBookingPage() {
       }, 5000);
 
       // Reload bookings and stats with current filters
-      const status = statusFilter === "all" ? undefined : statusFilter;
-      const type = typeFilter === "all" ? undefined : typeFilter;
-      loadBookings(currentPage, status, type);
+      loadBookings(1, undefined, undefined); // Load all bookings
       loadStats();
 
       const customerName =
@@ -445,28 +473,21 @@ export default function AdminBookingPage() {
   ) => {
     try {
       setIsLoading(true);
+      // Load all bookings for client-side pagination and filtering
       const response = await bookingService.getAllBookings(
-        page,
-        10,
-        status,
-        bookingType
+        1, // Always load from page 1
+        10000, // Load a large number to get all bookings
+        undefined, // No server-side status filter
+        undefined // No server-side type filter
       );
 
       if (response.success) {
-        console.log("Pagination info:", response.pagination);
-        setBookings(response.data);
-        setFilteredBookings(response.data);
-        setCurrentPage(response.pagination.page);
-        setTotalPages(response.pagination.totalPages);
-        setTotalBookings(response.pagination.total);
         console.log(
-          "Updated state - Current page:",
-          response.pagination.page,
-          "Total pages:",
-          response.pagination.totalPages,
-          "Total bookings:",
-          response.pagination.total
+          "Loaded all bookings for client-side processing:",
+          response.data.length
         );
+        setBookings(response.data);
+        // Don't set pagination here - it will be calculated from filtered results
       } else {
         toast.error(response.message || "Không thể tải danh sách booking");
       }
@@ -529,14 +550,13 @@ export default function AdminBookingPage() {
 
   // Load initial data on component mount
   useEffect(() => {
-    const status = statusFilter === "all" ? undefined : statusFilter;
-    const type = typeFilter === "all" ? undefined : typeFilter;
-    loadBookings(1, status, type);
+    loadBookings(1, undefined, undefined); // Load all bookings
     loadStats();
   }, []);
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
+      setIsUpdatingStatus(true);
       const response = await bookingService.updateBookingStatus(
         bookingId,
         newStatus as any
@@ -565,6 +585,8 @@ export default function AdminBookingPage() {
     } catch (error) {
       console.error("Update status error:", error);
       toast.error("Lỗi kết nối server");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -579,9 +601,7 @@ export default function AdminBookingPage() {
       if (response.success) {
         toast.success("Xóa booking thành công");
         // Reload data with current filters
-        const status = statusFilter === "all" ? undefined : statusFilter;
-        const type = typeFilter === "all" ? undefined : typeFilter;
-        loadBookings(currentPage, status, type);
+        loadBookings(1, undefined, undefined); // Load all bookings
         loadStats();
       } else {
         toast.error(response.message || "Không thể xóa booking");
@@ -616,9 +636,7 @@ export default function AdminBookingPage() {
       if (response.ok && result.success) {
         toast.success(result.message);
         // Reload data with current filters
-        const status = statusFilter === "all" ? undefined : statusFilter;
-        const type = typeFilter === "all" ? undefined : typeFilter;
-        loadBookings(currentPage, status, type);
+        loadBookings(1, undefined, undefined); // Load all bookings
         loadStats();
       } else {
         toast.error(result.message || "Không thể tạo test data");
@@ -976,9 +994,7 @@ export default function AdminBookingPage() {
 
         // Reload data if any bookings were completed
         if (result.data.completedCount > 0) {
-          const status = statusFilter === "all" ? undefined : statusFilter;
-          const type = typeFilter === "all" ? undefined : typeFilter;
-          loadBookings(currentPage, status, type);
+          loadBookings(1, undefined, undefined); // Load all bookings
           loadStats();
         }
       } else {
@@ -1028,10 +1044,12 @@ export default function AdminBookingPage() {
 
         {/* Bookings Table */}
         <BookingTable
-          bookings={filteredBookings}
+          bookings={paginatedBookings}
           isLoading={isLoading}
           onStatusChange={handleStatusChange}
           onDeleteBooking={handleDeleteBooking}
+          isUpdatingStatus={isUpdatingStatus}
+          totalBookings={totalBookings}
         />
 
         {/* Pagination */}
@@ -1040,9 +1058,7 @@ export default function AdminBookingPage() {
           totalPages={totalPages}
           totalBookings={totalBookings}
           onPageChange={(page) => {
-            const status = statusFilter === "all" ? undefined : statusFilter;
-            const type = typeFilter === "all" ? undefined : typeFilter;
-            loadBookings(page, status, type);
+            setCurrentPage(page); // Just change page, no API call needed
           }}
         />
       </div>
