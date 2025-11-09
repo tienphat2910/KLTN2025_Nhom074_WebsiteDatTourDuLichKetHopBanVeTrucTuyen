@@ -58,36 +58,56 @@ export default function FlightScheduleManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10); // Increased from 10 to 20
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<FlightSchedule | null>(
     null
   );
 
+  // Effect to refetch when filters change
   useEffect(() => {
-    fetchSchedules();
-  }, []);
+    fetchSchedules(1); // Reset to page 1 when filters change
+  }, [searchTerm, statusFilter]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = async (page = 1) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("lutrip_admin_token");
-      const { data } = await axios.get(`${env.API_BASE_URL}/flight-schedules`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: itemsPerPage.toString()
       });
 
-      if (Array.isArray(data)) {
-        setSchedules(data);
-      } else if (data.success && Array.isArray(data.data)) {
-        setSchedules(data.data);
+      // Add filters
+      if (searchTerm) params.append("flightCode", searchTerm);
+      if (statusFilter !== "all") params.append("status", statusFilter);
+
+      const { data } = await axios.get(
+        `${env.API_BASE_URL}/flight-schedules?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (data.success) {
+        setSchedules(data.data || []);
+        setTotalPages(data.pagination?.totalPages || 0);
+        setTotalCount(data.pagination?.totalCount || 0);
+        setCurrentPage(data.pagination?.currentPage || 1);
       } else {
         setSchedules([]);
+        setTotalPages(0);
+        setTotalCount(0);
       }
     } catch (error) {
       toast.error("Lỗi khi tải danh sách lịch bay");
       setSchedules([]);
+      setTotalPages(0);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -105,7 +125,7 @@ export default function FlightScheduleManagement() {
       });
 
       toast.success("Xóa lịch bay thành công");
-      fetchSchedules();
+      fetchSchedules(currentPage);
     } catch (error) {
       toast.error("Lỗi khi xóa lịch bay");
     }
@@ -129,21 +149,13 @@ export default function FlightScheduleManagement() {
     }).format(price);
   };
 
-  // Filter schedules
+  // Filter schedules (client-side filtering for search)
   const filteredSchedules = schedules.filter((schedule) => {
     const matchesSearch = schedule.flightCode
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || schedule.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredSchedules.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedSchedules = filteredSchedules.slice(startIndex, endIndex);
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
@@ -182,7 +194,7 @@ export default function FlightScheduleManagement() {
             <CardDescription>Quản lý lịch trình các chuyến bay</CardDescription>
           </div>
           <Button
-            onClick={fetchSchedules}
+            onClick={() => fetchSchedules(currentPage)}
             variant="outline"
             size="sm"
             disabled={loading}
@@ -256,7 +268,7 @@ export default function FlightScheduleManagement() {
                     Đang tải...
                   </TableCell>
                 </TableRow>
-              ) : paginatedSchedules.length === 0 ? (
+              ) : filteredSchedules.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
                     <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-2" />
@@ -264,7 +276,7 @@ export default function FlightScheduleManagement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedSchedules.map((schedule) => (
+                filteredSchedules.map((schedule) => (
                   <TableRow key={schedule._id}>
                     <TableCell className="font-medium">
                       {schedule.flightCode}
@@ -303,58 +315,63 @@ export default function FlightScheduleManagement() {
         </div>
 
         {/* Pagination */}
-        {!loading && filteredSchedules.length > 0 && (
+        {!loading && totalCount > 0 && (
           <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Hiển thị {startIndex + 1} -{" "}
-              {Math.min(endIndex, filteredSchedules.length)} /{" "}
-              {filteredSchedules.length} lịch bay
+              Hiển thị {(currentPage - 1) * itemsPerPage + 1} -{" "}
+              {Math.min(currentPage * itemsPerPage, totalCount)} / {totalCount}{" "}
+              lịch bay
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                onClick={() => {
+                  const newPage = currentPage - 1;
+                  setCurrentPage(newPage);
+                  fetchSchedules(newPage);
+                }}
                 disabled={currentPage === 1}
               >
                 Trước
               </Button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((page) => {
-                    // Show first, last, current, and neighbors
-                    return (
-                      page === 1 ||
-                      page === totalPages ||
-                      Math.abs(page - currentPage) <= 1
-                    );
-                  })
-                  .map((page, idx, arr) => {
-                    // Add ellipsis
-                    const showEllipsis = idx > 0 && page - arr[idx - 1] > 1;
-                    return (
-                      <div key={page} className="flex items-center gap-1">
-                        {showEllipsis && (
-                          <span className="px-2 text-gray-400">...</span>
-                        )}
-                        <Button
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                          className="w-8 h-8 p-0"
-                        >
-                          {page}
-                        </Button>
-                      </div>
-                    );
-                  })}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        fetchSchedules(pageNum);
+                      }}
+                      className="w-8 h-8 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
+                onClick={() => {
+                  const newPage = currentPage + 1;
+                  setCurrentPage(newPage);
+                  fetchSchedules(newPage);
+                }}
                 disabled={currentPage === totalPages}
               >
                 Sau
@@ -370,7 +387,7 @@ export default function FlightScheduleManagement() {
           setShowModal(false);
           setEditingSchedule(null);
         }}
-        onSuccess={fetchSchedules}
+        onSuccess={() => fetchSchedules(currentPage)}
         schedule={editingSchedule}
       />
     </Card>

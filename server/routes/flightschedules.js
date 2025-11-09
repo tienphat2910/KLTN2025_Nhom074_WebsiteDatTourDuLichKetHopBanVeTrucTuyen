@@ -40,13 +40,28 @@ const admin = require('../middleware/admin');
  *           type: string
  *           format: date
  *         description: Đến ngày
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Trang hiện tại
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Số item mỗi trang
  *     responses:
  *       200:
  *         description: Danh sách lịch bay
  */
 router.get('/', async (req, res) => {
     try {
-        const { flightCode, status, fromDate, toDate } = req.query;
+        const { flightCode, status, fromDate, toDate, page = 1, limit = 10 } = req.query;
 
         const query = {};
 
@@ -70,8 +85,16 @@ router.get('/', async (req, res) => {
             }
         }
 
+        // Get total count for pagination
+        const totalCount = await FlightSchedule.countDocuments(query);
+        const totalPages = Math.ceil(totalCount / limit);
+        const skip = (page - 1) * limit;
+
+        // Get paginated schedules
         const schedules = await FlightSchedule.find(query)
-            .sort({ departureDate: 1 });
+            .sort({ departureDate: 1 })
+            .skip(skip)
+            .limit(parseInt(limit));
 
         // Populate flight info
         const schedulesWithFlight = await Promise.all(
@@ -92,7 +115,15 @@ router.get('/', async (req, res) => {
 
         res.json({
             success: true,
-            data: schedulesWithFlight
+            data: schedulesWithFlight,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages,
+                totalCount,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+                limit: parseInt(limit)
+            }
         });
     } catch (err) {
         res.status(500).json({
