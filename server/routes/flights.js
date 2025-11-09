@@ -41,13 +41,28 @@ const admin = require('../middleware/admin');
  *         schema:
  *           type: string
  *         description: Lọc theo trạng thái
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Trang hiện tại
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Số item mỗi trang
  *     responses:
  *       200:
  *         description: Danh sách chuyến bay với thông tin đầy đủ
  */
 router.get('/', async (req, res) => {
     try {
-        const { departureAirportId, arrivalAirportId, airlineId, status } = req.query;
+        const { departureAirportId, arrivalAirportId, airlineId, status, page = 1, limit = 10 } = req.query;
 
         const query = {};
         if (departureAirportId) query.departureAirportId = departureAirportId;
@@ -55,11 +70,19 @@ router.get('/', async (req, res) => {
         if (airlineId) query.airlineId = airlineId;
         if (status) query.status = status;
 
+        // Get total count for pagination
+        const totalCount = await Flight.countDocuments(query);
+        const totalPages = Math.ceil(totalCount / limit);
+        const skip = (page - 1) * limit;
+
+        // Get paginated flights
         const flights = await Flight.find(query)
             .populate('airlineId', 'name code logo')
             .populate('departureAirportId', 'name city iata icao')
             .populate('arrivalAirportId', 'name city iata icao')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
 
         // Get flight classes for each flight
         const flightsWithClasses = await Promise.all(
@@ -77,7 +100,15 @@ router.get('/', async (req, res) => {
 
         res.json({
             success: true,
-            data: flightsWithClasses
+            data: flightsWithClasses,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages,
+                totalCount,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+                limit: parseInt(limit)
+            }
         });
     } catch (err) {
         res.status(500).json({

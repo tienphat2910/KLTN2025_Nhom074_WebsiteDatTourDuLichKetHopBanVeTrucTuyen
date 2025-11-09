@@ -61,19 +61,31 @@ export default function FlightManagement() {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Increased from default
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
 
   useEffect(() => {
-    fetchFlights();
-  }, []);
+    fetchFlights(1); // Reset to page 1 when search changes
+  }, [searchTerm]);
 
-  const fetchFlights = async () => {
+  const fetchFlights = async (page = 1) => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${env.API_BASE_URL}/flights`);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: itemsPerPage.toString()
+      });
+
+      const { data } = await axios.get(`${env.API_BASE_URL}/flights?${params}`);
       if (data.success) {
         setFlights(data.data);
+        setTotalPages(data.pagination?.totalPages || 0);
+        setTotalCount(data.pagination?.totalCount || 0);
+        setCurrentPage(data.pagination?.currentPage || 1);
       }
     } catch (error) {
       toast.error("Lỗi khi tải danh sách chuyến bay");
@@ -101,7 +113,7 @@ export default function FlightManagement() {
 
       if (data.success) {
         toast.success("Xóa chuyến bay thành công");
-        fetchFlights();
+        fetchFlights(currentPage);
       } else {
         toast.error(data.message || "Không thể xóa chuyến bay");
       }
@@ -121,7 +133,7 @@ export default function FlightManagement() {
   };
 
   const handleSuccess = () => {
-    fetchFlights();
+    fetchFlights(currentPage);
     handleCloseModal();
   };
 
@@ -175,7 +187,7 @@ export default function FlightManagement() {
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={fetchFlights}
+                onClick={() => fetchFlights(currentPage)}
                 variant="outline"
                 size="sm"
                 disabled={loading}
@@ -349,10 +361,71 @@ export default function FlightManagement() {
             </Table>
           </div>
 
-          {/* Summary */}
-          {!loading && filteredFlights.length > 0 && (
-            <div className="mt-4 text-sm text-gray-500">
-              Hiển thị {filteredFlights.length} / {flights.length} chuyến bay
+          {/* Summary & Pagination */}
+          {!loading && totalCount > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Hiển thị {(currentPage - 1) * itemsPerPage + 1} -{" "}
+                {Math.min(currentPage * itemsPerPage, totalCount)} /{" "}
+                {totalCount} chuyến bay
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newPage = currentPage - 1;
+                    setCurrentPage(newPage);
+                    fetchFlights(newPage);
+                  }}
+                  disabled={currentPage === 1}
+                >
+                  Trước
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          currentPage === pageNum ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => {
+                          setCurrentPage(pageNum);
+                          fetchFlights(pageNum);
+                        }}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newPage = currentPage + 1;
+                    setCurrentPage(newPage);
+                    fetchFlights(newPage);
+                  }}
+                  disabled={currentPage === totalPages}
+                >
+                  Sau
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
