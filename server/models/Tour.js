@@ -19,10 +19,20 @@ const tourSchema = new mongoose.Schema({
         required: [true, 'Mô tả tour là bắt buộc'],
         trim: true
     },
-    destinationId: {
+    destinationIds: [{
         type: String,
         required: [true, 'ID địa điểm là bắt buộc'],
-        ref: 'Destination'
+        ref: 'Destination',
+        validate: {
+            validator: function (v) {
+                return Array.isArray(v) && v.length > 0;
+            },
+            message: 'Phải có ít nhất 1 điểm đến'
+        }
+    }],
+    destinationId: {
+        type: String,
+        ref: 'Destination' // Keep for backward compatibility
     },
     departureLocation: {
         name: {
@@ -196,7 +206,7 @@ tourSchema.pre('save', function (next) {
 });
 
 // Index for better query performance
-tourSchema.index({ destinationId: 1, startDate: 1 });
+tourSchema.index({ destinationIds: 1, startDate: 1 });
 tourSchema.index({ isFeatured: -1, createdAt: -1 });
 tourSchema.index({ price: 1 });
 tourSchema.index({ slug: 1 });

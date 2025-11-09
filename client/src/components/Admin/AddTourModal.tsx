@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { destinationService, Destination } from "@/services/destinationService";
 import { tourService, Tour } from "@/services/tourService";
 import { toast } from "sonner";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { env } from "@/config/env";
 
@@ -32,12 +32,7 @@ interface TourFormData {
   title: string;
   description: string;
   destinationId: string;
-  departureLocation: {
-    name: string;
-    code?: string;
-    fullName?: string;
-    region?: string;
-  };
+  departureLocationId: string; // Changed from departureLocation object to destinationId
   itinerary: Record<string, { title: string; description: string }>;
   startDate: string;
   endDate: string;
@@ -94,12 +89,7 @@ export function AddTourModal({
     title: "",
     description: "",
     destinationId: "",
-    departureLocation: {
-      name: "",
-      code: "",
-      fullName: "",
-      region: ""
-    },
+    departureLocationId: "", // Changed from departureLocation object
     itinerary: {},
     startDate: "",
     endDate: "",
@@ -123,6 +113,8 @@ export function AddTourModal({
     current: number;
     total: number;
   } | null>(null);
+  const [departureSearch, setDepartureSearch] = useState("");
+  const [destinationSearch, setDestinationSearch] = useState("");
 
   // Load destinations
   useEffect(() => {
@@ -142,35 +134,18 @@ export function AddTourModal({
     if (tour && open) {
       setIsLoadingTourData(true);
 
-      // Handle destinationId - it might be a string or an object with _id
-      const destinationId =
-        typeof tour.destinationId === "string"
-          ? tour.destinationId
-          : (tour.destinationId as any)?._id || "";
+      // Handle departureLocationId - it might be a string or an object with _id
+      const departureLocationId =
+        typeof tour.departureLocation === "string"
+          ? tour.departureLocation
+          : (tour.departureLocation as any)?._id || "";
 
-      // Calculate duration if not provided
-      let duration = tour.duration || "";
-      if (!duration && tour.startDate && tour.endDate) {
-        const start = new Date(tour.startDate);
-        const end = new Date(tour.endDate);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const totalDays = diffDays + 1;
-        const nights = diffDays;
-        duration = `${totalDays} Ngày ${nights} đêm`;
-
-        console.log("📅 Calculated duration from dates:", duration);
-      } // Populate form with existing tour data
+      // Populate form with existing tour data
       setFormData({
         title: tour.title || "",
         description: tour.description || "",
-        destinationId: destinationId,
-        departureLocation: {
-          name: tour.departureLocation?.name || "",
-          code: tour.departureLocation?.code || "",
-          fullName: tour.departureLocation?.fullName || "",
-          region: tour.departureLocation?.region || ""
-        },
+        destinationId: tour.destinationId || "",
+        departureLocationId: departureLocationId, // Changed from departureLocation object
         itinerary: tour.itinerary || {},
         startDate: tour.startDate
           ? new Date(tour.startDate).toISOString().split("T")[0]
@@ -178,7 +153,7 @@ export function AddTourModal({
         endDate: tour.endDate
           ? new Date(tour.endDate).toISOString().split("T")[0]
           : "",
-        duration: duration,
+        duration: tour.duration || "",
         price: tour.price || 0,
         discount: tour.discount || 0,
         pricingByAge: {
@@ -261,22 +236,44 @@ export function AddTourModal({
     }
   };
 
-  const handleDepartureLocationChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      departureLocation: {
-        ...prev.departureLocation,
-        [field]: value
-      }
-    }));
+  // Format currency
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat("vi-VN").format(value);
   };
 
-  const handlePricingChange = (field: string, value: number) => {
+  const parseCurrency = (value: string): number => {
+    return parseInt(value.replace(/\D/g, "")) || 0;
+  };
+
+  // Handle price input with auto-formatting
+  const handlePriceInput = (field: keyof TourFormData, value: string) => {
+    const numericValue = parseCurrency(value);
+
+    if (field === "price") {
+      // When tour price changes, update adult price to match
+      setFormData((prev) => ({
+        ...prev,
+        price: numericValue,
+        pricingByAge: {
+          ...prev.pricingByAge,
+          adult: numericValue,
+          // Auto-calculate child price as 60% of adult price
+          child: Math.round(numericValue * 0.6)
+        }
+      }));
+    } else {
+      handleInputChange(field, numericValue);
+    }
+  };
+
+  // Handle pricing by age input with auto-formatting
+  const handlePricingByAgeInput = (field: string, value: string) => {
+    const numericValue = parseCurrency(value);
     setFormData((prev) => ({
       ...prev,
       pricingByAge: {
         ...prev.pricingByAge,
-        [field]: value
+        [field]: numericValue
       }
     }));
   };
@@ -400,9 +397,8 @@ export function AddTourModal({
         if (!formData.description.trim()) {
           newErrors.description = "Mô tả tour không được để trống";
         }
-        if (!formData.departureLocation.name.trim()) {
-          newErrors.departureLocation =
-            "Địa điểm khởi hành không được để trống";
+        if (!formData.departureLocationId) {
+          newErrors.departureLocationId = "Vui lòng chọn địa điểm khởi hành";
         }
         if (!formData.destinationId) {
           newErrors.destinationId = "Vui lòng chọn điểm đến";
@@ -470,7 +466,7 @@ export function AddTourModal({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate all tabs
     const allTabsValid =
       validateTab("basic") &&
@@ -479,26 +475,39 @@ export function AddTourModal({
       validateTab("images");
 
     if (allTabsValid) {
-      // Clean up departureLocation - remove empty fields
-      const cleanDepartureLocation: any = {
-        name: formData.departureLocation.name
-      };
-
-      if (formData.departureLocation.code?.trim()) {
-        cleanDepartureLocation.code = formData.departureLocation.code;
-      }
-      if (formData.departureLocation.fullName?.trim()) {
-        cleanDepartureLocation.fullName = formData.departureLocation.fullName;
-      }
-      if (formData.departureLocation.region?.trim()) {
-        cleanDepartureLocation.region = formData.departureLocation.region;
+      // Fetch departure location details
+      let departureLocationData = null;
+      if (formData.departureLocationId) {
+        try {
+          const destinationResponse =
+            await destinationService.getDestinationById(
+              formData.departureLocationId
+            );
+          if (destinationResponse.success) {
+            departureLocationData = {
+              name: destinationResponse.data.name,
+              region: destinationResponse.data.region,
+              code: destinationResponse.data._id // Use the destination ID as code
+            };
+          } else {
+            toast.error("Không thể tải thông tin địa điểm khởi hành");
+            return;
+          }
+        } catch (error) {
+          console.error("Error fetching departure location:", error);
+          toast.error("Lỗi khi tải thông tin địa điểm khởi hành");
+          return;
+        }
       }
 
       const tourData: any = {
         ...formData,
-        departureLocation: cleanDepartureLocation,
+        departureLocation: departureLocationData, // Use the constructed object
         availableSeats: formData.seats
       };
+
+      // Remove departureLocationId as it's not needed in the API
+      delete tourData.departureLocationId;
 
       // Add tour ID if editing
       if (tour?._id) {
@@ -518,12 +527,7 @@ export function AddTourModal({
       title: "",
       description: "",
       destinationId: "",
-      departureLocation: {
-        name: "",
-        code: "",
-        fullName: "",
-        region: ""
-      },
+      departureLocationId: "",
       itinerary: {},
       startDate: "",
       endDate: "",
@@ -541,6 +545,8 @@ export function AddTourModal({
       category: "family",
       isActive: true
     });
+    setDepartureSearch("");
+    setDestinationSearch("");
     setErrors({});
     setImageUrl("");
     setCurrentTab("basic");
@@ -613,69 +619,146 @@ export function AddTourModal({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="departureLocation">
+                  <Label htmlFor="departureLocationId">
                     Địa điểm khởi hành *
                   </Label>
-                  <Input
-                    id="departureLocation"
-                    value={formData.departureLocation.name}
-                    onChange={(e) =>
-                      handleDepartureLocationChange("name", e.target.value)
-                    }
-                    placeholder="VD: TP. Hồ Chí Minh, Hà Nội..."
-                    className={errors.departureLocation ? "border-red-500" : ""}
-                  />
-                  {errors.departureLocation && (
+                  <Select
+                    value={formData.departureLocationId}
+                    onValueChange={(value) => {
+                      handleInputChange("departureLocationId", value);
+                      setDepartureSearch("");
+                    }}
+                  >
+                    <SelectTrigger
+                      className={
+                        errors.departureLocationId ? "border-red-500" : ""
+                      }
+                    >
+                      <SelectValue placeholder="Chọn địa điểm khởi hành" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <div className="sticky top-0 bg-white p-2 border-b z-10">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            placeholder="Tìm theo tên, vùng miền..."
+                            className="h-9 pl-9"
+                            value={departureSearch}
+                            onChange={(e) => setDepartureSearch(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto p-1">
+                        {destinations
+                          .filter(
+                            (dest) =>
+                              dest.name
+                                .toLowerCase()
+                                .includes(departureSearch.toLowerCase()) ||
+                              dest.region
+                                .toLowerCase()
+                                .includes(departureSearch.toLowerCase())
+                          )
+                          .map((dest) => (
+                            <SelectItem key={dest._id} value={dest._id}>
+                              {dest.name} ({dest.region})
+                            </SelectItem>
+                          ))}
+                        {destinations.filter(
+                          (dest) =>
+                            dest.name
+                              .toLowerCase()
+                              .includes(departureSearch.toLowerCase()) ||
+                            dest.region
+                              .toLowerCase()
+                              .includes(departureSearch.toLowerCase())
+                        ).length === 0 &&
+                          departureSearch && (
+                            <div className="p-4 text-center text-sm text-gray-500">
+                              Không tìm thấy địa điểm
+                            </div>
+                          )}
+                      </div>
+                    </SelectContent>
+                  </Select>
+                  {errors.departureLocationId && (
                     <p className="text-sm text-red-500">
-                      {errors.departureLocation}
+                      {errors.departureLocationId}
                     </p>
                   )}
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="region">Vùng miền</Label>
+                  <Label htmlFor="destinationId">Điểm đến *</Label>
                   <Select
-                    value={formData.departureLocation.region || ""}
-                    onValueChange={(value) =>
-                      handleDepartureLocationChange("region", value)
-                    }
+                    value={formData.destinationId}
+                    onValueChange={(value) => {
+                      handleInputChange("destinationId", value);
+                      setDestinationSearch("");
+                    }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn vùng miền (tùy chọn)" />
+                    <SelectTrigger
+                      className={errors.destinationId ? "border-red-500" : ""}
+                    >
+                      <SelectValue placeholder="Chọn điểm đến" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Miền Bắc">Miền Bắc</SelectItem>
-                      <SelectItem value="Miền Trung">Miền Trung</SelectItem>
-                      <SelectItem value="Miền Nam">Miền Nam</SelectItem>
+                    <SelectContent className="max-h-[300px]">
+                      <div className="sticky top-0 bg-white p-2 border-b z-10">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            placeholder="Tìm theo tên, vùng miền..."
+                            className="h-9 pl-9"
+                            value={destinationSearch}
+                            onChange={(e) =>
+                              setDestinationSearch(e.target.value)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto p-1">
+                        {destinations
+                          .filter(
+                            (dest) =>
+                              dest.name
+                                .toLowerCase()
+                                .includes(destinationSearch.toLowerCase()) ||
+                              dest.region
+                                .toLowerCase()
+                                .includes(destinationSearch.toLowerCase())
+                          )
+                          .map((dest) => (
+                            <SelectItem key={dest._id} value={dest._id}>
+                              {dest.name} ({dest.region})
+                            </SelectItem>
+                          ))}
+                        {destinations.filter(
+                          (dest) =>
+                            dest.name
+                              .toLowerCase()
+                              .includes(destinationSearch.toLowerCase()) ||
+                            dest.region
+                              .toLowerCase()
+                              .includes(destinationSearch.toLowerCase())
+                        ).length === 0 &&
+                          destinationSearch && (
+                            <div className="p-4 text-center text-sm text-gray-500">
+                              Không tìm thấy địa điểm
+                            </div>
+                          )}
+                      </div>
                     </SelectContent>
                   </Select>
+                  {errors.destinationId && (
+                    <p className="text-sm text-red-500">
+                      {errors.destinationId}
+                    </p>
+                  )}
                 </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="destinationId">Điểm đến *</Label>
-                <Select
-                  value={formData.destinationId}
-                  onValueChange={(value) =>
-                    handleInputChange("destinationId", value)
-                  }
-                >
-                  <SelectTrigger
-                    className={errors.destinationId ? "border-red-500" : ""}
-                  >
-                    <SelectValue placeholder="Chọn điểm đến" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {destinations.map((dest) => (
-                      <SelectItem key={dest._id} value={dest._id}>
-                        {dest.name} ({dest.region})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.destinationId && (
-                  <p className="text-sm text-red-500">{errors.destinationId}</p>
-                )}
               </div>
 
               <div className="grid gap-2">
@@ -775,14 +858,11 @@ export function AddTourModal({
                   <Label htmlFor="price">Giá tour (VNĐ) *</Label>
                   <Input
                     id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) =>
-                      handleInputChange("price", Number(e.target.value))
-                    }
-                    placeholder="VD: 6989000"
+                    type="text"
+                    value={formatCurrency(formData.price)}
+                    onChange={(e) => handlePriceInput("price", e.target.value)}
+                    placeholder="VD: 6,989,000"
                     className={errors.price ? "border-red-500" : ""}
-                    min="0"
                   />
                   {errors.price && (
                     <p className="text-sm text-red-500">{errors.price}</p>
@@ -814,13 +894,12 @@ export function AddTourModal({
                     </Label>
                     <Input
                       id="adultPrice"
-                      type="number"
-                      value={formData.pricingByAge.adult}
+                      type="text"
+                      value={formatCurrency(formData.pricingByAge.adult)}
                       onChange={(e) =>
-                        handlePricingChange("adult", Number(e.target.value))
+                        handlePricingByAgeInput("adult", e.target.value)
                       }
-                      placeholder="6989000"
-                      min="0"
+                      placeholder="6,989,000"
                     />
                   </div>
 
@@ -830,13 +909,12 @@ export function AddTourModal({
                     </Label>
                     <Input
                       id="childPrice"
-                      type="number"
-                      value={formData.pricingByAge.child}
+                      type="text"
+                      value={formatCurrency(formData.pricingByAge.child)}
                       onChange={(e) =>
-                        handlePricingChange("child", Number(e.target.value))
+                        handlePricingByAgeInput("child", e.target.value)
                       }
-                      placeholder="5990000"
-                      min="0"
+                      placeholder="4,193,400"
                     />
                   </div>
 
@@ -846,13 +924,12 @@ export function AddTourModal({
                     </Label>
                     <Input
                       id="infantPrice"
-                      type="number"
-                      value={formData.pricingByAge.infant}
+                      type="text"
+                      value={formatCurrency(formData.pricingByAge.infant)}
                       onChange={(e) =>
-                        handlePricingChange("infant", Number(e.target.value))
+                        handlePricingByAgeInput("infant", e.target.value)
                       }
-                      placeholder="3290000"
-                      min="0"
+                      placeholder="3,494,500"
                     />
                   </div>
                 </div>
