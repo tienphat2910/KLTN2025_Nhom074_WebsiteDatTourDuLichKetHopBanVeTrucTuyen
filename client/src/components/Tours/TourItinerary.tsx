@@ -145,87 +145,6 @@ export default function TourItinerary({ tour, isVisible }: TourItineraryProps) {
                         })}
                     </div>
 
-                    {/* Activity icons based on content */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {day.description.includes("tắm biển") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          🏊‍♀️ Tắm biển
-                        </span>
-                      )}
-                      {day.description.includes("Safari") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          🦁 Safari
-                        </span>
-                      )}
-                      {day.description.includes("VinWonder") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          🎢 VinWonder
-                        </span>
-                      )}
-                      {day.description.includes("cano") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800">
-                          🛥️ Cano
-                        </span>
-                      )}
-                      {day.description.includes("chùa") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          🏛️ Chùa
-                        </span>
-                      )}
-                      {day.description.includes("Grand World") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                          🏰 Grand World
-                        </span>
-                      )}
-                      {day.description.includes("Dinh Cậu") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          ⛩️ Dinh Cậu
-                        </span>
-                      )}
-                      {day.description.includes("Sunset Town") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                          🌅 Sunset Town
-                        </span>
-                      )}
-                      {day.description.includes("Cầu Hôn") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
-                          💕 Cầu Hôn
-                        </span>
-                      )}
-                      {day.description.includes("ngọc trai") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          🦪 Ngọc trai
-                        </span>
-                      )}
-                      {day.description.includes("lặn ngắm san hô") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          🐠 Lặn ngắm san hô
-                        </span>
-                      )}
-                      {day.description.includes("tiêu") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          🌶️ Vườn tiêu
-                        </span>
-                      )}
-                      {day.description.includes("nước mắm") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                          🐟 Nước mắm
-                        </span>
-                      )}
-                      {day.description.includes("rượu Sim") && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          🍷 Rượu Sim
-                        </span>
-                      )}
-                      {(day.description.includes("Ăn sáng") ||
-                        day.description.includes("Ăn trưa") ||
-                        day.description.includes("Ăn tối")) && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                          🍽️ Bao gồm bữa ăn
-                        </span>
-                      )}
-                    </div>
-
                     {/* Add detailed breakdown for complex activities */}
                     {day.description.includes("Lựa chọn") && (
                       <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -250,6 +169,11 @@ export default function TourItinerary({ tour, isVisible }: TourItineraryProps) {
                         {day.description.includes("sáng") && (
                           <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
                             🌅 Buổi sáng
+                          </span>
+                        )}
+                        {day.description.includes("trưa") && (
+                          <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                            ☀️ Buổi trưa
                           </span>
                         )}
                         {day.description.includes("chiều") && (
@@ -296,32 +220,6 @@ export default function TourItinerary({ tour, isVisible }: TourItineraryProps) {
           </p>
         </div>
       )}
-
-      {/* Tour highlights */}
-      <div className="mt-8 p-4 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg border border-emerald-200">
-        <h5 className="font-semibold text-gray-800 mb-3 flex items-center">
-          <span className="text-emerald-600 mr-2">✨</span>
-          Điểm nổi bật của tour
-        </h5>
-        <div className="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">✓</span>
-            Khám phá VinWonder & Safari
-          </div>
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">✓</span>
-            Tắm biển Bãi Sao tuyệt đẹp
-          </div>
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">✓</span>
-            Chiêm ngưỡng Cầu Hôn lãng mạn
-          </div>
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">✓</span>
-            Trải nghiệm Grand World
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

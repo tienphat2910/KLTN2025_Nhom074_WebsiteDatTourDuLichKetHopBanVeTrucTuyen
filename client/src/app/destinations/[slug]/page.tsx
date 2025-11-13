@@ -14,41 +14,19 @@ import Tabs from "@/components/Destinations/Tabs";
 import HorizontalScrollSection from "@/components/Destinations/HorizontalScrollSection";
 import FilterableGrid from "@/components/Destinations/FilterableGrid";
 import ActivityCard from "@/components/Destinations/ActivityCard";
-import { getDestinationData, DestinationData } from '@/data/destinationData';
+import { getDestinationData, DestinationData } from "@/data/destinationData";
 
 // Lazy load heavy components
-const FamousPlacesSection = lazy(() => import('@/components/Destinations/FamousPlacesSection'));
-const TravelExperiencesSection = lazy(() => import('@/components/Destinations/TravelExperiencesSection'));
-const DestinationInfoSection = lazy(() => import('@/components/Destinations/DestinationInfoSection'));
-const FAQSection = lazy(() => import('@/components/Destinations/FAQSection'));
-import { Map, Plane, PartyPopper, Circle } from "lucide-react";
-
-const serviceIcons = [
-  {
-    id: "tour",
-    name: "Tour",
-    icon: Map,
-    href: "/tours"
-  },
-  {
-    id: "flight",
-    name: "Chuyến bay",
-    icon: Plane,
-    href: "/flights"
-  },
-  {
-    id: "activity",
-    name: "Giải trí",
-    icon: PartyPopper,
-    href: "/activity"
-  },
-  {
-    id: "all-services",
-    name: "Tất cả các mục",
-    icon: Circle,
-    href: "/services"
-  }
-];
+const FamousPlacesSection = lazy(
+  () => import("@/components/Destinations/FamousPlacesSection")
+);
+const TravelExperiencesSection = lazy(
+  () => import("@/components/Destinations/TravelExperiencesSection")
+);
+const DestinationInfoSection = lazy(
+  () => import("@/components/Destinations/DestinationInfoSection")
+);
+const FAQSection = lazy(() => import("@/components/Destinations/FAQSection"));
 
 export default function DestinationDetailPage() {
   const params = useParams();
@@ -62,11 +40,12 @@ export default function DestinationDetailPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState('kham-pha');
+  const [activeTab, setActiveTab] = useState("kham-pha");
   const [tours, setTours] = useState<Tour[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
-  const [destinationData, setDestinationData] = useState<DestinationData | null>(null);
+  const [destinationData, setDestinationData] =
+    useState<DestinationData | null>(null);
 
   // Mock gallery images for destination
   const galleryImages = [
@@ -117,7 +96,7 @@ export default function DestinationDetailPage() {
         // Load tours for this destination
         const toursResponse = await tourService.getTours({
           destination: destination._id,
-          limit: 20, // Load more for horizontal scroll
+          limit: 20 // Load more for horizontal scroll
         });
 
         if (toursResponse.success) {
@@ -127,7 +106,7 @@ export default function DestinationDetailPage() {
         // Load activities for this destination
         const activitiesResponse = await activityService.getActivities({
           destinationId: destination._id,
-          limit: 20,
+          limit: 20
         });
 
         if (activitiesResponse.success) {
@@ -294,42 +273,6 @@ export default function DestinationDetailPage() {
         </div>
       </div>
 
-      {/* Services Grid */}
-      <div className="container mx-auto px-4 pb-8">
-        <div
-          className={`bg-white rounded-2xl shadow-lg p-6 transition-all duration-1000 delay-300 ${
-            isVisible ? "animate-slide-up" : "opacity-0"
-          }`}
-        >
-          <div className="flex justify-center">
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 max-w-4xl">
-              {serviceIcons.map((service) => (
-                <Link
-                  key={service.id}
-                  href={
-                    service.id === "tour"
-                      ? `/tours/${destination.slug}`
-                      : service.id === "flight"
-                      ? `/flights/${destination.slug}`
-                      : service.id === "activity"
-                      ? `/activity/${destination.slug}`
-                      : service.href
-                  }
-                  className="flex flex-col items-center p-3 md:p-4 rounded-xl hover:scale-105 transition-all duration-200 group"
-                >
-                  <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform group-hover:bg-blue-50">
-                    <service.icon className="w-6 h-6 md:w-8 md:h-8 text-gray-700 group-hover:text-blue-600" />
-                  </div>
-                  <span className="text-xs md:text-sm text-center text-gray-700 group-hover:text-blue-600 font-medium leading-tight">
-                    {service.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Tabs Section */}
       <div className="container mx-auto px-4 pb-16">
         <div
@@ -349,21 +292,21 @@ export default function DestinationDetailPage() {
             <Tabs
               tabs={[
                 {
-                  id: 'kham-pha',
+                  id: "kham-pha",
                   label: `Khám phá ${destination.name}`,
                   content: (
                     <div className="space-y-8">
                       {/* Top tours nổi bật */}
                       <HorizontalScrollSection
                         title={`Top tour nổi bật ở ${destination.name}`}
-                        tours={tours.filter(tour => tour.isFeatured)}
+                        tours={tours.filter((tour) => tour.isFeatured)}
                         onTourClick={handleTourClick}
                       />
 
                       {/* Tour có giảm giá */}
                       <HorizontalScrollSection
                         title={`Tour khuyến mãi ở ${destination.name}`}
-                        tours={tours.filter(tour => tour.discount > 0)}
+                        tours={tours.filter((tour) => tour.discount > 0)}
                         onTourClick={handleTourClick}
                       />
 
@@ -394,11 +337,17 @@ export default function DestinationDetailPage() {
 
                       {/* Địa điểm du lịch nổi tiếng */}
                       {destinationData?.famousPlaces && (
-                        <Suspense fallback={
-                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
-                            <LoadingSpinner type="travel" size="md" text="Đang tải địa điểm..." />
-                          </div>
-                        }>
+                        <Suspense
+                          fallback={
+                            <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                              <LoadingSpinner
+                                type="travel"
+                                size="md"
+                                text="Đang tải địa điểm..."
+                              />
+                            </div>
+                          }
+                        >
                           <FamousPlacesSection
                             places={destinationData.famousPlaces}
                             destinationName={destination.name}
@@ -408,11 +357,17 @@ export default function DestinationDetailPage() {
 
                       {/* Kinh nghiệm du lịch */}
                       {destinationData?.travelExperiences && (
-                        <Suspense fallback={
-                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
-                            <LoadingSpinner type="travel" size="md" text="Đang tải kinh nghiệm..." />
-                          </div>
-                        }>
+                        <Suspense
+                          fallback={
+                            <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                              <LoadingSpinner
+                                type="travel"
+                                size="md"
+                                text="Đang tải kinh nghiệm..."
+                              />
+                            </div>
+                          }
+                        >
                           <TravelExperiencesSection
                             experiences={destinationData.travelExperiences}
                             destinationName={destination.name}
@@ -422,11 +377,17 @@ export default function DestinationDetailPage() {
 
                       {/* Thông tin du lịch */}
                       {destinationData && (
-                        <Suspense fallback={
-                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
-                            <LoadingSpinner type="travel" size="md" text="Đang tải thông tin..." />
-                          </div>
-                        }>
+                        <Suspense
+                          fallback={
+                            <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                              <LoadingSpinner
+                                type="travel"
+                                size="md"
+                                text="Đang tải thông tin..."
+                              />
+                            </div>
+                          }
+                        >
                           <DestinationInfoSection
                             info={destinationData.destinationInfo}
                             weatherInfo={destinationData.weatherInfo}
@@ -437,11 +398,17 @@ export default function DestinationDetailPage() {
 
                       {/* Câu hỏi thường gặp */}
                       {destinationData?.faqs && (
-                        <Suspense fallback={
-                          <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
-                            <LoadingSpinner type="travel" size="md" text="Đang tải câu hỏi..." />
-                          </div>
-                        }>
+                        <Suspense
+                          fallback={
+                            <div className="bg-white rounded-xl shadow-lg p-8 flex items-center justify-center">
+                              <LoadingSpinner
+                                type="travel"
+                                size="md"
+                                text="Đang tải câu hỏi..."
+                              />
+                            </div>
+                          }
+                        >
                           <FAQSection
                             faqs={destinationData.faqs}
                             destinationName={destination.name}
@@ -449,11 +416,11 @@ export default function DestinationDetailPage() {
                         </Suspense>
                       )}
                     </div>
-                  ),
+                  )
                 },
                 {
-                  id: 'vui-choi',
-                  label: 'Vui chơi & Trải nghiệm',
+                  id: "vui-choi",
+                  label: "Vui chơi & Trải nghiệm",
                   content: (
                     <FilterableGrid
                       tours={tours}
@@ -461,8 +428,8 @@ export default function DestinationDetailPage() {
                       onTourClick={handleTourClick}
                       onActivityClick={handleActivityClick}
                     />
-                  ),
-                },
+                  )
+                }
               ]}
               activeTab={activeTab}
               onTabChange={setActiveTab}
