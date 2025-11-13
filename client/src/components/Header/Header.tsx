@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,6 +48,12 @@ export default function Header() {
   >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Refs for dropdown containers
+  const destinationsRef = useRef<HTMLDivElement>(null);
+  const toursRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Load destinations and tours from API
   useEffect(() => {
@@ -234,15 +240,38 @@ export default function Header() {
     }
   };
 
-  // Close suggestions when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
-      setShowSuggestions(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+
+      // Close search suggestions if click is outside search container
+      if (searchRef.current && !searchRef.current.contains(target)) {
+        setShowSuggestions(false);
+      }
+
+      // Close destinations dropdown if click is outside destinations container
+      if (
+        destinationsRef.current &&
+        !destinationsRef.current.contains(target)
+      ) {
+        setIsDestinationsOpen(false);
+      }
+
+      // Close tours dropdown if click is outside tours container
+      if (toursRef.current && !toursRef.current.contains(target)) {
+        setIsToursOpen(false);
+      }
+
+      // Close user menu if click is outside user menu container
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setIsUserMenuOpen(false);
+      }
     };
 
-    document.addEventListener("click", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("click", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -284,7 +313,7 @@ export default function Header() {
             {/* Desktop Navigation - Hidden on tablet, shown on large desktop */}
             <nav className="hidden xl:flex space-x-4 2xl:space-x-8">
               {/* Destinations Dropdown - click to open/close */}
-              <div className="relative">
+              <div className="relative" ref={destinationsRef}>
                 <button
                   type="button"
                   className={`relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg flex items-center space-x-1 text-sm 2xl:text-base ${
@@ -390,7 +419,7 @@ export default function Header() {
                 )}
               </div>
               {/* Tours Dropdown - click to open/close */}
-              <div className="relative">
+              <div className="relative" ref={toursRef}>
                 <button
                   type="button"
                   className={`relative font-medium transition-all duration-300 px-3 2xl:px-4 py-2 rounded-lg flex items-center space-x-1 text-sm 2xl:text-base ${
@@ -516,7 +545,7 @@ export default function Header() {
             {/* Desktop Search and Auth - Responsive sizing */}
             <div className="hidden lg:flex items-center space-x-2 xl:space-x-4">
               {/* Search Bar with responsive width */}
-              <div className="relative">
+              <div className="relative" ref={searchRef}>
                 <form onSubmit={handleSearchSubmit}>
                   <input
                     type="text"
@@ -647,7 +676,7 @@ export default function Header() {
                   </span>
                 </div>
               ) : user ? (
-                <div className="relative">
+                <div className="relative" ref={userMenuRef}>
                   {/* User dropdown button */}
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
