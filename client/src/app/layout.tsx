@@ -7,6 +7,7 @@ import { LoadingProvider } from "@/contexts/LoadingContext";
 import PageTransition from "@/components/Loading/PageTransition";
 import { Toaster } from "sonner";
 import { RouteGuard } from "@/components/Auth";
+import Chatbot from "@/components/Chatbot";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,6 +25,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     <RouteGuard>
       <PageTransition />
       {children}
+      <Chatbot />
     </RouteGuard>
   );
 }

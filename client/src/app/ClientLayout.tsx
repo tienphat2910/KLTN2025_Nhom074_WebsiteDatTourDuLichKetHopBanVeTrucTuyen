@@ -3,6 +3,7 @@
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PageLoader } from "@/components/Loading";
 import { usePageLoading } from "@/hooks/usePageLoading";
+import Chatbot from "@/components/Chatbot";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { isLoading, progress } = usePageLoading();
@@ -17,6 +18,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         message="Chào mừng bạn đến với LuTrip"
       />
       {children}
+      <Chatbot />
     </>
   );
 }
