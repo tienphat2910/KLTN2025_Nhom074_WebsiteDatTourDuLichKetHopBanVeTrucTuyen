@@ -216,11 +216,11 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 snap-y snap-mandatory">
       <Header />
 
       {/* Hero Section với background */}
-      <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden snap-start scroll-mt-20">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           {heroBackgroundImage && (
@@ -278,7 +278,7 @@ export default function Home() {
       {/* Services Section */}
       <section
         ref={servicesRef}
-        className={`py-16 px-4 relative transition-all duration-1000 ${
+        className={`py-16 px-4 relative transition-all duration-1000 snap-start scroll-mt-20 ${
           isSectionVisible("services")
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
@@ -339,7 +339,7 @@ export default function Home() {
       {/* Popular Destinations Section */}
       <section
         ref={destinationsRef}
-        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 ${
+        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 snap-start scroll-mt-20 ${
           isSectionVisible("destinations")
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
@@ -468,7 +468,7 @@ export default function Home() {
       {/* Popular Tours Section */}
       <section
         ref={toursRef}
-        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 ${
+        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 snap-start scroll-mt-20 ${
           isSectionVisible("tours")
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
@@ -662,7 +662,7 @@ export default function Home() {
       {/* Popular Activity Section */}
       <section
         ref={activityRef}
-        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 ${
+        className={`relative py-25 min-h-[450px] px-4 overflow-hidden transition-all duration-1000 snap-start scroll-mt-20 ${
           isSectionVisible("activity")
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
