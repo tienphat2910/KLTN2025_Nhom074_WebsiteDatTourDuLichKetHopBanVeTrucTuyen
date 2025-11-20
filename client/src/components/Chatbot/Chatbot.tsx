@@ -19,7 +19,7 @@ export default function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Xin chào! 👋 Tôi là trợ lý AI của LuTrip. Tôi có thể giúp bạn:\n\n✈️ Tìm tour du lịch phù hợp\n🏖️ Tư vấn điểm đến\n💳 Hướng dẫn đặt chỗ và thanh toán\n❓ Trả lời các câu hỏi về du lịch\n\nBạn cần hỗ trợ gì?",
+      text: "Xin chao! Toi la tro ly AI cua LuTrip. Toi co the giup ban:\n\nTim tour du lich phu hop\nTu van diem den\nHuong dan dat cho va thanh toan\nTra loi cac cau hoi ve du lich\n\nBan can ho tro gi?",
       isBot: true,
       timestamp: new Date()
     }
@@ -59,7 +59,7 @@ export default function Chatbot() {
         setMessages([messages[0], ...loadedMessages]);
       }
     } catch (error) {
-      console.error("Error loading history:", error);
+      // Error loading history
     }
   };
 
@@ -94,7 +94,7 @@ export default function Chatbot() {
         id: (Date.now() + 1).toString(),
         text:
           error.message ||
-          "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau hoặc liên hệ hotline 1900 XXX XXX.",
+          "Xin loi, co loi xay ra. Vui long thu lai sau hoac lien he hotline 1900 XXX XXX.",
         isBot: true,
         timestamp: new Date()
       };
@@ -117,7 +117,7 @@ export default function Chatbot() {
       setMessages([
         {
           id: "1",
-          text: "Lịch sử đã được xóa. Bạn có thể bắt đầu cuộc trò chuyện mới! 🎉",
+          text: "Lich su da duoc xoa. Ban co the bat dau cuoc tro chuyen moi!",
           isBot: true,
           timestamp: new Date()
         }
@@ -270,13 +270,13 @@ export default function Chatbot() {
                                 <div className="flex items-center gap-2">
                                   <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
                                     {item.type === "tour" && (
-                                      <span className="text-xs">🏖️</span>
+                                      <span className="text-xs">Tour</span>
                                     )}
                                     {item.type === "destination" && (
-                                      <span className="text-xs">📍</span>
+                                      <span className="text-xs">Diem den</span>
                                     )}
                                     {item.type === "activity" && (
-                                      <span className="text-xs">🎢</span>
+                                      <span className="text-xs">Hoat dong</span>
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">

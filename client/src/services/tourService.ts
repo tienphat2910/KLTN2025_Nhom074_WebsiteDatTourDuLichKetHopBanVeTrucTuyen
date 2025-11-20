@@ -185,7 +185,6 @@ export const tourService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Get tours error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server",
@@ -214,7 +213,6 @@ export const tourService = {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error("API Error:", result);
         return {
           success: false,
           data: [],
@@ -224,7 +222,6 @@ export const tourService = {
 
       return result;
     } catch (error) {
-      console.error("Error fetching featured tours:", error);
       return {
         success: false,
         data: [],
@@ -240,7 +237,6 @@ export const tourService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Get tour by ID error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server",
@@ -252,8 +248,6 @@ export const tourService = {
   // Get tour by slug
   getTourBySlug: async (slug: string): Promise<ApiResponse<Tour>> => {
     try {
-      console.log(`🌐 API Call: ${API_BASE_URL}/tours/slug/${slug}`);
-
       const response = await fetch(`${API_BASE_URL}/tours/slug/${slug}`, {
         method: "GET",
         headers: {
@@ -261,15 +255,10 @@ export const tourService = {
         }
       });
 
-      console.log(`📡 Response status: ${response.status}`);
-      console.log(`📡 Response ok: ${response.ok}`);
-
       const result = await response.json();
-      console.log(`📦 Response data:`, result);
 
       return result;
     } catch (error) {
-      console.error("❌ Get tour by slug error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server"
@@ -281,7 +270,6 @@ export const tourService = {
   createTour: async (tourData: Partial<Tour>): Promise<ApiResponse<Tour>> => {
     try {
       const token = getAuthToken();
-      console.log("📤 Creating tour with data:", tourData);
 
       const response = await fetch(`${API_BASE_URL}/admin/tours`, {
         method: "POST",
@@ -293,15 +281,12 @@ export const tourService = {
       });
 
       const result = await response.json();
-      console.log("📥 Create tour response:", result);
 
       if (!response.ok) {
-        console.error("❌ Create tour failed:", result);
       }
 
       return result;
     } catch (error) {
-      console.error("Create tour error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server"
@@ -325,7 +310,6 @@ export const tourService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Update tour error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server"
@@ -351,7 +335,6 @@ export const tourService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Update tour admin error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server"
@@ -372,7 +355,6 @@ export const tourService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Delete tour error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server"
@@ -411,7 +393,6 @@ export const tourService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Get tours admin error:", error);
       return {
         success: false,
         message: "Lỗi kết nối server",
@@ -481,13 +462,6 @@ export const tourService = {
       // Get token from localStorage
       const token = getAuthToken();
 
-      console.log(
-        "🔑 Token từ localStorage:",
-        token ? "Có token" : "Không có token"
-      );
-      console.log("🔑 Token length:", token?.length);
-      console.log("🔑 Token preview:", token?.substring(0, 20) + "...");
-
       if (!token) {
         return {
           success: false,
@@ -499,13 +473,6 @@ export const tourService = {
       formData.append("image", file);
       formData.append("tourId", tourId || "temp");
 
-      console.log(
-        "📤 Uploading to:",
-        `${API_BASE_URL}/admin/tours/upload-image`
-      );
-      console.log("📤 File name:", file.name);
-      console.log("📤 File size:", file.size);
-
       const response = await fetch(`${API_BASE_URL}/admin/tours/upload-image`, {
         method: "POST",
         headers: {
@@ -514,13 +481,10 @@ export const tourService = {
         body: formData
       });
 
-      console.log("📥 Response status:", response.status);
       const result = await response.json();
-      console.log("📥 Response data:", result);
 
       return result;
     } catch (error) {
-      console.error("❌ Upload tour image error:", error);
       return {
         success: false,
         message: "Lỗi khi tải ảnh lên"
@@ -565,7 +529,6 @@ export const tourService = {
 
       return result;
     } catch (error) {
-      console.error("Get tour booking details error:", error);
       return {
         success: false,
         data: {} as TourBookingDetail,
