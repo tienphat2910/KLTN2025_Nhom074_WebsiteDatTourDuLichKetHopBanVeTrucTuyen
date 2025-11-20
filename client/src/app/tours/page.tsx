@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { LoadingSpinner } from "@/components/Loading";
+import { useState, useEffect, Fragment, lazy, Suspense } from "react";
 import { destinationService, Destination } from "@/services/destinationService";
 import { tourService, Tour } from "@/services/tourService";
 import { toast } from "sonner";
 import { Star, MapPin, Clock } from "lucide-react";
+
+// Lazy load components for better bundle splitting
+const Header = lazy(() => import("@/components/Header"));
+const Footer = lazy(() => import("@/components/Footer"));
+const LoadingSpinner = lazy(
+  () => import("@/components/Loading/LoadingSpinner")
+);
 
 export default function Tours() {
   const [isVisible, setIsVisible] = useState(false);
@@ -92,18 +96,28 @@ export default function Tours() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100 flex items-center justify-center">
-        <LoadingSpinner
-          type="travel"
-          size="xl"
-          text="Đang tải danh sách tour..."
-        />
+        <Suspense
+          fallback={
+            <div className="animate-pulse bg-gray-200 rounded-full w-16 h-16"></div>
+          }
+        >
+          <LoadingSpinner
+            type="travel"
+            size="xl"
+            text="Đang tải danh sách tour..."
+          />
+        </Suspense>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
-      <Header />
+      <Suspense
+        fallback={<div className="h-16 bg-white shadow-sm animate-pulse"></div>}
+      >
+        <Header />
+      </Suspense>
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -402,7 +416,11 @@ export default function Tours() {
         </div>
       </section>
 
-      <Footer />
+      <Suspense
+        fallback={<div className="h-32 bg-gray-100 animate-pulse"></div>}
+      >
+        <Footer />
+      </Suspense>
     </div>
   );
 }

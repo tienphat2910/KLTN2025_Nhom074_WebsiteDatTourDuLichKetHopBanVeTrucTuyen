@@ -54,7 +54,7 @@ export default function Footer() {
             >
               <li>
                 <a
-                  href="#"
+                  href="/how-to-book"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Cách đặt chỗ
@@ -62,7 +62,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="/contact"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Liên hệ chúng tôi
@@ -70,7 +70,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="/help"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Trợ giúp
@@ -79,7 +79,7 @@ export default function Footer() {
 
               <li>
                 <a
-                  href="#"
+                  href="/about"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Về chúng tôi
@@ -177,7 +177,7 @@ export default function Footer() {
             >
               <li>
                 <a
-                  href="#"
+                  href="/privacy-policy"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Chính Sách Quyền Riêng Tư
@@ -185,7 +185,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="/terms-conditions"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >
                   Điều khoản & Điều kiện
