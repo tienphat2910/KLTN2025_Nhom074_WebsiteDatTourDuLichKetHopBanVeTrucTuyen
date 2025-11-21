@@ -16,6 +16,7 @@ import { BookingPagination } from "@/components/Admin/BookingPagination";
 import { formatCurrency, formatDate } from "@/components/Admin/bookingUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { CreateBookingModal } from "@/components/Admin/CreateBookingModal";
 
 export default function StaffBookingPage() {
   const { user, isAuthLoading } = useAuth();
@@ -33,6 +34,7 @@ export default function StaffBookingPage() {
   const [totalBookings, setTotalBookings] = useState(0);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [stats, setStats] = useState({
     totalBookings: 0,
     pendingBookings: 0,
@@ -540,6 +542,7 @@ export default function StaffBookingPage() {
           onExportExcel={handleExportExcel}
           onGenerateReport={handleGenerateReport}
           onAutoComplete={handleAutoComplete}
+          onCreateBooking={() => setIsCreateModalOpen(true)}
         />
 
         <BookingStats stats={stats} />
@@ -574,6 +577,15 @@ export default function StaffBookingPage() {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      <CreateBookingModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={async () => {
+          await loadBookings(currentPage);
+          await loadStats();
+        }}
+      />
     </AdminLayout>
   );
 }

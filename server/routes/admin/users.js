@@ -517,4 +517,60 @@ router.delete('/:id', admin, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/admin/users/search:
+ *   get:
+ *     summary: Search user by email
+ *     tags: [Admin - User Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email to search for
+ *     responses:
+ *       200:
+ *         description: User found
+ *       404:
+ *         description: User not found
+ */
+router.get('/search', admin, async (req, res) => {
+    try {
+        const { email } = req.query;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email là bắt buộc'
+            });
+        }
+
+        const user = await User.findOne({
+            email: email.toLowerCase().trim()
+        }).select('_id fullName email phone role status');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy người dùng'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: user
+        });
+    } catch (error) {
+        console.error('Search user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server, vui lòng thử lại sau'
+        });
+    }
+});
+
 module.exports = router;

@@ -120,5 +120,22 @@ export const flightService = {
       }
     );
     return response.data;
+  },
+
+  getFlights: async (): Promise<FlightSearchResult> => {
+    try {
+      const response = await axios.get(`${API_URL}/flights`);
+      return {
+        success: response.data.success || false,
+        data: response.data.data || [],
+        count: response.data.data?.length || 0
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: [],
+        count: 0
+      };
+    }
   }
 };
