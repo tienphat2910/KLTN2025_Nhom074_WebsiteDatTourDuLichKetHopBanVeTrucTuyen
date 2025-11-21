@@ -35,7 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSocket } from "@/hooks/useSocket";
 import { cancellationRequestService } from "@/services/cancellationRequestService";
 
-const sidebarItems = [
+const adminSidebarItems = [
   {
     title: "Tổng quan",
     href: "/admin",
@@ -86,6 +86,25 @@ const sidebarItems = [
     title: "Thống kê",
     href: "/admin/analytics",
     icon: BarChart3
+  }
+];
+
+const staffSidebarItems = [
+  {
+    title: "Tổng quan",
+    href: "/staff",
+    icon: LayoutDashboard
+  },
+  {
+    title: "Đặt chỗ",
+    href: "/staff/bookings",
+    icon: Calendar
+  },
+  {
+    title: "Yêu cầu hủy",
+    href: "/staff/cancellation-requests",
+    icon: AlertCircle,
+    showBadge: true
   }
 ];
 
@@ -146,108 +165,115 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
     }
   };
 
-  const SidebarContent = () => (
-    <div className="flex h-full flex-col">
-      {/* Logo */}
-      <div className="flex items-center border-b px-6 py-5">
-        <Link href="/admin" className="flex items-center space-x-2">
-          <img
-            src="/images/logo/logo-lutrip.png"
-            alt="LuTrip Logo"
-            className="h-12 w-auto"
-          />
-          <span className="text-xl font-bold">Admin</span>
-        </Link>
-      </div>
+  const SidebarContent = () => {
+    const sidebarItems =
+      user?.role === "staff" ? staffSidebarItems : adminSidebarItems;
+    const homeHref = user?.role === "staff" ? "/staff" : "/admin";
+    const roleLabel = user?.role === "staff" ? "Staff" : "Admin";
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {sidebarItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/admin" && pathname.startsWith(item.href));
+    return (
+      <div className="flex h-full flex-col">
+        {/* Logo */}
+        <div className="flex items-center border-b px-6 py-5">
+          <Link href={homeHref} className="flex items-center space-x-2">
+            <img
+              src="/images/logo/logo-lutrip.png"
+              alt="LuTrip Logo"
+              className="h-12 w-auto"
+            />
+            <span className="text-xl font-bold">{roleLabel}</span>
+          </Link>
+        </div>
 
-          return (
-            <Link key={item.href} href={item.href}>
-              <div
-                className={cn(
-                  "flex items-center justify-between space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground"
-                )}
-              >
-                <div className="flex items-center space-x-3">
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1 px-3 py-4">
+          {sidebarItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== homeHref && pathname.startsWith(item.href));
+
+            return (
+              <Link key={item.href} href={item.href}>
+                <div
+                  className={cn(
+                    "flex items-center justify-between space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                    isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <div className="flex items-center space-x-3">
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </div>
+                  {item.showBadge && pendingCount > 0 && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                      {pendingCount > 9 ? "9+" : pendingCount}
+                    </span>
+                  )}
                 </div>
-                {item.showBadge && pendingCount > 0 && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-                    {pendingCount > 9 ? "9+" : pendingCount}
-                  </span>
-                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <Separator />
+
+        {/* Footer */}
+        <div className="p-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center space-x-3 rounded-lg bg-muted/50 p-3 cursor-pointer hover:bg-muted transition-colors">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium overflow-hidden">
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.fullName || "User Avatar"}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      {user?.fullName
+                        ? user.fullName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                        : "AD"}
+                    </>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">
+                    {user?.fullName || "Admin User"}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.email || "admin@lutrip.com"}
+                  </p>
+                </div>
               </div>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <Separator />
-
-      {/* Footer */}
-      <div className="p-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex items-center space-x-3 rounded-lg bg-muted/50 p-3 cursor-pointer hover:bg-muted transition-colors">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium overflow-hidden">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.fullName || "User Avatar"}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <>
-                    {user?.fullName
-                      ? user.fullName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()
-                      : "AD"}
-                  </>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1.5">
                 <p className="text-sm font-medium">
                   {user?.fullName || "Admin User"}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="text-xs text-muted-foreground">
                   {user?.email || "admin@lutrip.com"}
                 </p>
               </div>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <div className="px-2 py-1.5">
-              <p className="text-sm font-medium">
-                {user?.fullName || "Admin User"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {user?.email || "admin@lutrip.com"}
-              </p>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Đăng xuất</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Đăng xuất</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>

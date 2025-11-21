@@ -159,8 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(userData);
 
     // Store token based on role
-    if (userData.role === "admin") {
-      // Store admin token temporarily (will be cleared when leaving admin pages)
+    if (userData.role === "admin" || userData.role === "staff") {
+      // Store admin/staff token temporarily (will be cleared when leaving admin pages)
       localStorage.setItem("lutrip_admin_token", userToken);
       localStorage.setItem("lutrip_admin_user", JSON.stringify(userData));
     } else {

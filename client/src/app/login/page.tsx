@@ -138,7 +138,11 @@ export default function Login() {
               break;
           }
         }
-        router.push(decodeURIComponent(targetPath));
+
+        // Use setTimeout to ensure state updates complete before redirect
+        setTimeout(() => {
+          router.push(decodeURIComponent(targetPath));
+        }, 100);
       } else {
         // Handle server validation errors
         if (result.errors && result.errors.length > 0) {
