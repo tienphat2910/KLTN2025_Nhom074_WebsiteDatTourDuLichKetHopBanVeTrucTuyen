@@ -21,7 +21,7 @@ export interface User {
   email: string;
   phone?: string;
   avatar?: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "staff";
   status: "active" | "inactive" | "banned";
   isVerified: boolean;
   createdAt: string;
@@ -34,8 +34,16 @@ export interface UserFormData {
   fullName: string;
   email?: string; // Email is not editable but kept for reference
   phone?: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "staff";
   status: "active" | "inactive" | "banned";
+}
+
+export interface CreateUserData {
+  email: string;
+  password: string;
+  fullName: string;
+  role: "admin" | "staff";
+  status: "active" | "inactive";
 }
 
 export interface UsersResponse {
@@ -43,10 +51,11 @@ export interface UsersResponse {
   data?: {
     users: User[];
     pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      pages: number;
+      currentPage: number;
+      totalPages: number;
+      totalUsers: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
     };
   };
   message?: string;
@@ -65,7 +74,7 @@ export interface UpdateUserResponse {
 }
 
 export const userService = {
-  // Get all users with pagination and filters
+  // Get all users with pagination and filters (Admin endpoint)
   getUsers: async (params?: {
     page?: number;
     limit?: number;
@@ -86,13 +95,16 @@ export const userService = {
       if (params?.status) queryParams.append("status", params.status);
       if (params?.role) queryParams.append("role", params.role);
 
-      const response = await fetch(`${API_BASE_URL}/users?${queryParams}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+      const response = await fetch(
+        `${API_BASE_URL}/admin/users?${queryParams}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
         }
-      });
+      );
 
       const data = await response.json();
 
@@ -103,6 +115,40 @@ export const userService = {
       return data;
     } catch (error) {
       console.error("Get users error:", error);
+      return {
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Unknown error occurred"
+      };
+    }
+  },
+
+  // Create new user (Admin only)
+  createUser: async (userData: CreateUserData): Promise<UserResponse> => {
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(userData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to create user");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Create user error:", error);
       return {
         success: false,
         message:
@@ -144,10 +190,10 @@ export const userService = {
     }
   },
 
-  // Update user
+  // Update user (Admin endpoint)
   updateUser: async (
     userId: string,
-    userData: Partial<UserFormData>
+    userData: Partial<Pick<UserFormData, "fullName" | "role" | "status">>
   ): Promise<UpdateUserResponse> => {
     try {
       const token = getToken();
@@ -155,7 +201,7 @@ export const userService = {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -181,7 +227,7 @@ export const userService = {
     }
   },
 
-  // Delete user
+  // Delete user (Admin endpoint)
   deleteUser: async (
     userId: string
   ): Promise<{ success: boolean; message?: string }> => {
@@ -191,7 +237,7 @@ export const userService = {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -296,11 +342,12 @@ export const userService = {
 
       const users = response.data.users;
       const stats = {
-        total: users.length,
+        total: response.data.pagination.totalUsers,
         active: users.filter((u: User) => u.status === "active").length,
         inactive: users.filter((u: User) => u.status === "inactive").length,
         banned: users.filter((u: User) => u.status === "banned").length,
         admins: users.filter((u: User) => u.role === "admin").length,
+        staff: users.filter((u: User) => u.role === "staff").length,
         totalBookings: users.reduce(
           (sum: number, u: User) => sum + u.totalBookings,
           0

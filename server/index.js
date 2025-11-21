@@ -47,6 +47,7 @@ app.use('/api/cancellationrequests', require('./routes/cancellationrequests'));
 app.use('/api/admin/tours', require('./routes/admin/tours'));
 app.use('/api/admin/bookings', require('./routes/admin/bookings'));
 app.use('/api/admin/analytics', require('./routes/admin/analytics'));
+app.use('/api/admin/users', require('./routes/admin/users'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 
 
