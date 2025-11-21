@@ -287,7 +287,7 @@ export default function Login() {
             {/* Forgot Password */}
             <div className="text-right">
               <Link
-                href="#"
+                href="/forgot-password"
                 className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm transition-colors"
               >
                 Quên mật khẩu?

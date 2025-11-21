@@ -1310,6 +1310,135 @@ const sendCancellationRequestApprovedEmail = async (userEmail, requestData) => {
     }
 };
 
+// Send Password Reset Success Email
+const sendPasswordResetSuccessEmail = async (email, userData) => {
+    try {
+        const transporter = createTransporter();
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 20px; text-align: center; color: white; }
+        .header img { width: 120px; margin-bottom: 15px; }
+        .header h1 { margin: 0; font-size: 26px; }
+        .success-icon { text-align: center; padding: 20px; }
+        .success-icon svg { width: 80px; height: 80px; }
+        .content { padding: 0 30px 30px; color: #333; }
+        .info-section { margin: 25px 0; }
+        .info-section h3 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 8px; margin-bottom: 15px; }
+        .info-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-label { flex: 0 0 40%; color: #666; font-weight: 500; }
+        .info-value { flex: 1; color: #333; }
+        .security-tips { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 20px 0; }
+        .footer { background: #10b981; text-align: center; color: white; padding: 20px; font-size: 14px; }
+        .footer a { color: #ffd369; text-decoration: none; }
+        @media screen and (max-width: 600px) {
+            .container { margin: 15px; }
+            .content { padding: 0 20px 20px; }
+            .info-row { flex-direction: column; }
+            .info-label { margin-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://res.cloudinary.com/de5rurcwt/image/upload/v1760700010/logo-lutrip_vdnkd3.png" alt="LuTrip Logo" />
+            <h1>LuTrip</h1>
+            <p>Mật khẩu đã được đặt lại thành công</p>
+        </div>
+
+        <!-- Success Icon -->
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h2 style="text-align: center; color: #10b981;">Mật khẩu đã được đặt lại thành công!</h2>
+            <p style="text-align: center; color: #666;">Xin chào <strong>${userData.fullName || 'bạn'}</strong>,</p>
+            <p>Mật khẩu tài khoản LuTrip của bạn đã được đặt lại thành công. Bạn có thể sử dụng mật khẩu mới để đăng nhập vào hệ thống.</p>
+
+            <div class="info-section">
+                <h3>📋 Thông tin tài khoản</h3>
+                <div class="info-row">
+                    <div class="info-label">Email:</div>
+                    <div class="info-value"><strong>${email}</strong></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Thời gian đặt lại:</div>
+                    <div class="info-value">${formatDate(new Date())}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">IP đăng nhập:</div>
+                    <div class="info-value">Đã được bảo mật</div>
+                </div>
+            </div>
+
+            <div class="security-tips">
+                <h3 style="margin-top: 0; color: #059669;">🛡️ Mẹo bảo mật</h3>
+                <ul style="margin: 10px 0 0 0; padding-left: 18px; line-height: 1.6;">
+                    <li>Sử dụng mật khẩu mạnh với ít nhất 8 ký tự</li>
+                    <li>Kết hợp chữ hoa, chữ thường, số và ký tự đặc biệt</li>
+                    <li>Không chia sẻ mật khẩu với bất kỳ ai</li>
+                    <li>Thay đổi mật khẩu định kỳ để đảm bảo an toàn</li>
+                    <li>Đăng xuất tài khoản sau khi sử dụng trên thiết bị công cộng</li>
+                </ul>
+            </div>
+
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <strong>⚠️ Cảnh báo bảo mật:</strong>
+                <ul style="margin: 10px 0 0 0; padding-left: 18px; line-height: 1.6;">
+                    <li>Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ ngay với chúng tôi</li>
+                    <li>Email này được gửi tự động, vui lòng không trả lời</li>
+                    <li>Giữ an toàn thông tin đăng nhập của bạn</li>
+                </ul>
+            </div>
+
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="${process.env.CLIENT_URL}/login" style="background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Đăng nhập ngay</a>
+            </p>
+
+            <p>Nếu bạn gặp bất kỳ vấn đề gì khi đăng nhập, vui lòng liên hệ với chúng tôi.</p>
+            <p>Trân trọng,<br><strong>Đội ngũ LuTrip</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} LuTrip - Khám phá Việt Nam</p>
+            <p><a href="${process.env.CLIENT_URL}">Truy cập website</a> | <a href="${process.env.CLIENT_URL}/support">Hỗ trợ</a></p>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const mailOptions = {
+            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: '✅ Mật khẩu đã được đặt lại thành công - LuTrip',
+            html: htmlContent
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Password reset success email sent to: ${email}`);
+        return true;
+    } catch (error) {
+        console.error('Send password reset success email error:', error);
+        return false;
+    }
+};
+
 // Send Cancellation Request Rejected Email
 const sendCancellationRequestRejectedEmail = async (userEmail, requestData) => {
     try {
@@ -1462,6 +1591,7 @@ const sendCancellationRequestRejectedEmail = async (userEmail, requestData) => {
     }
 };
 
+
 module.exports = {
     generateOTP,
     sendOTPEmail,
@@ -1473,5 +1603,6 @@ module.exports = {
     sendFlightBookingEmail,
     sendCancellationRequestSubmittedEmail,
     sendCancellationRequestApprovedEmail,
-    sendCancellationRequestRejectedEmail
+    sendCancellationRequestRejectedEmail,
+    sendPasswordResetSuccessEmail
 };

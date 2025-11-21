@@ -366,5 +366,53 @@ export const authService = {
         message: "Lỗi kết nối server"
       };
     }
+  },
+
+  // Forgot password - request OTP
+  forgotPassword: async (email: string): Promise<AuthResponse> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
+  },
+
+  // Reset password with OTP
+  resetPassword: async (data: {
+    email: string;
+    otp: string;
+    newPassword: string;
+  }): Promise<AuthResponse> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Reset password error:", error);
+      return {
+        success: false,
+        message: "Lỗi kết nối server"
+      };
+    }
   }
 };
