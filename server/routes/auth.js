@@ -3,9 +3,9 @@ const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { uploadAvatar } = require('../utils/cloudinaryUpload'); // Updated import
 const { createFirebaseUser, signInFirebaseUser, sendFirebaseEmailVerification, signInWithGoogleCredential } = require('../utils/firebaseAuth');
-const { generateOTP, sendOTPEmail } = require('../utils/emailService');
+const { generateOTP, sendOTPEmail, sendPasswordResetSuccessEmail } = require('../utils/emailService');
 const { validateEmail } = require('../utils/emailValidation');
-const { validateRegistration, validateLogin } = require('../utils/validation');
+const { validateRegistration, validateLogin, validatePassword } = require('../utils/validation');
 const { uploadSingle, handleUploadError } = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const { notifyUserRegistered } = require('../utils/socketHandler');
@@ -822,9 +822,9 @@ router.post('/resend-verification', async (req, res) => {
 
 /**
  * @swagger
- * /api/auth/google:
+ * /api/auth/forgot-password:
  *   post:
- *     summary: Login or register with Google
+ *     summary: Request password reset OTP
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -833,17 +833,201 @@ router.post('/resend-verification', async (req, res) => {
  *           schema:
  *             type: object
  *             required:
- *               - idToken
+ *               - email
  *             properties:
- *               idToken:
+ *               email:
  *                 type: string
- *                 description: Google ID token from Firebase
- *     responses:
- *       200:
- *         description: Login/Register successful
- *       401:
- *         description: Invalid token
+ *                 format: email
+ *                 example: "user@example.com"
  */
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email là bắt buộc'
+            });
+        }
+
+        // Validate email format
+        const emailValidation = await validateEmail(email);
+        if (!emailValidation.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: emailValidation.message
+            });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email không tồn tại trong hệ thống'
+            });
+        }
+
+        // Check if user is verified
+        if (!user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Tài khoản chưa được xác thực. Vui lòng xác thực email trước.'
+            });
+        }
+
+        // Generate OTP for password reset
+        const otp = generateOTP();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        // Update user with reset OTP
+        user.resetPasswordCode = otp;
+        user.resetPasswordExpires = otpExpires;
+        await user.save();
+
+        // Send OTP via email
+        await sendOTPEmail(email, otp, 'reset');
+
+        res.status(200).json({
+            success: true,
+            message: 'Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn',
+            data: {
+                email: email,
+                expiresIn: '10 phút'
+            }
+        });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server, vui lòng thử lại sau'
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password with OTP
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: "newpassword123"
+ */
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email, mã OTP và mật khẩu mới là bắt buộc'
+            });
+        }
+
+        // Validate password strength
+        const passwordValidation = validatePassword(newPassword);
+        if (!passwordValidation.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mật khẩu không hợp lệ',
+                errors: [{ field: 'password', message: passwordValidation.message }],
+                passwordStrength: passwordValidation.strength
+            });
+        }
+
+        // Find user
+        const user = await User.findOne({ email }).select('+password');
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Email không tồn tại trong hệ thống'
+            });
+        }
+
+        // Check if user is verified
+        if (!user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Tài khoản chưa được xác thực'
+            });
+        }
+
+        // Check reset OTP
+        if (!user.isOTPValid(otp, 'reset')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mã OTP không đúng hoặc đã hết hạn'
+            });
+        }
+
+        // Update password
+        user.password = newPassword;
+        user.clearOTP('reset');
+        await user.save();
+
+        // Send password reset success email
+        await sendPasswordResetSuccessEmail(email, {
+            fullName: user.fullName,
+            email: user.email
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Mật khẩu đã được đặt lại thành công'
+        });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server, vui lòng thử lại sau'
+        });
+    }
+});
+/**
+ * @swagger
+ * /api/auth/google:
+     *   post:
+     *     summary: Login or register with Google
+     *     tags: [Authentication]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - idToken
+     *             properties:
+     *               idToken:
+     *                 type: string
+     *                 description: Google ID token from Firebase
+     *     responses:
+     *       200:
+     *         description: Login/Register successful
+     *       401:
+     *         description: Invalid token
+     */
 router.post('/google', async (req, res) => {
     try {
         const { idToken } = req.body;
@@ -949,5 +1133,6 @@ router.post('/google', async (req, res) => {
         });
     }
 });
+
 
 module.exports = router;

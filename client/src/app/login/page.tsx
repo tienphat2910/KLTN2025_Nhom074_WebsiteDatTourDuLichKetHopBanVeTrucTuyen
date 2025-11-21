@@ -138,7 +138,11 @@ export default function Login() {
               break;
           }
         }
-        router.push(decodeURIComponent(targetPath));
+
+        // Use setTimeout to ensure state updates complete before redirect
+        setTimeout(() => {
+          router.push(decodeURIComponent(targetPath));
+        }, 100);
       } else {
         // Handle server validation errors
         if (result.errors && result.errors.length > 0) {
@@ -287,7 +291,7 @@ export default function Login() {
             {/* Forgot Password */}
             <div className="text-right">
               <Link
-                href="#"
+                href="/forgot-password"
                 className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm transition-colors"
               >
                 Quên mật khẩu?

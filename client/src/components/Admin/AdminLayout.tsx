@@ -55,8 +55,8 @@ export function AdminLayout({
     if (!isAuthLoading) {
       const token = localStorage.getItem("lutrip_admin_token");
 
-      // Redirect if no token or not admin
-      if (!token || !user || user.role !== "admin") {
+      // Redirect if no token or not admin/staff
+      if (!token || !user || (user.role !== "admin" && user.role !== "staff")) {
         router.replace("/login");
         return;
       }
@@ -250,7 +250,7 @@ export function AdminLayout({
   }
 
   const token = localStorage.getItem("lutrip_admin_token");
-  if (!token || !user || user.role !== "admin") {
+  if (!token || !user || (user.role !== "admin" && user.role !== "staff")) {
     return null; // Don't render anything while redirecting
   }
 

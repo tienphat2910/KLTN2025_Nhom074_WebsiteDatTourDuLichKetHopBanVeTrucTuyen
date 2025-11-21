@@ -4,12 +4,9 @@ import { useState, useEffect } from "react";
 import {
   Search,
   Plus,
-  Filter,
   MoreHorizontal,
   Edit,
   Trash2,
-  UserX,
-  UserCheck,
   Mail,
   Phone,
   Calendar,
@@ -55,79 +52,25 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { UserModal } from "./UserModal";
-import { User, UserFormData, UserRole, UserStatus } from "@/types/user";
-import { userService } from "@/services/userService";
+import { UserRole, UserStatus } from "@/types/user";
+import { userService, User as ApiUser } from "@/services/userService";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/useSocket";
 
-// Mock data for users
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn An",
-    email: "nguyenvanan@email.com",
-    phone: "0123456789",
-    avatar: "",
-    role: "user",
-    status: "active",
-    createdAt: "2024-01-15",
-    lastLogin: "2024-10-12",
-    totalBookings: 5,
-    totalSpent: 2500000
-  },
-  {
-    id: "2",
-    name: "Trần Thị Bình",
-    email: "tranthibibinh@email.com",
-    phone: "0987654321",
-    avatar: "",
-    role: "user",
-    status: "active",
-    createdAt: "2024-02-20",
-    lastLogin: "2024-10-11",
-    totalBookings: 12,
-    totalSpent: 5800000
-  },
-  {
-    id: "3",
-    name: "Lê Văn Cường",
-    email: "levancuong@email.com",
-    phone: "0369852147",
-    avatar: "",
-    role: "user",
-    status: "banned",
-    createdAt: "2024-03-10",
-    lastLogin: "2024-09-28",
-    totalBookings: 2,
-    totalSpent: 800000
-  },
-  {
-    id: "4",
-    name: "Phạm Thị Dung",
-    email: "phamthidung@email.com",
-    phone: "0258741369",
-    avatar: "",
-    role: "user",
-    status: "inactive",
-    createdAt: "2024-01-05",
-    lastLogin: "2024-08-15",
-    totalBookings: 8,
-    totalSpent: 3200000
-  },
-  {
-    id: "5",
-    name: "Hoàng Văn Em",
-    email: "hoangvanem@email.com",
-    phone: "0147258369",
-    avatar: "",
-    role: "admin",
-    status: "active",
-    createdAt: "2023-12-01",
-    lastLogin: "2024-10-12",
-    totalBookings: 0,
-    totalSpent: 0
-  }
-];
+// Local User interface for display purposes
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  role: UserRole;
+  status: UserStatus;
+  createdAt: string;
+  lastLogin: string;
+  totalBookings: number;
+  totalSpent: number;
+}
 
 const statusColors: Record<
   UserStatus,
@@ -146,7 +89,8 @@ const statusLabels: Record<UserStatus, string> = {
 
 const roleLabels: Record<UserRole, string> = {
   user: "Người dùng",
-  admin: "Quản trị viên"
+  admin: "Quản trị viên",
+  staff: "Nhân viên"
 };
 
 export function UserManagement() {
@@ -206,15 +150,14 @@ export function UserManagement() {
         );
 
         setUsers(transformedUsers);
-        setCurrentPage(response.data.pagination.page);
-        setTotalPages(response.data.pagination.pages);
-        setTotalUsers(response.data.pagination.total);
+        setCurrentPage(response.data.pagination.currentPage);
+        setTotalPages(response.data.pagination.totalPages);
+        setTotalUsers(response.data.pagination.totalUsers);
       } else {
         setError(response.message || "Không thể tải danh sách người dùng");
         setUsers([]);
       }
     } catch (error) {
-      console.error("Load users error:", error);
       setError("Có lỗi xảy ra khi tải dữ liệu");
       setUsers([]);
     } finally {
@@ -235,11 +178,9 @@ export function UserManagement() {
 
       if (response.success && response.data) {
         setStats(response.data);
-      } else {
-        console.error("Failed to load stats:", response.message);
       }
     } catch (error) {
-      console.error("Load stats error:", error);
+      // Silent fail for stats
     } finally {
       setIsLoadingStats(false);
       setIsRefreshing(false);
@@ -294,11 +235,7 @@ export function UserManagement() {
       loadStats(true);
       // Show notification
       const statusText =
-        data.newStatus === "banned"
-          ? "bị cấm"
-          : data.newStatus === "active"
-          ? "được kích hoạt"
-          : "bị vô hiệu hóa";
+        data.newStatus === "active" ? "được kích hoạt" : "bị vô hiệu hóa";
       toast.info("Trạng thái người dùng thay đổi", {
         description: `Người dùng ${data.userId} đã ${statusText}`,
         duration: 4000
@@ -344,12 +281,6 @@ export function UserManagement() {
     };
   }, [currentPage]);
 
-  // Handle search with debounce
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
-
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -361,26 +292,6 @@ export function UserManagement() {
       let response;
 
       switch (action) {
-        case "ban":
-          response = await userService.banUser(userId);
-          if (response.success) {
-            toast.success("Đã cấm người dùng thành công");
-            loadUsers(currentPage, true);
-            loadStats(true);
-          } else {
-            toast.error(response.message || "Không thể cấm người dùng");
-          }
-          break;
-        case "unban":
-          response = await userService.unbanUser(userId);
-          if (response.success) {
-            toast.success("Đã bỏ cấm người dùng thành công");
-            loadUsers(currentPage, true);
-            loadStats(true);
-          } else {
-            toast.error(response.message || "Không thể bỏ cấm người dùng");
-          }
-          break;
         case "delete":
           // Find the user to check their role
           const userToDelete = users.find((u) => u.id === userId);
@@ -420,7 +331,6 @@ export function UserManagement() {
           break;
       }
     } catch (error) {
-      console.error("User action error:", error);
       toast.error("Có lỗi xảy ra");
     }
   };
@@ -430,12 +340,31 @@ export function UserManagement() {
     setIsModalOpen(true);
   };
 
+  // Convert local User to ApiUser for the modal
+  const getApiUser = (user: User | null): ApiUser | null => {
+    if (!user) return null;
+    return {
+      _id: user.id,
+      fullName: user.name,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      role: user.role as "user" | "admin" | "staff",
+      status: user.status as "active" | "inactive" | "banned",
+      isVerified: true,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      totalBookings: user.totalBookings,
+      totalSpent: user.totalSpent
+    };
+  };
+
   const handleAddUser = () => {
     setEditingUser(null);
     setIsModalOpen(true);
   };
 
-  const handleSaveUser = async (userData: UserFormData) => {
+  const handleSaveUser = async (userData: any) => {
     try {
       if (editingUser) {
         // Update existing user
@@ -448,11 +377,17 @@ export function UserManagement() {
           toast.error(response.message || "Không thể cập nhật người dùng");
         }
       } else {
-        // For now, we'll show a message that adding users should be done through registration
-        toast.info("Vui lòng hướng dẫn người dùng đăng ký tài khoản mới");
+        // Create new user
+        const response = await userService.createUser(userData);
+        if (response.success) {
+          toast.success("Tạo người dùng thành công");
+          loadUsers(1, true); // Go to first page to see new user
+          loadStats(true);
+        } else {
+          toast.error(response.message || "Không thể tạo người dùng");
+        }
       }
     } catch (error) {
-      console.error("Save user error:", error);
       toast.error("Có lỗi xảy ra khi lưu thông tin");
     }
   };
@@ -541,21 +476,25 @@ export function UserManagement() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bị cấm</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Không hoạt động
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingStats || isRefreshing ? "..." : stats.banned || 0}
+              {isLoadingStats || isRefreshing ? "..." : stats.inactive || 0}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Quản trị viên</CardTitle>
+            <CardTitle className="text-sm font-medium">Nhân viên</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoadingStats || isRefreshing ? "..." : stats.admins || 0}
+              {isLoadingStats || isRefreshing
+                ? "..."
+                : (stats.admins || 0) + (stats.staff || 0)}
             </div>
           </CardContent>
         </Card>
@@ -591,7 +530,6 @@ export function UserManagement() {
                   <SelectItem value="all">Tất cả trạng thái</SelectItem>
                   <SelectItem value="active">Hoạt động</SelectItem>
                   <SelectItem value="inactive">Không hoạt động</SelectItem>
-                  <SelectItem value="banned">Bị cấm</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -602,6 +540,7 @@ export function UserManagement() {
                   <SelectItem value="all">Tất cả vai trò</SelectItem>
                   <SelectItem value="user">Người dùng</SelectItem>
                   <SelectItem value="admin">Quản trị viên</SelectItem>
+                  <SelectItem value="staff">Nhân viên</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -759,29 +698,6 @@ export function UserManagement() {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Chỉnh sửa
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {user.status === "banned" ? (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleUserAction("unban", user.id)
-                                  }
-                                  className="text-green-600"
-                                >
-                                  <UserCheck className="mr-2 h-4 w-4" />
-                                  Bỏ cấm
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleUserAction("ban", user.id)
-                                  }
-                                  className="text-orange-600"
-                                >
-                                  <UserX className="mr-2 h-4 w-4" />
-                                  Cấm người dùng
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() =>
                                   handleUserAction("delete", user.id)
@@ -916,41 +832,6 @@ export function UserManagement() {
                           Chỉnh sửa
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <div className="px-2 py-1">
-                          <Badge
-                            variant={
-                              user.role === "admin" ? "default" : "secondary"
-                            }
-                            className="text-xs"
-                          >
-                            {roleLabels[user.role as UserRole]}
-                          </Badge>
-                          <Badge
-                            variant={statusColors[user.status as UserStatus]}
-                            className="text-xs ml-2"
-                          >
-                            {statusLabels[user.status as UserStatus]}
-                          </Badge>
-                        </div>
-                        <DropdownMenuSeparator />
-                        {user.status === "banned" ? (
-                          <DropdownMenuItem
-                            onClick={() => handleUserAction("unban", user.id)}
-                            className="text-green-600"
-                          >
-                            <UserCheck className="mr-2 h-4 w-4" />
-                            Bỏ cấm
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            onClick={() => handleUserAction("ban", user.id)}
-                            className="text-orange-600"
-                          >
-                            <UserX className="mr-2 h-4 w-4" />
-                            Cấm người dùng
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleUserAction("delete", user.id)}
                           className="text-red-600"
@@ -1004,7 +885,7 @@ export function UserManagement() {
       <UserModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
-        user={editingUser}
+        user={getApiUser(editingUser)}
         onSave={handleSaveUser}
       />
     </div>

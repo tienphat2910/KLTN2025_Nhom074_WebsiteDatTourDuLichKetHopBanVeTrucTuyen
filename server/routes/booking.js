@@ -11,10 +11,16 @@ router.post('/', auth, async (req, res) => {
         console.log('Booking request body:', req.body);
         console.log('Authenticated user:', req.user._id);
 
-        // Use userId from authenticated user
+        // Allow admin/staff to create booking for other users
+        // Regular users can only create bookings for themselves
+        let userId = req.user._id;
+        if ((req.user.role === 'admin' || req.user.role === 'staff') && req.body.userId) {
+            userId = req.body.userId;
+        }
+
         const bookingData = {
             ...req.body,
-            userId: req.user._id // Set userId from authenticated user
+            userId // Use determined userId
         };
 
         // Set paidAt if payment is already paid (online payment)

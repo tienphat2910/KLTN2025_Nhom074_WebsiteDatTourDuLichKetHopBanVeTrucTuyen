@@ -1,6 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Activity, Download, TrendingUp, CheckCircle } from "lucide-react";
+import {
+  Activity,
+  Download,
+  TrendingUp,
+  CheckCircle,
+  Plus
+} from "lucide-react";
 
 interface BookingActionsProps {
   isSocketConnected: boolean;
@@ -8,6 +14,7 @@ interface BookingActionsProps {
   onExportExcel: () => void;
   onGenerateReport: () => void;
   onAutoComplete?: () => void;
+  onCreateBooking?: () => void;
 }
 
 export function BookingActions({
@@ -15,7 +22,8 @@ export function BookingActions({
   onRefreshStats,
   onExportExcel,
   onGenerateReport,
-  onAutoComplete
+  onAutoComplete,
+  onCreateBooking
 }: BookingActionsProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -43,6 +51,15 @@ export function BookingActions({
         </p>
       </div>
       <div className="flex gap-3">
+        {onCreateBooking && (
+          <Button
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            onClick={onCreateBooking}
+          >
+            <Plus className="h-4 w-4" />
+            Tạo Booking
+          </Button>
+        )}
         <Button
           variant="outline"
           className="flex items-center gap-2"

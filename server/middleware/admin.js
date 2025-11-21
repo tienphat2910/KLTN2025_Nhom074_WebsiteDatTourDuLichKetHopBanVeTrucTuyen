@@ -1,15 +1,15 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../models/User.js');
 
 const admin = async (req, res, next) => {
     try {
         // If auth middleware already ran, req.user should exist
         if (req.user) {
-            // Check if user has admin role
-            if (req.user.role !== 'admin') {
+            // Check if user has admin or staff role
+            if (req.user.role !== 'admin' && req.user.role !== 'staff') {
                 return res.status(403).json({
                     success: false,
-                    message: 'Truy cập bị từ chối. Chỉ admin mới có quyền thực hiện thao tác này.'
+                    message: 'Truy cập bị từ chối. Chỉ admin hoặc staff mới có quyền thực hiện thao tác này.'
                 });
             }
             return next();
@@ -36,11 +36,11 @@ const admin = async (req, res, next) => {
                 });
             }
 
-            // Check if user has admin role
-            if (user.role !== 'admin') {
+            // Check if user has admin or staff role
+            if (user.role !== 'admin' && user.role !== 'staff') {
                 return res.status(403).json({
                     success: false,
-                    message: 'Truy cập bị từ chối. Chỉ admin mới có quyền thực hiện thao tác này.'
+                    message: 'Truy cập bị từ chối. Chỉ admin hoặc staff mới có quyền thực hiện thao tác này.'
                 });
             }
 
