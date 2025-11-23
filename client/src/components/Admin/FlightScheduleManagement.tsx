@@ -65,11 +65,66 @@ export default function FlightScheduleManagement() {
   const [editingSchedule, setEditingSchedule] = useState<FlightSchedule | null>(
     null
   );
+  const [isAutoUpdating, setIsAutoUpdating] = useState(false);
 
   // Effect to refetch when filters change
   useEffect(() => {
     fetchSchedules(1); // Reset to page 1 when filters change
   }, [searchTerm, statusFilter]);
+
+  // Socket.IO real-time updates
+  useEffect(() => {
+    const token = localStorage.getItem("lutrip_admin_token");
+    if (!token) return;
+
+    // Dynamic import to avoid SSR issues
+    import("socket.io-client").then(({ default: io }) => {
+      const socket = io(env.API_BASE_URL.replace("/api", ""), {
+        auth: { token },
+        transports: ["websocket", "polling"]
+      });
+
+      socket.on("connect", () => {
+        console.log("✅ Connected to flight schedule updates");
+      });
+
+      socket.on("flight_status_changed", (data) => {
+        console.log("📡 Flight status changed:", data);
+        toast.info(
+          `Chuyến bay ${
+            data.flightCode
+          } đã chuyển sang trạng thái: ${getStatusLabel(data.status)}`
+        );
+
+        // Update the schedule in the list
+        setSchedules((prev) =>
+          prev.map((s) =>
+            s._id === data.scheduleId ? { ...s, status: data.status } : s
+          )
+        );
+      });
+
+      socket.on("disconnect", () => {
+        console.log("❌ Disconnected from flight schedule updates");
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    });
+  }, []);
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      scheduled: "Đã lên lịch",
+      boarding: "Đang lên máy bay",
+      departed: "Đã khởi hành",
+      arrived: "Đã đến",
+      delayed: "Bị trễ",
+      cancelled: "Đã hủy"
+    };
+    return statusMap[status] || status;
+  };
 
   const fetchSchedules = async (page = 1) => {
     setLoading(true);
@@ -83,6 +138,9 @@ export default function FlightScheduleManagement() {
       // Add filters
       if (searchTerm) params.append("flightCode", searchTerm);
       if (statusFilter !== "all") params.append("status", statusFilter);
+
+      // Exclude 'arrived' status by default
+      if (statusFilter === "all") params.append("excludeArrived", "true");
 
       const { data } = await axios.get(
         `${env.API_BASE_URL}/flight-schedules?${params}`,
@@ -128,6 +186,58 @@ export default function FlightScheduleManagement() {
       fetchSchedules(currentPage);
     } catch (error) {
       toast.error("Lỗi khi xóa lịch bay");
+    }
+  };
+
+  const handleManualUpdate = async () => {
+    setIsAutoUpdating(true);
+    try {
+      const token = localStorage.getItem("lutrip_admin_token");
+      const response = await axios.post(
+        `${env.API_BASE_URL}/flight-schedules/auto-update`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(`Đã cập nhật ${response.data.updatedCount} lịch bay`);
+        fetchSchedules(currentPage);
+      }
+    } catch (error) {
+      toast.error("Lỗi khi cập nhật tự động");
+    } finally {
+      setIsAutoUpdating(false);
+    }
+  };
+
+  const handleStatusCheck = async () => {
+    try {
+      const token = localStorage.getItem("lutrip_admin_token");
+      const response = await axios.get(
+        `${env.API_BASE_URL}/flight-schedules/status-check`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        console.log("📊 Status Check Results:", response.data);
+        const needsUpdate = response.data.schedules.filter(
+          (s: any) =>
+            s.shouldBeBoarding || s.shouldBeDeparted || s.shouldBeArrived
+        );
+        toast.info(
+          `Tìm thấy ${needsUpdate.length} lịch bay cần cập nhật. Xem console để biết chi tiết.`
+        );
+      }
+    } catch (error) {
+      toast.error("Lỗi khi kiểm tra trạng thái");
     }
   };
 
@@ -190,23 +300,73 @@ export default function FlightScheduleManagement() {
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
               Lịch bay
+              <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                Auto-Update
+              </Badge>
             </CardTitle>
-            <CardDescription>Quản lý lịch trình các chuyến bay</CardDescription>
+            <CardDescription>
+              Quản lý lịch trình các chuyến bay - Tự động cập nhật mỗi 1 phút
+            </CardDescription>
           </div>
-          <Button
-            onClick={() => fetchSchedules(currentPage)}
-            variant="outline"
-            size="sm"
-            disabled={loading}
-          >
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
-            />
-            Làm mới
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleStatusCheck}
+              variant="outline"
+              size="sm"
+              className="bg-purple-50 hover:bg-purple-100"
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Debug
+            </Button>
+            <Button
+              onClick={handleManualUpdate}
+              variant="outline"
+              size="sm"
+              disabled={isAutoUpdating}
+              className="bg-blue-50 hover:bg-blue-100"
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${
+                  isAutoUpdating ? "animate-spin" : ""
+                }`}
+              />
+              Cập nhật ngay
+            </Button>
+            <Button
+              onClick={() => fetchSchedules(currentPage)}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              Làm mới
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
+        {/* Auto-Update Info */}
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <RefreshCw className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-medium text-blue-900 mb-1">
+                Tự động cập nhật trạng thái
+              </h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• 2 giờ trước giờ bay: Đã lên lịch → Đang lên máy bay</li>
+                <li>• Đúng giờ khởi hành: Đang lên máy bay → Đã khởi hành</li>
+                <li>• Đúng giờ đến: Đã khởi hành → Đã đến</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
@@ -234,13 +394,13 @@ export default function FlightScheduleManagement() {
                 <SelectValue placeholder="Lọc theo trạng thái" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="all">Tất cả</SelectItem>
                 <SelectItem value="scheduled">Đã lên lịch</SelectItem>
                 <SelectItem value="boarding">Đang lên máy bay</SelectItem>
                 <SelectItem value="departed">Đã khởi hành</SelectItem>
-                <SelectItem value="arrived">Đã đến</SelectItem>
                 <SelectItem value="delayed">Bị trễ</SelectItem>
                 <SelectItem value="cancelled">Đã hủy</SelectItem>
+                <SelectItem value="arrived">Đã đến</SelectItem>
               </SelectContent>
             </Select>
           </div>

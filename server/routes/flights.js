@@ -453,7 +453,7 @@ router.put('/:id', admin, async (req, res) => {
  */
 router.delete('/:id', admin, async (req, res) => {
     try {
-        const flight = await Flight.findByIdAndDelete(req.params.id);
+        const flight = await Flight.findById(req.params.id);
 
         if (!flight) {
             return res.status(404).json({
@@ -462,15 +462,30 @@ router.delete('/:id', admin, async (req, res) => {
             });
         }
 
-        // Also delete related classes and schedules
+        // Count related data before deletion
+        const classesCount = await FlightClass.countDocuments({ flightCode: flight.flightCode });
+        const schedulesCount = await FlightSchedule.countDocuments({ flightCode: flight.flightCode });
+
+        // Delete related classes and schedules first
         await FlightClass.deleteMany({ flightCode: flight.flightCode });
         await FlightSchedule.deleteMany({ flightCode: flight.flightCode });
 
+        // Then delete the flight itself
+        await Flight.findByIdAndDelete(req.params.id);
+
+        console.log(`✅ Deleted flight ${flight.flightCode}: ${schedulesCount} schedules, ${classesCount} classes`);
+
         res.json({
             success: true,
-            message: 'Xóa chuyến bay thành công'
+            message: `Xóa chuyến bay thành công (bao gồm ${schedulesCount} lịch bay và ${classesCount} hạng ghế)`,
+            deletedCount: {
+                flight: 1,
+                schedules: schedulesCount,
+                classes: classesCount
+            }
         });
     } catch (err) {
+        console.error('❌ Error deleting flight:', err);
         res.status(500).json({
             success: false,
             message: err.message

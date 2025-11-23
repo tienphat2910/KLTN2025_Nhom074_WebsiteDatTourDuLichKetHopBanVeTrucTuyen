@@ -320,6 +320,26 @@ const notifyCancellationRequestProcessed = (requestData, processStatus) => {
     emitToUser(userIdToNotify, 'cancellation_request_processed', eventData);
 };
 
+// Notify flight status change
+const notifyFlightStatusChange = (scheduleData) => {
+    const eventData = {
+        scheduleId: scheduleData._id,
+        flightCode: scheduleData.flightCode,
+        status: scheduleData.status,
+        departureDate: scheduleData.departureDate,
+        arrivalDate: scheduleData.arrivalDate,
+        timestamp: new Date()
+    };
+
+    console.log('📡 Broadcasting flight status change:', eventData);
+
+    // Notify admins and staff
+    emitToAdmins('flight_status_changed', eventData);
+
+    // Broadcast to all connected clients for real-time updates
+    emitToAll('flight_status_changed', eventData);
+};
+
 module.exports = {
     initSocket,
     emitToUser,
@@ -333,5 +353,6 @@ module.exports = {
     notifyUserStatusChanged,
     notifySystemAlert,
     notifyCancellationRequestCreated,
-    notifyCancellationRequestProcessed
+    notifyCancellationRequestProcessed,
+    notifyFlightStatusChange
 };

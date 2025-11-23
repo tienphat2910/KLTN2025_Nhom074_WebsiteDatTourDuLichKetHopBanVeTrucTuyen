@@ -4,6 +4,7 @@ const cors = require("cors");
 const { specs, swaggerUi } = require('./swagger');
 const { initSocket } = require('./utils/socketHandler');
 const { scheduleAutoComplete } = require('./utils/autoCompleteBookings');
+const { startFlightScheduleAutoUpdate } = require('./utils/flightScheduleAutoUpdate');
 require("dotenv").config(); // Load biến môi trường từ .env
 
 const app = express();
@@ -154,3 +155,16 @@ console.log('🔌 Socket.IO đã được khởi tạo');
 // Chạy mỗi 60 phút (có thể thay đổi tùy nhu cầu)
 scheduleAutoComplete(60);
 console.log('⏰ Auto-complete bookings scheduler đã được khởi động');
+
+// Khởi động flight schedule auto-update
+// Tự động cập nhật trạng thái lịch bay mỗi 1 phút
+const flightScheduleInterval = startFlightScheduleAutoUpdate();
+console.log('✈️ Flight schedule auto-update service đã được khởi động');
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+        console.log('HTTP server closed');
+    });
+});

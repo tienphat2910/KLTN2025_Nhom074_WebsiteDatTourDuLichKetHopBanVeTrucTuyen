@@ -97,7 +97,9 @@ export default function FlightManagement() {
   const handleDelete = async (id: string) => {
     if (
       !confirm(
-        "Bạn có chắc chắn muốn xóa chuyến bay này? Hành động này không thể hoàn tác."
+        "Bạn có chắc chắn muốn xóa chuyến bay này?\n\n" +
+          "⚠️ Cảnh báo: Tất cả lịch bay và hạng ghế liên quan sẽ bị xóa vĩnh viễn.\n" +
+          "Hành động này không thể hoàn tác."
       )
     ) {
       return;
@@ -112,13 +114,16 @@ export default function FlightManagement() {
       });
 
       if (data.success) {
-        toast.success("Xóa chuyến bay thành công");
+        toast.success("Xóa chuyến bay và dữ liệu liên quan thành công");
         fetchFlights(currentPage);
       } else {
         toast.error(data.message || "Không thể xóa chuyến bay");
       }
-    } catch (error) {
-      toast.error("Lỗi khi xóa chuyến bay");
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi xóa chuyến bay";
+      toast.error(errorMessage);
+      console.error("Delete flight error:", error);
     }
   };
 

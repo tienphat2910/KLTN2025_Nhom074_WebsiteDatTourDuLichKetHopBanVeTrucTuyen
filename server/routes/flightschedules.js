@@ -61,7 +61,7 @@ const admin = require('../middleware/admin');
  */
 router.get('/', async (req, res) => {
     try {
-        const { flightCode, status, fromDate, toDate, page = 1, limit = 10 } = req.query;
+        const { flightCode, status, fromDate, toDate, page = 1, limit = 10, excludeArrived } = req.query;
 
         const query = {};
 
@@ -71,6 +71,11 @@ router.get('/', async (req, res) => {
 
         if (status) {
             query.status = status;
+        }
+
+        // Exclude 'arrived' status by default unless specifically requested
+        if (excludeArrived === 'true' && !status) {
+            query.status = { $ne: 'arrived' };
         }
 
         if (fromDate || toDate) {
@@ -408,6 +413,94 @@ router.delete('/:id', admin, async (req, res) => {
         res.status(500).json({
             success: false,
             message: err.message
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/flight-schedules/auto-update:
+ *   post:
+ *     summary: Manually trigger auto-update of flight schedule statuses
+ *     tags: [FlightSchedules]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Flight schedules updated successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/auto-update', admin, async (req, res) => {
+    try {
+        const { updateFlightScheduleStatuses } = require('../utils/flightScheduleAutoUpdate');
+        const updatedCount = await updateFlightScheduleStatuses();
+
+        res.json({
+            success: true,
+            message: `Đã cập nhật ${updatedCount} lịch bay`,
+            updatedCount
+        });
+    } catch (err) {
+        console.error('Manual auto-update error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi cập nhật tự động',
+            error: err.message
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/flight-schedules/status-check:
+ *   get:
+ *     summary: Check current status of all active flight schedules
+ *     tags: [FlightSchedules]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Status check results
+ */
+router.get('/status-check', admin, async (req, res) => {
+    try {
+        const now = new Date();
+        const schedules = await FlightSchedule.find({
+            status: { $in: ['scheduled', 'boarding', 'departed'] }
+        }).sort({ departureDate: 1 });
+
+        const statusInfo = schedules.map(schedule => {
+            const departureTime = new Date(schedule.departureDate);
+            const arrivalTime = new Date(schedule.arrivalDate);
+            const minutesToDeparture = (departureTime - now) / (1000 * 60);
+            const minutesSinceDeparture = (now - departureTime) / (1000 * 60);
+
+            return {
+                flightCode: schedule.flightCode,
+                currentStatus: schedule.status,
+                departureDate: schedule.departureDate,
+                arrivalDate: schedule.arrivalDate,
+                minutesToDeparture: Math.round(minutesToDeparture),
+                minutesSinceDeparture: Math.round(minutesSinceDeparture),
+                shouldBeBoarding: schedule.status === 'scheduled' && minutesToDeparture <= 120 && minutesToDeparture > 0,
+                shouldBeDeparted: (schedule.status === 'boarding' || schedule.status === 'scheduled') && minutesSinceDeparture >= 0,
+                shouldBeArrived: schedule.status === 'departed' && (now >= arrivalTime)
+            };
+        });
+
+        res.json({
+            success: true,
+            currentTime: now,
+            totalSchedules: statusInfo.length,
+            schedules: statusInfo
+        });
+    } catch (err) {
+        console.error('Status check error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi kiểm tra trạng thái',
+            error: err.message
         });
     }
 });
