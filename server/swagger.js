@@ -19,7 +19,7 @@ const options = {
                 description: 'Development server'
             },
             {
-                url: 'https://api.lutrip.com',
+                url: 'https://lutrip.onrender.com',
                 description: 'Production server'
             }
         ],
