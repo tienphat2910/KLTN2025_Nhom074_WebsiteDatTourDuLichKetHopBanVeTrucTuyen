@@ -606,7 +606,7 @@ export default function PaymentSuccessPage() {
                             fontFamily="none"
                             fontWeight="none"
                             fontSize="none"
-                            textAnchor="none"
+                            textAnchor="middle"
                             style={{ mixBlendMode: "normal" }}
                           >
                             <g transform="scale(5.33333,5.33333)">
