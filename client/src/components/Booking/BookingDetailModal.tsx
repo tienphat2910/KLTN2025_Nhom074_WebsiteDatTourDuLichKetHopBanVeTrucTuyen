@@ -84,6 +84,13 @@ const bookingTypeConfig = {
     color: "text-green-600",
     bgColor: "bg-green-50",
     description: "Vé máy bay nội địa/quốc tế"
+  },
+  amadeus_flight: {
+    label: "Chuyến bay",
+    icon: Plane,
+    color: "text-green-600",
+    bgColor: "bg-green-50",
+    description: "Vé máy bay nội địa/quốc tế"
   }
 };
 
