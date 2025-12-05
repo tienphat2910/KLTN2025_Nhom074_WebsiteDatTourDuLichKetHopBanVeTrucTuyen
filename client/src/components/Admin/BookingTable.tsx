@@ -28,6 +28,7 @@ import { FlightBookingDetailModal } from "@/components/Admin/FlightBookingDetail
 import { RoundTripFlightBookingDetailModal } from "@/components/Admin/RoundTripFlightBookingDetailModal";
 import { TourBookingDetailModal } from "@/components/Admin/TourBookingDetailModal";
 import { ActivityBookingDetailModal } from "@/components/Admin/ActivityBookingDetailModal";
+import { AmadeusBookingDetailModal } from "@/components/Admin/AmadeusBookingDetailModal";
 import { Booking } from "@/services/bookingService";
 import { statusConfig, bookingTypeConfig } from "./bookingConstants";
 import { formatCurrency, formatDate } from "./bookingUtils";
@@ -169,8 +170,10 @@ export function BookingTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 justify-end">
-                        {booking.bookingType === "flight" ? (
-                          // Check if it's a round trip flight booking
+                        {booking.bookingType === "amadeus_flight" ? (
+                          <AmadeusBookingDetailModal booking={booking} />
+                        ) : booking.bookingType === "flight" ? (
+                          // Check if it's a round trip flight booking (old system)
                           booking.isRoundTrip ? (
                             <RoundTripFlightBookingDetailModal
                               booking={booking}

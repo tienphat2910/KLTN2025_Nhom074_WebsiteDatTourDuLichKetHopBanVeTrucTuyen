@@ -52,11 +52,6 @@ const adminSidebarItems = [
     icon: TentTree
   },
   {
-    title: "Chuyến bay",
-    href: "/admin/flights",
-    icon: Plane
-  },
-  {
     title: "Hoạt động",
     href: "/admin/activities",
     icon: Tickets

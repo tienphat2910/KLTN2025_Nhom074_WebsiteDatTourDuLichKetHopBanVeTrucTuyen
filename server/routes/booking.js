@@ -1,5 +1,6 @@
 const express = require('express');
 const Booking = require('../models/Booking');
+const AmadeusBooking = require('../models/AmadeusBooking');
 const User = require('../models/User');
 const auth = require('../middleware/auth'); // Add auth middleware import
 const { notifyBookingCreated } = require('../utils/socketHandler');
@@ -96,7 +97,43 @@ router.get('/', auth, async (req, res) => {
             return transformed;
         }));
 
-        res.json({ success: true, data: enrichedBookings });
+        // Also get Amadeus bookings
+        const amadeusBookings = await AmadeusBooking.find({ userId: req.user._id });
+
+        // Transform Amadeus bookings to match the Booking format
+        const transformedAmadeusBookings = amadeusBookings.map(ab => {
+            const abObj = ab.toObject();
+            const outboundSegment = abObj.outboundFlight?.itineraries?.[0]?.segments?.[0];
+            const lastOutboundSegment = abObj.outboundFlight?.itineraries?.[0]?.segments?.slice(-1)[0];
+
+            return {
+                _id: abObj._id,
+                userId: abObj.userId,
+                bookingDate: abObj.createdAt,
+                bookingType: 'amadeus_flight',
+                status: abObj.status,
+                totalPrice: abObj.totalAmount,
+                actualTotal: abObj.totalAmount - abObj.discountAmount,
+                isRoundTrip: abObj.isRoundTrip,
+                paymentStatus: abObj.paymentStatus,
+                createdAt: abObj.createdAt,
+                updatedAt: abObj.updatedAt,
+                // Extra Amadeus-specific fields
+                bookingReference: abObj.bookingReference,
+                outboundFlight: abObj.outboundFlight,
+                returnFlight: abObj.returnFlight,
+                passengers: abObj.passengers,
+                departureCode: outboundSegment?.departure?.iataCode,
+                arrivalCode: lastOutboundSegment?.arrival?.iataCode,
+                flightNumber: outboundSegment?.flightNumber
+            };
+        });
+
+        // Combine all bookings and sort by creation date
+        const allBookings = [...enrichedBookings, ...transformedAmadeusBookings]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        res.json({ success: true, data: allBookings });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

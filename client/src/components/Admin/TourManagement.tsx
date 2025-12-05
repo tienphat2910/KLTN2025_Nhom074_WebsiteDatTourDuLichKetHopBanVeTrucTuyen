@@ -283,15 +283,24 @@ export function TourManagement() {
           break;
         case "delete":
           // Show confirmation dialog
-          if (window.confirm("Bạn có chắc chắn muốn ẩn tour này?")) {
-            response = await tourService.updateTour(tourId, {
-              isActive: false
-            });
-            if (response.success) {
-              toast.success("Đã ẩn tour thành công");
-              loadTours(currentPage, true);
-            } else {
-              toast.error(response.message || "Không thể ẩn tour");
+          if (
+            window.confirm(
+              "Bạn có chắc chắn muốn ẩn tour này? Các tour đã ẩn sẽ không hiển thị cho khách hàng."
+            )
+          ) {
+            try {
+              response = await tourService.updateTour(tourId, {
+                isActive: false
+              });
+              if (response.success) {
+                toast.success("Đã ẩn tour thành công");
+                loadTours(currentPage, true);
+              } else {
+                toast.error(response.message || "Không thể ẩn tour");
+              }
+            } catch (error) {
+              console.error("Error deleting tour:", error);
+              toast.error("Có lỗi xảy ra khi ẩn tour");
             }
           }
           break;
@@ -321,6 +330,12 @@ export function TourManagement() {
         const response = await tourService.updateTour(tourData._id, tourData);
         if (response.success) {
           toast.success("Cập nhật tour thành công");
+          // Check if there's a warning
+          if ((response as any).warning) {
+            toast.info((response as any).warning, {
+              duration: 6000
+            });
+          }
           loadTours(currentPage, true);
         } else {
           toast.error(response.message || "Không thể cập nhật tour");

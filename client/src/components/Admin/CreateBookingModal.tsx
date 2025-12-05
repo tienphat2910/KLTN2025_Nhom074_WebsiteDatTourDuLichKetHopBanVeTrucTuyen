@@ -24,7 +24,6 @@ import { toast } from "sonner";
 import { tourService, Tour } from "@/services/tourService";
 import { activityService } from "@/services/activityService";
 import { Activity } from "@/types/activity";
-import { flightService, Flight } from "@/services/flightService";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -40,7 +39,7 @@ interface CreateBookingModalProps {
   onSuccess: () => void;
 }
 
-type BookingType = "tour" | "activity" | "flight";
+type BookingType = "tour" | "activity";
 
 interface UserSearchResult {
   _id: string;
@@ -78,13 +77,6 @@ export function CreateBookingModal({
   const [activityAdults, setActivityAdults] = useState(1);
   const [activityChildren, setActivityChildren] = useState(0);
 
-  // Flight fields
-  const [flights, setFlights] = useState<Flight[]>([]);
-  const [selectedFlight, setSelectedFlight] = useState("");
-  const [flightDate, setFlightDate] = useState<Date>();
-  const [flightPassengers, setFlightPassengers] = useState(1);
-  const [flightClass, setFlightClass] = useState("");
-
   // Payment fields
   const [paymentMethod, setPaymentMethod] = useState<"banking" | "momo">(
     "banking"
@@ -100,8 +92,6 @@ export function CreateBookingModal({
         loadTours();
       } else if (bookingType === "activity") {
         loadActivities();
-      } else if (bookingType === "flight") {
-        loadFlights();
       }
     }
   }, [bookingType, isOpen]);
@@ -125,17 +115,6 @@ export function CreateBookingModal({
       }
     } catch (error) {
       toast.error("Không thể tải danh sách hoạt động");
-    }
-  };
-
-  const loadFlights = async () => {
-    try {
-      const response = await flightService.getFlights();
-      if (response.success) {
-        setFlights(response.data);
-      }
-    } catch (error) {
-      toast.error("Không thể tải danh sách chuyến bay");
     }
   };
 
@@ -199,16 +178,6 @@ export function CreateBookingModal({
     const childPrice = activity.price.retail?.child || adultPrice * 0.7;
 
     return activityAdults * adultPrice + activityChildren * childPrice;
-  };
-
-  const calculateFlightPrice = (): number => {
-    const flight = flights.find((f) => f._id === selectedFlight);
-    if (!flight || !flightClass) return 0;
-
-    const selectedClass = flight.classes?.find((fc) => fc._id === flightClass);
-    if (!selectedClass) return 0;
-
-    return selectedClass.price * flightPassengers;
   };
 
   const handleSubmit = async () => {
@@ -355,75 +324,6 @@ export function CreateBookingModal({
         }
 
         toast.success("Tạo booking hoạt động thành công!");
-      } else if (bookingType === "flight") {
-        if (!selectedFlight || !flightDate || !flightClass) {
-          toast.error("Vui lòng điền đầy đủ thông tin chuyến bay");
-          setIsLoading(false);
-          return;
-        }
-
-        const totalPrice = calculateFlightPrice();
-        bookingData = {
-          ...bookingData,
-          totalPrice,
-          status: paymentStatus === "paid" ? "confirmed" : "pending"
-        };
-
-        const bookingResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/booking`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify(bookingData)
-          }
-        );
-
-        const bookingResult = await bookingResponse.json();
-
-        if (!bookingResult.success) {
-          throw new Error(bookingResult.message || "Không thể tạo booking");
-        }
-
-        // Create flight booking
-        const flightBookingData = {
-          bookingId: bookingResult.data._id,
-          flightId: selectedFlight,
-          flightClassId: flightClass,
-          passengers: Array.from({ length: flightPassengers }, (_, i) => ({
-            firstName: `Hành khách ${i + 1}`,
-            lastName: selectedUser.fullName,
-            dateOfBirth: "1990-01-01",
-            gender: "male",
-            passengerType: "adult"
-          })),
-          departureDate: flightDate.toISOString(),
-          totalFlightPrice: totalPrice
-        };
-
-        const flightBookingResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/bookingflights`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify(flightBookingData)
-          }
-        );
-
-        const flightBookingResult = await flightBookingResponse.json();
-
-        if (!flightBookingResult.success) {
-          throw new Error(
-            flightBookingResult.message || "Không thể tạo booking flight"
-          );
-        }
-
-        toast.success("Tạo booking chuyến bay thành công!");
       }
 
       onSuccess();
@@ -447,10 +347,6 @@ export function CreateBookingModal({
     setActivityDate(undefined);
     setActivityAdults(1);
     setActivityChildren(0);
-    setSelectedFlight("");
-    setFlightDate(undefined);
-    setFlightPassengers(1);
-    setFlightClass("");
     setPaymentMethod("banking");
     setPaymentStatus("pending");
     onClose();
@@ -459,7 +355,6 @@ export function CreateBookingModal({
   const getTotalPrice = () => {
     if (bookingType === "tour") return calculateTourPrice();
     if (bookingType === "activity") return calculateActivityPrice();
-    if (bookingType === "flight") return calculateFlightPrice();
     return 0;
   };
 
@@ -521,9 +416,11 @@ export function CreateBookingModal({
               <SelectContent>
                 <SelectItem value="tour">Tour</SelectItem>
                 <SelectItem value="activity">Hoạt Động</SelectItem>
-                <SelectItem value="flight">Chuyến Bay</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-gray-500">
+              * Booking chuyến bay được tạo tự động khi khách đặt vé
+            </p>
           </div>
 
           {/* Tour Booking Fields */}
@@ -660,98 +557,6 @@ export function CreateBookingModal({
                     }
                   />
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Flight Booking Fields */}
-          {bookingType === "flight" && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Chọn Chuyến Bay</Label>
-                <Select
-                  value={selectedFlight}
-                  onValueChange={setSelectedFlight}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn chuyến bay" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {flights.map((flight) => (
-                      <SelectItem key={flight._id} value={flight._id}>
-                        {flight.flightCode} -{" "}
-                        {flight.departureAirportId?.city || "N/A"} →{" "}
-                        {flight.arrivalAirportId?.city || "N/A"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedFlight && (
-                <div className="space-y-2">
-                  <Label>Hạng Vé</Label>
-                  <Select value={flightClass} onValueChange={setFlightClass}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn hạng vé" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {flights
-                        .find((f) => f._id === selectedFlight)
-                        ?.classes?.map((fc) => (
-                          <SelectItem key={fc._id} value={fc._id}>
-                            {fc.className} -{" "}
-                            {new Intl.NumberFormat("vi-VN", {
-                              style: "currency",
-                              currency: "VND"
-                            }).format(fc.price)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Ngày Bay</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !flightDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {flightDate ? (
-                        format(flightDate, "dd/MM/yyyy")
-                      ) : (
-                        <span>Chọn ngày</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={flightDate}
-                      onSelect={setFlightDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Số Hành Khách</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={flightPassengers}
-                  onChange={(e) =>
-                    setFlightPassengers(parseInt(e.target.value))
-                  }
-                />
               </div>
             </div>
           )}

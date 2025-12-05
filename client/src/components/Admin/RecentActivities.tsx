@@ -43,15 +43,26 @@ export function RecentActivities() {
     };
 
     const handleBookingCreated = (data: any) => {
+      const bookingTypeLabels: any = {
+        tour: "Tour du lịch",
+        activity: "Hoạt động",
+        flight: "Chuyến bay",
+        amadeus_flight: "Chuyến bay"
+      };
+      const typeLabel =
+        bookingTypeLabels[data.booking.bookingType] || "Booking";
+
       const activity: Activity = {
         id: `booking_${Date.now()}`,
         type: "booking_created",
         title: "Đặt chỗ mới",
-        description: `${
-          data.booking.type
-        } - ${data.booking.totalPrice?.toLocaleString("vi-VN")} VND`,
+        description: `${typeLabel} - ${(
+          data.booking.totalPrice ||
+          data.booking.totalAmount ||
+          0
+        )?.toLocaleString("vi-VN")} VND`,
         timestamp: new Date(data.timestamp),
-        user: "Hệ thống"
+        user: data.booking.user?.fullName || "Khách hàng"
       };
       addActivity(activity);
     };

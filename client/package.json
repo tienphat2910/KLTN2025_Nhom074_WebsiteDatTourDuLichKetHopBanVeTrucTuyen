@@ -42,6 +42,7 @@
     "multer": "^2.0.2",
     "next": "^16.0.7",
     "react": "^19.2.1",
+    "react-barcode": "^1.6.1",
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.2.1",
     "react-icon": "^1.0.0",

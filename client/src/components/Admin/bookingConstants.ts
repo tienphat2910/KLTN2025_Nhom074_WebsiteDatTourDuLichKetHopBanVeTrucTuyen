@@ -23,7 +23,10 @@ export const statusConfig = {
   }
 };
 
-export const bookingTypeConfig = {
+export const bookingTypeConfig: Record<
+  string,
+  { label: string; icon: typeof Plane; color: string; bgColor: string }
+> = {
   tour: {
     label: "Tour du lịch",
     icon: Mountain,
@@ -41,5 +44,11 @@ export const bookingTypeConfig = {
     icon: Plane,
     color: "text-green-600",
     bgColor: "bg-green-50"
+  },
+  amadeus_flight: {
+    label: "Chuyến bay",
+    icon: Plane,
+    color: "text-sky-600",
+    bgColor: "bg-sky-50"
   }
 };

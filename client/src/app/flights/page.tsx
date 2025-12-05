@@ -3,12 +3,23 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Flight, flightService } from "@/services/flightService";
+import {
+  flightService,
+  MappedAmadeusFlight,
+  AmadeusSearchParams
+} from "@/services/flightService";
 import FlightSearchForm from "@/components/flight/FlightSearchForm";
 
 // Lazy load search result components
-const FlightSearchResults = lazy(() => import("@/components/flight/FlightSearchResults"));
-const RoundTripFlightSelection = lazy(() => import("@/components/flight/RoundTripFlightSelection"));
+const AmadeusFlightResults = lazy(
+  () => import("@/components/flight/AmadeusFlightResults")
+);
+const FlightInspiration = lazy(
+  () => import("@/components/flight/FlightInspiration")
+);
+const CheapestDatesCalendar = lazy(
+  () => import("@/components/flight/CheapestDatesCalendar")
+);
 
 // Loading component for lazy loaded components
 const SearchResultsLoading = () => (
@@ -29,12 +40,22 @@ const bannerImages = [
 
 export default function Flights() {
   const [isVisible, setIsVisible] = useState(false);
-  const [searchResults, setSearchResults] = useState<Flight[]>([]);
-  const [returnSearchResults, setReturnSearchResults] = useState<Flight[]>([]);
+
+  // Amadeus search results
+  const [amadeusResults, setAmadeusResults] = useState<MappedAmadeusFlight[]>(
+    []
+  );
+  const [amadeusReturnResults, setAmadeusReturnResults] = useState<
+    MappedAmadeusFlight[]
+  >([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentBanner, setCurrentBanner] = useState("");
+
+  // Always use Amadeus API
+  const useAmadeusAPI = true;
 
   // Search parameters
   const [isRoundTrip, setIsRoundTrip] = useState(false);
@@ -48,11 +69,39 @@ export default function Flights() {
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
 
-  // Set random banner on mount
+  // Selected flights for booking
+  const [selectedOutboundFlight, setSelectedOutboundFlight] =
+    useState<MappedAmadeusFlight | null>(null);
+  const [selectedReturnFlight, setSelectedReturnFlight] =
+    useState<MappedAmadeusFlight | null>(null);
+  const [bookingStep, setBookingStep] = useState<
+    "outbound" | "return" | "confirm"
+  >("outbound");
+
+  // Set visibility and random banner on mount
   useEffect(() => {
+    setIsVisible(true);
     const randomIndex = Math.floor(Math.random() * bannerImages.length);
     setCurrentBanner(bannerImages[randomIndex]);
   }, []);
+
+  // Map seat class to Amadeus travel class
+  const mapSeatClassToAmadeus = (
+    seatClass: string
+  ): AmadeusSearchParams["travelClass"] => {
+    switch (seatClass) {
+      case "economy":
+        return "ECONOMY";
+      case "premium_economy":
+        return "PREMIUM_ECONOMY";
+      case "business":
+        return "BUSINESS";
+      case "first":
+        return "FIRST";
+      default:
+        return "ECONOMY";
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,35 +118,60 @@ export default function Flights() {
 
     setLoading(true);
     setError(null);
+    setSelectedOutboundFlight(null);
+    setSelectedReturnFlight(null);
+    setBookingStep("outbound");
 
     try {
-      // Tìm chuyến đi
-      const outboundResults = await flightService.searchFlights({
-        from: selectedDeparture,
-        to: selectedArrival,
-        date: departureDate
-      });
+      // Search using Amadeus API
+      const searchParams: AmadeusSearchParams = {
+        originLocationCode: selectedDeparture.toUpperCase(),
+        destinationLocationCode: selectedArrival.toUpperCase(),
+        departureDate: departureDate,
+        adults: adults,
+        children: children,
+        infants: infants,
+        travelClass: mapSeatClassToAmadeus(seatClass),
+        currencyCode: "VND",
+        max: 250 // Maximum allowed by Amadeus
+      };
 
-      setSearchResults(outboundResults);
+      console.log("[Amadeus] Searching outbound flights:", searchParams);
+      const outboundResults = await flightService.searchAndMapAmadeusFlights(
+        searchParams
+      );
+      setAmadeusResults(outboundResults);
+      console.log(
+        "[Amadeus] Found",
+        outboundResults.length,
+        "outbound flights"
+      );
 
-      // Nếu là khứ hồi, tìm chuyến về
+      // If round trip, search return flights
       if (isRoundTrip && returnDate) {
-        const returnResults = await flightService.searchFlights({
-          from: selectedArrival, // Đảo ngược điểm đi/đến
-          to: selectedDeparture,
-          date: returnDate
-        });
-        setReturnSearchResults(returnResults);
+        const returnParams: AmadeusSearchParams = {
+          ...searchParams,
+          originLocationCode: selectedArrival.toUpperCase(),
+          destinationLocationCode: selectedDeparture.toUpperCase(),
+          departureDate: returnDate
+        };
+
+        console.log("[Amadeus] Searching return flights:", returnParams);
+        const returnResults = await flightService.searchAndMapAmadeusFlights(
+          returnParams
+        );
+        setAmadeusReturnResults(returnResults);
+        console.log("[Amadeus] Found", returnResults.length, "return flights");
       } else {
-        setReturnSearchResults([]);
+        setAmadeusReturnResults([]);
       }
 
       setHasSearched(true);
     } catch (err) {
-      setError("Không tìm thấy chuyến bay phù hợp. Vui lòng thử lại.");
       console.error("Error searching flights:", err);
-      setSearchResults([]);
-      setReturnSearchResults([]);
+      setError("Không tìm thấy chuyến bay phù hợp. Vui lòng thử lại.");
+      setAmadeusResults([]);
+      setAmadeusReturnResults([]);
     } finally {
       setLoading(false);
     }
@@ -162,50 +236,247 @@ export default function Flights() {
         </div>
       </section>
 
+      {/* Flight Inspiration Section - Show when departure is selected but no search yet */}
+      {selectedDeparture && !hasSearched && useAmadeusAPI && (
+        <section className="py-8 px-4 bg-white/80 backdrop-blur-sm">
+          <div className="container mx-auto">
+            <Suspense fallback={<SearchResultsLoading />}>
+              <FlightInspiration
+                origin={selectedDeparture}
+                onSelectDestination={(destination, date) => {
+                  setSelectedArrival(destination);
+                  setDepartureDate(date);
+                }}
+              />
+            </Suspense>
+          </div>
+        </section>
+      )}
+
+      {/* Cheapest Dates Section - Show when both departure and arrival are selected */}
+      {selectedDeparture &&
+        selectedArrival &&
+        !hasSearched &&
+        useAmadeusAPI && (
+          <section className="py-4 px-4 bg-white/80 backdrop-blur-sm">
+            <div className="container mx-auto max-w-4xl">
+              <Suspense fallback={<SearchResultsLoading />}>
+                <CheapestDatesCalendar
+                  origin={selectedDeparture}
+                  destination={selectedArrival}
+                  selectedDate={departureDate}
+                  onSelectDate={(date) => setDepartureDate(date)}
+                />
+              </Suspense>
+            </div>
+          </section>
+        )}
+
       {/* Search Results Section */}
       {hasSearched && (
         <section className="py-16 px-4">
           <div className="container mx-auto">
             <Suspense fallback={<SearchResultsLoading />}>
               {isRoundTrip ? (
-                <RoundTripFlightSelection
-                  outboundFlights={searchResults}
-                  returnFlights={returnSearchResults}
-                  loading={loading}
-                  error={error}
-                  outboundSearchParams={{
-                    from: selectedDeparture,
-                    to: selectedArrival,
-                    date: departureDate,
-                    passengers: passengerCount,
-                    seatClass
-                  }}
-                  returnSearchParams={{
-                    from: selectedArrival,
-                    to: selectedDeparture,
-                    date: returnDate,
-                    passengers: passengerCount,
-                    seatClass
-                  }}
-                  adults={adults}
-                  children={children}
-                  infants={infants}
-                />
+                <div className="space-y-8">
+                  {/* Outbound Flight Selection */}
+                  {bookingStep === "outbound" && (
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                        Chuyến đi: {selectedDeparture} → {selectedArrival}
+                      </h2>
+                      <AmadeusFlightResults
+                        flights={amadeusResults}
+                        loading={loading}
+                        error={error}
+                        tripType="outbound"
+                        adults={adults}
+                        children={children}
+                        infants={infants}
+                        showBookingButton={true}
+                        onFlightSelect={(flight) => {
+                          setSelectedOutboundFlight(flight);
+                          setBookingStep("return");
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Return Flight Selection */}
+                  {bookingStep === "return" && (
+                    <div>
+                      {/* Selected Outbound Summary */}
+                      {selectedOutboundFlight && (
+                        <div className="bg-sky-50 rounded-xl p-4 mb-6">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                Chuyến đi đã chọn
+                              </p>
+                              <p className="font-semibold text-gray-800">
+                                {selectedOutboundFlight.airline}{" "}
+                                {selectedOutboundFlight.flightNumber} •{" "}
+                                {selectedOutboundFlight.departure.time} -{" "}
+                                {selectedOutboundFlight.arrival.time}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setBookingStep("outbound")}
+                              className="text-sky-600 hover:underline text-sm"
+                            >
+                              Thay đổi
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                        Chuyến về: {selectedArrival} → {selectedDeparture}
+                      </h2>
+                      <AmadeusFlightResults
+                        flights={amadeusReturnResults}
+                        loading={loading}
+                        error={error}
+                        tripType="return"
+                        adults={adults}
+                        children={children}
+                        infants={infants}
+                        showBookingButton={true}
+                        onFlightSelect={(flight) => {
+                          setSelectedReturnFlight(flight);
+                          setBookingStep("confirm");
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Booking Confirmation */}
+                  {bookingStep === "confirm" &&
+                    selectedOutboundFlight &&
+                    selectedReturnFlight && (
+                      <div className="bg-white rounded-xl shadow-lg p-6">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                          Xác nhận đặt vé
+                        </h2>
+
+                        <div className="grid md:grid-cols-2 gap-6 mb-6">
+                          {/* Outbound Summary */}
+                          <div className="bg-sky-50 rounded-lg p-4">
+                            <h3 className="font-semibold text-gray-800 mb-2">
+                              Chuyến đi
+                            </h3>
+                            <p>
+                              {selectedOutboundFlight.airline}{" "}
+                              {selectedOutboundFlight.flightNumber}
+                            </p>
+                            <p>
+                              {selectedOutboundFlight.departure.airport} →{" "}
+                              {selectedOutboundFlight.arrival.airport}
+                            </p>
+                            <p>
+                              {selectedOutboundFlight.departure.time} -{" "}
+                              {selectedOutboundFlight.arrival.time}
+                            </p>
+                            <p className="text-sky-600 font-semibold mt-2">
+                              {new Intl.NumberFormat("vi-VN", {
+                                style: "currency",
+                                currency: selectedOutboundFlight.currency
+                              }).format(selectedOutboundFlight.price)}
+                            </p>
+                          </div>
+
+                          {/* Return Summary */}
+                          <div className="bg-sky-50 rounded-lg p-4">
+                            <h3 className="font-semibold text-gray-800 mb-2">
+                              Chuyến về
+                            </h3>
+                            <p>
+                              {selectedReturnFlight.airline}{" "}
+                              {selectedReturnFlight.flightNumber}
+                            </p>
+                            <p>
+                              {selectedReturnFlight.departure.airport} →{" "}
+                              {selectedReturnFlight.arrival.airport}
+                            </p>
+                            <p>
+                              {selectedReturnFlight.departure.time} -{" "}
+                              {selectedReturnFlight.arrival.time}
+                            </p>
+                            <p className="text-sky-600 font-semibold mt-2">
+                              {new Intl.NumberFormat("vi-VN", {
+                                style: "currency",
+                                currency: selectedReturnFlight.currency
+                              }).format(selectedReturnFlight.price)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Total Price */}
+                        <div className="border-t pt-4 mb-6">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-semibold">
+                              Tổng cộng ({adults + children + infants} hành
+                              khách):
+                            </span>
+                            <span className="text-2xl font-bold text-sky-600">
+                              {new Intl.NumberFormat("vi-VN", {
+                                style: "currency",
+                                currency: "VND"
+                              }).format(
+                                (selectedOutboundFlight.price +
+                                  selectedReturnFlight.price) *
+                                  (adults + children)
+                              )}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                          <button
+                            onClick={() => setBookingStep("return")}
+                            className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            Quay lại
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Navigate to booking page with both flights
+                              const outboundParam = encodeURIComponent(
+                                JSON.stringify(selectedOutboundFlight.raw)
+                              );
+                              const returnParam = encodeURIComponent(
+                                JSON.stringify(selectedReturnFlight.raw)
+                              );
+                              window.location.href = `/flight-booking?flightOffer=${outboundParam}&returnFlightOffer=${returnParam}&adults=${adults}&children=${children}&infants=${infants}`;
+                            }}
+                            className="flex-1 px-6 py-3 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors font-semibold"
+                          >
+                            Tiến hành đặt vé
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                </div>
               ) : (
+                // One-way Amadeus Results
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">
                     Chuyến đi: {selectedDeparture} → {selectedArrival}
                   </h2>
-                  <FlightSearchResults
-                    results={searchResults}
+                  <AmadeusFlightResults
+                    flights={amadeusResults}
                     loading={loading}
                     error={error}
-                    searchParams={{
-                      from: selectedDeparture,
-                      to: selectedArrival,
-                      date: departureDate,
-                      passengers: passengerCount,
-                      seatClass
+                    adults={adults}
+                    children={children}
+                    infants={infants}
+                    showBookingButton={true}
+                    onFlightSelect={(flight) => {
+                      // Navigate to booking page with selected flight
+                      const flightOfferParam = encodeURIComponent(
+                        JSON.stringify(flight.raw)
+                      );
+                      window.location.href = `/flight-booking?flightOffer=${flightOfferParam}&adults=${adults}&children=${children}&infants=${infants}`;
                     }}
                   />
                 </div>

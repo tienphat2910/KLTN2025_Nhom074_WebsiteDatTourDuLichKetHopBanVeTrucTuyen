@@ -1,96 +1,136 @@
 const express = require('express');
 const path = require('path');
 const Booking = require(path.resolve(__dirname, '../../models/Booking'));
+const AmadeusBooking = require(path.resolve(__dirname, '../../models/AmadeusBooking'));
 const User = require(path.resolve(__dirname, '../../models/User'));
 const admin = require(path.resolve(__dirname, '../../middleware/admin'));
 const { notifyBookingCreated, notifyPaymentCompleted, notifyBookingUpdated, notifyBookingCancelled } = require(path.resolve(__dirname, '../../utils/socketHandler'));
 const { autoCompleteBookings } = require(path.resolve(__dirname, '../../utils/autoCompleteBookings'));
 const router = express.Router();
 
-// Get all bookings for admin with user info
+// Get all bookings for admin with user info (including Amadeus bookings)
 router.get('/', admin, async (req, res) => {
     try {
         const { page = 1, limit = 50, status, bookingType, search } = req.query;
 
-        // Build query
+        // Build query for regular bookings (exclude 'flight' type - only use Amadeus)
         let query = {};
+
+        // Exclude old flight booking type, only show tour and activity from Booking model
+        if (bookingType && bookingType !== 'all') {
+            if (bookingType === 'amadeus_flight') {
+                // Will be handled separately
+                query.bookingType = { $in: [] }; // Empty - skip regular bookings
+            } else if (bookingType === 'flight') {
+                // Old flight type - skip
+                query.bookingType = { $in: [] };
+            } else {
+                query.bookingType = bookingType;
+            }
+        } else {
+            // Default: exclude old flight bookings
+            query.bookingType = { $in: ['tour', 'activity'] };
+        }
 
         if (status && status !== 'all') {
             query.status = status;
         }
 
-        if (bookingType && bookingType !== 'all') {
-            query.bookingType = bookingType;
-        }
-
-        // Search by booking ID or user info
-        if (search) {
-            const searchRegex = new RegExp(search, 'i');
-            query.$or = [
-                { _id: searchRegex },
-                // We'll handle user search in aggregation
-            ];
-        }
-
-        const bookings = await Booking.find(query)
+        // Get regular bookings (tour, activity only)
+        const regularBookings = await Booking.find(query)
             .populate('userId', 'fullName email phone')
-            .sort({ createdAt: -1 })
-            .limit(limit * 1)
-            .skip((page - 1) * limit);
+            .sort({ createdAt: -1 });
 
-        const total = await Booking.countDocuments(query);
+        // Build query for Amadeus bookings
+        let amadeusQuery = {};
+        if (status && status !== 'all') {
+            amadeusQuery.status = status;
+        }
 
-        // If searching by user info, we need to do it differently
-        let filteredBookings = bookings;
+        // Get Amadeus bookings
+        const amadeusBookings = await AmadeusBooking.find(amadeusQuery)
+            .populate('userId', 'fullName email phone')
+            .sort({ createdAt: -1 });
+
+        // Transform regular bookings
+        const transformedRegularBookings = regularBookings.map(booking => {
+            const bookingObj = booking.toObject();
+            return {
+                ...bookingObj,
+                user: bookingObj.userId
+            };
+        });
+
+        // Transform Amadeus bookings to match Booking format
+        const transformedAmadeusBookings = amadeusBookings.map(ab => {
+            const abObj = ab.toObject();
+            const outboundSegment = abObj.outboundFlight?.itineraries?.[0]?.segments?.[0];
+            const lastOutboundSegment = abObj.outboundFlight?.itineraries?.[0]?.segments?.slice(-1)[0];
+
+            return {
+                _id: abObj._id,
+                userId: abObj.userId,
+                user: abObj.userId, // For frontend compatibility
+                bookingDate: abObj.createdAt,
+                bookingType: 'amadeus_flight',
+                status: abObj.status,
+                totalPrice: abObj.totalAmount,
+                actualTotal: abObj.totalAmount - (abObj.discountAmount || 0),
+                isRoundTrip: abObj.isRoundTrip,
+                paymentStatus: abObj.paymentStatus,
+                createdAt: abObj.createdAt,
+                updatedAt: abObj.updatedAt,
+                // Amadeus-specific fields
+                bookingReference: abObj.bookingReference,
+                outboundFlight: abObj.outboundFlight,
+                returnFlight: abObj.returnFlight,
+                passengers: abObj.passengers,
+                departureCode: outboundSegment?.departure?.iataCode,
+                arrivalCode: lastOutboundSegment?.arrival?.iataCode,
+                flightNumber: outboundSegment?.carrierCode + outboundSegment?.number,
+                contactInfo: abObj.contactInfo,
+                seatSelections: abObj.seatSelections
+            };
+        });
+
+        // Combine and filter by bookingType if specified
+        let allBookings = [];
+        if (bookingType === 'amadeus_flight') {
+            allBookings = transformedAmadeusBookings;
+        } else if (bookingType && bookingType !== 'all' && bookingType !== 'flight') {
+            allBookings = transformedRegularBookings;
+        } else {
+            allBookings = [...transformedRegularBookings, ...transformedAmadeusBookings];
+        }
+
+        // Sort by creation date
+        allBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        // Apply search filter
         if (search) {
-            const searchRegex = new RegExp(search, 'i');
-            filteredBookings = bookings.filter(booking => {
-                const user = booking.userId;
+            const searchLower = search.toLowerCase();
+            allBookings = allBookings.filter(booking => {
+                const user = booking.user;
                 return (
-                    booking._id.toString().includes(search) ||
+                    booking._id.toString().toLowerCase().includes(searchLower) ||
+                    booking.bookingReference?.toLowerCase().includes(searchLower) ||
                     (user && (
-                        user.fullName?.match(searchRegex) ||
-                        user.email?.match(searchRegex) ||
-                        user.phone?.match(searchRegex)
+                        user.fullName?.toLowerCase().includes(searchLower) ||
+                        user.email?.toLowerCase().includes(searchLower) ||
+                        user.phone?.includes(search)
                     ))
                 );
             });
         }
 
-        // Transform data to have 'user' field for frontend compatibility
-        // For flight bookings, enrich with round trip status and actual total
-        const BookingFlight = require(path.resolve(__dirname, '../../models/BookingFlight'));
-
-        const transformedBookings = await Promise.all(filteredBookings.map(async (booking) => {
-            const bookingObj = booking.toObject();
-            const transformed = {
-                ...bookingObj,
-                user: bookingObj.userId // Add 'user' field as alias for populated userId
-            };
-
-            // If it's a flight booking, check if it's round trip and get total with discounts
-            if (booking.bookingType === 'flight') {
-                const flightBookings = await BookingFlight.find({ bookingId: booking._id });
-
-                if (flightBookings.length > 0) {
-                    // Check if round trip (2 flights)
-                    transformed.isRoundTrip = flightBookings.length > 1;
-
-                    // Calculate actual total (sum of all flight prices)
-                    const totalFlightPrice = flightBookings.reduce((sum, fb) => sum + fb.totalFlightPrice, 0);
-                    const totalDiscount = flightBookings.reduce((sum, fb) => sum + (fb.discountAmount || 0), 0);
-
-                    // Override totalPrice with actual amount after discount
-                    transformed.actualTotal = totalFlightPrice - totalDiscount;
-                }
-            }
-
-            return transformed;
-        }));
+        // Pagination
+        const total = allBookings.length;
+        const startIndex = (page - 1) * limit;
+        const paginatedBookings = allBookings.slice(startIndex, startIndex + parseInt(limit));
 
         res.json({
             success: true,
-            data: transformedBookings,
+            data: paginatedBookings,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -104,10 +144,12 @@ router.get('/', admin, async (req, res) => {
     }
 });
 
-// Get booking statistics for admin (MUST BE BEFORE dynamic routes)
+// Get booking statistics for admin (including Amadeus bookings)
 router.get('/stats/overview', admin, async (req, res) => {
     try {
-        const stats = await Booking.aggregate([
+        // Stats for regular bookings (exclude old flight type)
+        const regularStats = await Booking.aggregate([
+            { $match: { bookingType: { $in: ['tour', 'activity'] } } },
             {
                 $group: {
                     _id: '$status',
@@ -125,6 +167,25 @@ router.get('/stats/overview', admin, async (req, res) => {
             }
         ]);
 
+        // Stats for Amadeus bookings
+        const amadeusStats = await AmadeusBooking.aggregate([
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 },
+                    totalRevenue: {
+                        $sum: {
+                            $cond: [
+                                { $eq: ['$status', 'completed'] },
+                                '$totalAmount',
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        ]);
+
         const result = {
             totalBookings: 0,
             pendingBookings: 0,
@@ -134,11 +195,12 @@ router.get('/stats/overview', admin, async (req, res) => {
             totalRevenue: 0
         };
 
-        stats.forEach(stat => {
+        // Combine stats
+        [...regularStats, ...amadeusStats].forEach(stat => {
             result.totalBookings += stat.count;
-            result[`${stat._id}Bookings`] = stat.count;
+            result[`${stat._id}Bookings`] = (result[`${stat._id}Bookings`] || 0) + stat.count;
             if (stat._id === 'completed') {
-                result.totalRevenue = stat.totalRevenue;
+                result.totalRevenue += stat.totalRevenue;
             }
         });
 
@@ -149,7 +211,7 @@ router.get('/stats/overview', admin, async (req, res) => {
     }
 });
 
-// Update booking status (admin only)
+// Update booking status (admin only) - supports both regular and Amadeus bookings
 router.put('/:id/status', admin, async (req, res) => {
     try {
         const { status } = req.body;
@@ -161,7 +223,8 @@ router.put('/:id/status', admin, async (req, res) => {
             });
         }
 
-        const booking = await Booking.findByIdAndUpdate(
+        // Try to find in regular Booking first
+        let booking = await Booking.findByIdAndUpdate(
             req.params.id,
             {
                 status,
@@ -169,6 +232,31 @@ router.put('/:id/status', admin, async (req, res) => {
             },
             { new: true }
         ).populate('userId', 'fullName email phone');
+
+        // If not found in Booking, try AmadeusBooking
+        if (!booking) {
+            booking = await AmadeusBooking.findByIdAndUpdate(
+                req.params.id,
+                {
+                    status,
+                    updatedAt: new Date()
+                },
+                { new: true }
+            ).populate('userId', 'fullName email phone');
+
+            if (booking) {
+                // Transform Amadeus booking for notification
+                const abObj = booking.toObject();
+                const outboundSegment = abObj.outboundFlight?.itineraries?.[0]?.segments?.[0];
+                booking = {
+                    ...abObj,
+                    user: abObj.userId,
+                    bookingType: 'amadeus_flight',
+                    totalPrice: abObj.totalAmount,
+                    flightNumber: outboundSegment?.carrierCode + outboundSegment?.number
+                };
+            }
+        }
 
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -184,10 +272,16 @@ router.put('/:id/status', admin, async (req, res) => {
     }
 });
 
-// Delete booking (admin only)
+// Delete booking (admin only) - supports both regular and Amadeus bookings
 router.delete('/:id', admin, async (req, res) => {
     try {
-        const booking = await Booking.findByIdAndDelete(req.params.id);
+        // Try to find in regular Booking first
+        let booking = await Booking.findByIdAndDelete(req.params.id);
+
+        // If not found in Booking, try AmadeusBooking
+        if (!booking) {
+            booking = await AmadeusBooking.findByIdAndDelete(req.params.id);
+        }
 
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking not found' });

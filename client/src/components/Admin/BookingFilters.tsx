@@ -70,7 +70,7 @@ export function BookingFilters({
               <SelectItem value="all">Tất cả loại</SelectItem>
               <SelectItem value="tour">Tour du lịch</SelectItem>
               <SelectItem value="activity">Hoạt động</SelectItem>
-              <SelectItem value="flight">Chuyến bay</SelectItem>
+              <SelectItem value="amadeus_flight">Chuyến bay</SelectItem>
             </SelectContent>
           </Select>
 
