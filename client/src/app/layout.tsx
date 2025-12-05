@@ -64,7 +64,7 @@ export default function RootLayout({
 
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://lutrip.vercel.app/" />
+        <meta property="twitter:url" content="https://lutrip.id.vn/" />
         <meta property="twitter:title" content="LuTrip - Khám phá Việt Nam" />
         <meta
           property="twitter:description"
