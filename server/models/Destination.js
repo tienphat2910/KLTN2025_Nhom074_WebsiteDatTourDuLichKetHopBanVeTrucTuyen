@@ -25,8 +25,8 @@ const destinationSchema = new mongoose.Schema({
         required: [true, 'Hình ảnh là bắt buộc'],
         validate: {
             validator: function (v) {
-                // Accept both HTTP URLs and local URLs
-                return /^https?:\/\/.+/.test(v) || /^\/uploads\/.+/.test(v) || /^http:\/\/localhost:\d+\/uploads\/.+/.test(v);
+                // Accept HTTP/HTTPS URLs, Cloudinary URLs, and local upload paths
+                return /^https?:\/\/.+/.test(v) || /^\/uploads\/.+/.test(v);
             },
             message: 'URL hình ảnh không hợp lệ'
         }
