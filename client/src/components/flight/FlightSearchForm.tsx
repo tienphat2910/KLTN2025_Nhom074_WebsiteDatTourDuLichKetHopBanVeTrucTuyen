@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Flight } from "@/services/flightService";
-import { airportService, Airport } from "@/services/airportService";
+import { airportService, AmadeusAirport } from "@/services/airportService";
 import { addDays, format } from "date-fns";
 import { vi } from "date-fns/locale/vi";
 import { DayPicker } from "react-day-picker";
@@ -131,8 +130,337 @@ export default function FlightSearchForm({
     { value: "business", label: "Thương gia" }
   ];
 
-  // State cho sân bay
-  const [airportOptions, setAirportOptions] = useState<Airport[]>([]);
+  // Danh sách sân bay Vietnam (fallback khi Amadeus không có data)
+  const vietnamAirports: AmadeusAirport[] = [
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Tân Sơn Nhất International",
+      iataCode: "SGN",
+      address: {
+        cityName: "Hồ Chí Minh",
+        cityCode: "SGN",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Nội Bài International",
+      iataCode: "HAN",
+      address: {
+        cityName: "Hà Nội",
+        cityCode: "HAN",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Đà Nẵng International",
+      iataCode: "DAD",
+      address: {
+        cityName: "Đà Nẵng",
+        cityCode: "DAD",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Cam Ranh International",
+      iataCode: "CXR",
+      address: {
+        cityName: "Nha Trang",
+        cityCode: "CXR",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Phú Quốc International",
+      iataCode: "PQC",
+      address: {
+        cityName: "Phú Quốc",
+        cityCode: "PQC",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Liên Khương Airport",
+      iataCode: "DLI",
+      address: {
+        cityName: "Đà Lạt",
+        cityCode: "DLI",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Cần Thơ International",
+      iataCode: "VCA",
+      address: {
+        cityName: "Cần Thơ",
+        cityCode: "VCA",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Cát Bi International",
+      iataCode: "HPH",
+      address: {
+        cityName: "Hải Phòng",
+        cityCode: "HPH",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Phú Bài International",
+      iataCode: "HUI",
+      address: {
+        cityName: "Huế",
+        cityCode: "HUI",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Vinh Airport",
+      iataCode: "VII",
+      address: {
+        cityName: "Vinh",
+        cityCode: "VII",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Phù Cát Airport",
+      iataCode: "UIH",
+      address: {
+        cityName: "Quy Nhơn",
+        cityCode: "UIH",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Đồng Hới Airport",
+      iataCode: "VDH",
+      address: {
+        cityName: "Đồng Hới",
+        cityCode: "VDH",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Thọ Xuân Airport",
+      iataCode: "THD",
+      address: {
+        cityName: "Thanh Hóa",
+        cityCode: "THD",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Buôn Ma Thuột Airport",
+      iataCode: "BMV",
+      address: {
+        cityName: "Buôn Ma Thuột",
+        cityCode: "BMV",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Pleiku Airport",
+      iataCode: "PXU",
+      address: {
+        cityName: "Pleiku",
+        cityCode: "PXU",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Tuy Hòa Airport",
+      iataCode: "TBB",
+      address: {
+        cityName: "Phú Yên",
+        cityCode: "TBB",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Rạch Giá Airport",
+      iataCode: "VKG",
+      address: {
+        cityName: "Kiên Giang",
+        cityCode: "VKG",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Côn Đảo Airport",
+      iataCode: "VCS",
+      address: {
+        cityName: "Côn Đảo",
+        cityCode: "VCS",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Cà Mau Airport",
+      iataCode: "CAH",
+      address: {
+        cityName: "Cà Mau",
+        cityCode: "CAH",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Điện Biên Phủ Airport",
+      iataCode: "DIN",
+      address: {
+        cityName: "Điện Biên",
+        cityCode: "DIN",
+        countryName: "Vietnam",
+        countryCode: "VN"
+      }
+    },
+    // International popular airports
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Suvarnabhumi International",
+      iataCode: "BKK",
+      address: {
+        cityName: "Bangkok",
+        cityCode: "BKK",
+        countryName: "Thailand",
+        countryCode: "TH"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Changi Airport",
+      iataCode: "SIN",
+      address: {
+        cityName: "Singapore",
+        cityCode: "SIN",
+        countryName: "Singapore",
+        countryCode: "SG"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Hong Kong International",
+      iataCode: "HKG",
+      address: {
+        cityName: "Hong Kong",
+        cityCode: "HKG",
+        countryName: "Hong Kong",
+        countryCode: "HK"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Incheon International",
+      iataCode: "ICN",
+      address: {
+        cityName: "Seoul",
+        cityCode: "ICN",
+        countryName: "South Korea",
+        countryCode: "KR"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Narita International",
+      iataCode: "NRT",
+      address: {
+        cityName: "Tokyo",
+        cityCode: "NRT",
+        countryName: "Japan",
+        countryCode: "JP"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Kuala Lumpur International",
+      iataCode: "KUL",
+      address: {
+        cityName: "Kuala Lumpur",
+        cityCode: "KUL",
+        countryName: "Malaysia",
+        countryCode: "MY"
+      }
+    },
+    {
+      type: "location",
+      subType: "AIRPORT",
+      name: "Taoyuan International",
+      iataCode: "TPE",
+      address: {
+        cityName: "Taipei",
+        cityCode: "TPE",
+        countryName: "Taiwan",
+        countryCode: "TW"
+      }
+    }
+  ];
+
+  // State cho sân bay - sử dụng Amadeus Airport API với fallback
+  const [airportOptions, setAirportOptions] = useState<AmadeusAirport[]>([]);
   const [airportLoading, setAirportLoading] = useState(false);
 
   // Tìm kiếm sân bay
@@ -141,14 +469,36 @@ export default function FlightSearchForm({
   const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
   const [showArrivalDropdown, setShowArrivalDropdown] = useState(false);
 
-  // Sử dụng API search khi nhập từ khóa
+  // Helper: Filter local airports by keyword
+  const filterLocalAirports = (keyword: string): AmadeusAirport[] => {
+    const query = keyword.toLowerCase();
+    return vietnamAirports.filter(
+      (a) =>
+        a.iataCode.toLowerCase().includes(query) ||
+        a.name.toLowerCase().includes(query) ||
+        a.address?.cityName?.toLowerCase().includes(query) ||
+        a.address?.countryName?.toLowerCase().includes(query)
+    );
+  };
+
+  // Sử dụng Amadeus API search với fallback to local data
   useEffect(() => {
-    if (departureSearch.trim()) {
+    if (departureSearch.trim() && departureSearch.trim().length >= 2) {
       setAirportLoading(true);
       airportService
-        .searchAirports(departureSearch.trim())
-        .then((data) => setAirportOptions(Array.isArray(data) ? data : []))
-        .catch(() => setAirportOptions([]))
+        .searchAmadeusAirports(departureSearch.trim())
+        .then((data) => {
+          // If Amadeus returns results, use them. Otherwise fallback to local
+          if (Array.isArray(data) && data.length > 0) {
+            setAirportOptions(data);
+          } else {
+            setAirportOptions(filterLocalAirports(departureSearch.trim()));
+          }
+        })
+        .catch(() => {
+          // On error, use local airports
+          setAirportOptions(filterLocalAirports(departureSearch.trim()));
+        })
         .finally(() => setAirportLoading(false));
     } else {
       setAirportOptions([]);
@@ -156,12 +506,22 @@ export default function FlightSearchForm({
   }, [departureSearch]);
 
   useEffect(() => {
-    if (arrivalSearch.trim()) {
+    if (arrivalSearch.trim() && arrivalSearch.trim().length >= 2) {
       setAirportLoading(true);
       airportService
-        .searchAirports(arrivalSearch.trim())
-        .then((data) => setAirportOptions(Array.isArray(data) ? data : []))
-        .catch(() => setAirportOptions([]))
+        .searchAmadeusAirports(arrivalSearch.trim())
+        .then((data) => {
+          // If Amadeus returns results, use them. Otherwise fallback to local
+          if (Array.isArray(data) && data.length > 0) {
+            setAirportOptions(data);
+          } else {
+            setAirportOptions(filterLocalAirports(arrivalSearch.trim()));
+          }
+        })
+        .catch(() => {
+          // On error, use local airports
+          setAirportOptions(filterLocalAirports(arrivalSearch.trim()));
+        })
         .finally(() => setAirportLoading(false));
     } else {
       setAirportOptions([]);
@@ -518,14 +878,16 @@ export default function FlightSearchForm({
                 {airportLoading ? (
                   <div className="px-4 py-2 text-gray-400">Đang tải...</div>
                 ) : (
-                  airportOptions.slice(0, 10).map((a) => (
+                  airportOptions.slice(0, 10).map((a, index) => (
                     <button
-                      key={a._id}
+                      key={a.iataCode + index}
                       type="button"
                       className="w-full text-left px-4 py-3 hover:bg-[#e3f2fd] text-[#1976d2] flex flex-col gap-1"
                       onMouseDown={() => {
-                        setSelectedDeparture(a.iata);
-                        setDepartureSearch(`${a.city} (${a.iata})`);
+                        setSelectedDeparture(a.iataCode);
+                        setDepartureSearch(
+                          `${a.address?.cityName || a.name} (${a.iataCode})`
+                        );
                         setShowDepartureDropdown(false);
                       }}
                     >
@@ -534,11 +896,14 @@ export default function FlightSearchForm({
                         <span className="text-xs text-gray-500 min-w-[60px]">
                           {" "}
                           <span className="font-bold text-[#1976d2]">
-                            {a.iata}
+                            {a.iataCode}
                           </span>
                         </span>
                         <span className="text-xs text-gray-400 min-w-[120px]">
-                          {a.city}
+                          {a.address?.cityName || ""}
+                          {a.address?.countryName
+                            ? `, ${a.address.countryName}`
+                            : ""}
                         </span>
                       </div>
                     </button>
@@ -634,14 +999,16 @@ export default function FlightSearchForm({
                 {airportLoading ? (
                   <div className="px-4 py-2 text-gray-400">Đang tải...</div>
                 ) : (
-                  airportOptions.slice(0, 10).map((a) => (
+                  airportOptions.slice(0, 10).map((a, index) => (
                     <button
-                      key={a._id}
+                      key={a.iataCode + index}
                       type="button"
                       className="w-full text-left px-4 py-3 hover:bg-[#e3f2fd] text-[#1976d2] flex flex-col gap-1"
                       onMouseDown={() => {
-                        setSelectedArrival(a.iata);
-                        setArrivalSearch(`${a.city} (${a.iata})`);
+                        setSelectedArrival(a.iataCode);
+                        setArrivalSearch(
+                          `${a.address?.cityName || a.name} (${a.iataCode})`
+                        );
                         setShowArrivalDropdown(false);
                       }}
                     >
@@ -650,11 +1017,14 @@ export default function FlightSearchForm({
                         <span className="text-xs text-gray-500 min-w-[60px]">
                           {" "}
                           <span className="font-bold text-[#1976d2]">
-                            {a.iata}
+                            {a.iataCode}
                           </span>
                         </span>
                         <span className="text-xs text-gray-400 min-w-[120px]">
-                          {a.city}
+                          {a.address?.cityName || ""}
+                          {a.address?.countryName
+                            ? `, ${a.address.countryName}`
+                            : ""}
                         </span>
                       </div>
                     </button>

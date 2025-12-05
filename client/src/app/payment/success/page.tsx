@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { paymentService } from "@/services/paymentService";
 import { bookingTourService } from "@/services/bookingTourService";
 import { bookingFlightService } from "@/services/bookingFlightService";
+import { checkPaymentStatus as checkAmadeusPaymentStatus } from "@/services/amadeusBookingService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -242,12 +243,22 @@ export default function PaymentSuccessPage() {
     const pendingTourData = localStorage.getItem("pendingBooking");
     const pendingFlightData = localStorage.getItem("pendingFlightBooking");
     const pendingActivityData = localStorage.getItem("pendingActivityBooking");
+    const pendingAmadeusBookingId = localStorage.getItem(
+      "pendingAmadeusBookingId"
+    );
 
     console.log("📦 Pending Data:", {
       hasTour: !!pendingTourData,
       hasFlight: !!pendingFlightData,
-      hasActivity: !!pendingActivityData
+      hasActivity: !!pendingActivityData,
+      hasAmadeusBooking: !!pendingAmadeusBookingId
     });
+
+    // Check if this is an Amadeus booking
+    if (pendingAmadeusBookingId) {
+      await handleAmadeusZaloPayPayment(pendingAmadeusBookingId);
+      return;
+    }
 
     if (!pendingTourData && !pendingFlightData && !pendingActivityData) {
       setPaymentStatus("error");
@@ -323,6 +334,75 @@ export default function PaymentSuccessPage() {
       toast.error("Thanh toán ZaloPay thất bại!");
       clearPendingBookings();
     }
+  };
+
+  // Handle Amadeus booking payment (booking already created, just update status)
+  const handleAmadeusZaloPayPayment = async (bookingId: string) => {
+    console.log("🛫 Handling Amadeus ZaloPay Payment for booking:", bookingId);
+
+    setPaymentInfo({
+      orderId: appTransId,
+      amount: zalopayAmount,
+      transId: appTransId,
+      method: "zalopay",
+      bookingType: "amadeus_flight"
+    });
+
+    // Check if payment was successful (status = 1)
+    if (zalopayStatus === "1") {
+      try {
+        // Check payment status from server to update booking
+        const statusResponse = await checkAmadeusPaymentStatus(bookingId);
+
+        console.log("📦 Amadeus Payment Status Response:", statusResponse);
+
+        if (statusResponse.success && statusResponse.data) {
+          const { paymentStatus: serverPaymentStatus, bookingReference } =
+            statusResponse.data;
+
+          setPaymentInfo((prev: any) => ({
+            ...prev,
+            bookingReference,
+            bookingId
+          }));
+
+          if (serverPaymentStatus === "paid") {
+            setPaymentStatus("success");
+            setBookingCreated(true);
+            toast.success(
+              "Thanh toán thành công! Đặt vé máy bay đã được xác nhận."
+            );
+          } else {
+            // Payment successful on ZaloPay but server hasn't updated yet
+            // This can happen due to callback delay
+            setPaymentStatus("success");
+            setBookingCreated(true);
+            toast.success("Thanh toán thành công! Đơn đặt vé đang được xử lý.");
+          }
+        } else {
+          // Still show success since ZaloPay confirmed
+          setPaymentStatus("success");
+          setBookingCreated(true);
+          toast.success(
+            "Thanh toán thành công! Đơn đặt vé đang được xác nhận."
+          );
+        }
+      } catch (error) {
+        console.error("Error checking Amadeus payment status:", error);
+        // Still show success since ZaloPay returned status = 1
+        setPaymentStatus("success");
+        setBookingCreated(true);
+        toast.success(
+          "Thanh toán thành công! Vui lòng kiểm tra đơn đặt vé của bạn."
+        );
+      }
+    } else {
+      setPaymentStatus("failed");
+      toast.error("Thanh toán ZaloPay thất bại!");
+    }
+
+    // Clear pending Amadeus booking ID
+    localStorage.removeItem("pendingAmadeusBookingId");
   };
 
   const createBooking = async (
@@ -439,6 +519,7 @@ export default function PaymentSuccessPage() {
     localStorage.removeItem("pendingBooking");
     localStorage.removeItem("pendingFlightBooking");
     localStorage.removeItem("pendingActivityBooking");
+    localStorage.removeItem("pendingAmadeusBookingId");
   };
 
   const handleRetryBooking = () => {

@@ -127,22 +127,33 @@ export function AdminLayout({
       });
 
       socketService.on("booking_created", (data: any) => {
+        const bookingTypeLabels: any = {
+          tour: "Tour du lịch",
+          activity: "Hoạt động",
+          flight: "Chuyến bay",
+          amadeus_flight: "Chuyến bay"
+        };
+        const typeLabel =
+          bookingTypeLabels[data.booking.bookingType] || "Booking";
+        const totalPrice =
+          data.booking.totalPrice || data.booking.totalAmount || 0;
+
         const notification: Notification = {
           id: `booking_${Date.now()}`,
           type: "booking_created",
           title: "Đặt chỗ mới",
-          message: `Đặt chỗ ${
-            data.booking.type
-          } trị giá ${data.booking.totalPrice?.toLocaleString("vi-VN")} VND`,
+          message: `Đặt chỗ ${typeLabel} trị giá ${totalPrice?.toLocaleString(
+            "vi-VN"
+          )} VND`,
           timestamp: new Date(data.timestamp),
           read: false,
           data: data.booking
         };
         addNotification(notification);
         toast.success("Đặt chỗ mới!", {
-          description: `${
-            data.booking.type
-          } - ${data.booking.totalPrice?.toLocaleString("vi-VN")} VND`,
+          description: `${typeLabel} - ${totalPrice?.toLocaleString(
+            "vi-VN"
+          )} VND`,
           duration: 5000
         });
       });

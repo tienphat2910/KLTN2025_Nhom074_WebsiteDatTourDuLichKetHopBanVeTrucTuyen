@@ -26,7 +26,6 @@ import {
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BookingDetailModal } from "@/components/Booking/BookingDetailModal";
@@ -35,6 +34,7 @@ import { RoundTripFlightBookingDetailModal } from "@/components/Admin/RoundTripF
 import { TourBookingDetailModal } from "@/components/Admin/TourBookingDetailModal";
 import { ActivityBookingDetailModal } from "@/components/Admin/ActivityBookingDetailModal";
 import { CancelBookingDialog } from "@/components/Booking/CancelBookingDialog";
+import Link from "next/link";
 
 const statusConfig = {
   pending: {
@@ -77,6 +77,12 @@ const bookingTypeConfig = {
     icon: Plane,
     color: "text-green-600",
     bgColor: "bg-green-50"
+  },
+  amadeus_flight: {
+    label: "Vé máy bay",
+    icon: Plane,
+    color: "text-purple-600",
+    bgColor: "bg-purple-50"
   }
 };
 
@@ -102,6 +108,15 @@ export default function BookingPage() {
   useEffect(() => {
     if (activeTab === "all") {
       setFilteredBookings(bookings);
+    } else if (activeTab === "flight") {
+      // Include both flight and amadeus_flight types
+      setFilteredBookings(
+        bookings.filter(
+          (booking) =>
+            booking.bookingType === "flight" ||
+            booking.bookingType === "amadeus_flight"
+        )
+      );
     } else {
       setFilteredBookings(
         bookings.filter((booking) => booking.bookingType === activeTab)
@@ -169,7 +184,9 @@ export default function BookingPage() {
       all: bookings.length,
       tour: bookings.filter((b) => b.bookingType === "tour").length,
       activity: bookings.filter((b) => b.bookingType === "activity").length,
-      flight: bookings.filter((b) => b.bookingType === "flight").length
+      flight: bookings.filter(
+        (b) => b.bookingType === "flight" || b.bookingType === "amadeus_flight"
+      ).length
     };
     return stats;
   };
@@ -337,7 +354,9 @@ export default function BookingPage() {
             ) : (
               <div className="grid gap-4">
                 {filteredBookings.map((booking) => {
-                  const typeConfig = bookingTypeConfig[booking.bookingType];
+                  const typeConfig =
+                    bookingTypeConfig[booking.bookingType] ||
+                    bookingTypeConfig.flight;
                   const statusInfo = statusConfig[booking.status];
                   const StatusIcon = statusInfo.icon;
                   const TypeIcon = typeConfig.icon;
@@ -362,9 +381,21 @@ export default function BookingPage() {
                               <div>
                                 <h3 className="font-semibold text-lg text-gray-900">
                                   {typeConfig.label}
+                                  {booking.bookingType === "amadeus_flight" &&
+                                    booking.departureCode &&
+                                    booking.arrivalCode && (
+                                      <span className="ml-2 text-sm font-normal text-gray-500">
+                                        ({booking.departureCode} →{" "}
+                                        {booking.arrivalCode})
+                                      </span>
+                                    )}
                                 </h3>
                                 <p className="text-sm text-gray-600">
-                                  ID: {booking._id.slice(-8).toUpperCase()}
+                                  {booking.bookingReference
+                                    ? `Mã đặt vé: ${booking.bookingReference}`
+                                    : `ID: ${booking._id
+                                        .slice(-8)
+                                        .toUpperCase()}`}
                                 </p>
                               </div>
                             </div>
@@ -428,6 +459,12 @@ export default function BookingPage() {
                                 <TourBookingDetailModal booking={booking} />
                               ) : booking.bookingType === "activity" ? (
                                 <ActivityBookingDetailModal booking={booking} />
+                              ) : booking.bookingType === "amadeus_flight" ? (
+                                <Link href={`/flight-booking/${booking._id}`}>
+                                  <Button variant="outline" size="sm">
+                                    Xem chi tiết
+                                  </Button>
+                                </Link>
                               ) : (
                                 <BookingDetailModal booking={booking} />
                               )}

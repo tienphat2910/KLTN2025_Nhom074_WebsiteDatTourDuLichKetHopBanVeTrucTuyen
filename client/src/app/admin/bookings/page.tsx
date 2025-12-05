@@ -179,7 +179,8 @@ export default function AdminBookingPage() {
       const bookingTypeLabels: any = {
         tour: "Tour du lịch",
         activity: "Hoạt động",
-        flight: "Chuyến bay"
+        flight: "Chuyến bay",
+        amadeus_flight: "Chuyến bay"
       };
       const typeLabel =
         bookingTypeLabels[data.booking.bookingType] || "Booking mới";

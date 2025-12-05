@@ -368,10 +368,20 @@ export function DashboardOverview() {
     };
 
     const handleBookingCreated = (data: any) => {
+      const bookingTypeLabels: any = {
+        tour: "Tour du lịch",
+        activity: "Hoạt động",
+        flight: "Chuyến bay",
+        amadeus_flight: "Chuyến bay"
+      };
+      const typeLabel = bookingTypeLabels[data?.booking?.bookingType] || "mới";
+      const totalPrice =
+        data?.booking?.totalPrice || data?.booking?.totalAmount || 0;
+
       // Could refresh booking stats here if implemented
       toast.success("Đặt chỗ mới!", {
-        description: `Đặt chỗ ${data?.booking?.type || "mới"} trị giá ${
-          data?.booking?.totalPrice?.toLocaleString("vi-VN") || "N/A"
+        description: `Đặt chỗ ${typeLabel} trị giá ${
+          totalPrice?.toLocaleString("vi-VN") || "N/A"
         } VND`,
         duration: 5000,
         action: {

@@ -31,9 +31,18 @@ export interface Booking {
   actualTotal?: number; // For flight bookings with discounts
   isRoundTrip?: boolean; // For flight bookings
   status: "pending" | "confirmed" | "cancelled" | "completed";
-  bookingType: "tour" | "activity" | "flight";
+  bookingType: "tour" | "activity" | "flight" | "amadeus_flight";
+  paymentStatus?: "pending" | "paid" | "refunded" | "failed";
   createdAt: string;
   updatedAt: string;
+  // Amadeus flight specific fields
+  bookingReference?: string;
+  departureCode?: string;
+  arrivalCode?: string;
+  flightNumber?: string;
+  outboundFlight?: unknown;
+  returnFlight?: unknown;
+  passengers?: unknown[];
 }
 
 export interface BookingsResponse {

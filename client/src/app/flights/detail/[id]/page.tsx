@@ -18,7 +18,6 @@ import {
   Tag,
   DollarSign
 } from "lucide-react";
-import SeatMapModal from "@/components/flight/SeatMapModal";
 import FlightInfoSection from "@/components/flight/FlightInfoSection";
 import ClassSelector from "@/components/flight/ClassSelector";
 
@@ -818,23 +817,6 @@ export default function FlightDetailPage() {
           </div>
         </div>
       </section>
-
-      <SeatMapModal
-        show={showSeatMap}
-        onClose={handleCloseSeatMap}
-        flight={flight}
-        selectedClass={selectedClass}
-        selectedSeats={selectedSeats}
-        onSeatSelect={handleSeatSelect}
-        onConfirm={handleCloseSeatMap}
-        onClearSelection={() => {
-          setSelectedSeats([]);
-          setPrioritySeat(false);
-        }}
-        getSeatPrice={getSeatPrice}
-        isSeatOccupied={isSeatOccupied}
-        maxSeats={adults + children + infants}
-      />
 
       <Footer />
     </div>

@@ -143,7 +143,8 @@ export default function StaffBookingPage() {
       const bookingTypeLabels: any = {
         tour: "Tour du lịch",
         activity: "Hoạt động",
-        flight: "Chuyến bay"
+        flight: "Chuyến bay",
+        amadeus_flight: "Chuyến bay"
       };
       const typeLabel =
         bookingTypeLabels[data.booking.bookingType] || "Booking mới";
@@ -151,7 +152,8 @@ export default function StaffBookingPage() {
         data.booking.user?.fullName ||
         data.booking.userId?.fullName ||
         "Khách hàng";
-      const totalPrice = data.booking.totalPrice || 0;
+      const totalPrice =
+        data.booking.totalPrice || data.booking.totalAmount || 0;
       const bookingIdDisplay = bookingId.toString().slice(-8).toUpperCase();
 
       toast.success("🎉 ĐẶT CHỖ MỚI!", {
