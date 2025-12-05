@@ -48,7 +48,7 @@ export default function RootLayout({
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://lutrip.vercel.app/" />
+        <meta property="og:url" content="https://lutrip.id.vn/" />
         <meta property="og:title" content="LuTrip - Khám phá Việt Nam" />
         <meta
           property="og:description"
