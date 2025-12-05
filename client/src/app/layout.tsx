@@ -45,6 +45,35 @@ export default function RootLayout({
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://lutrip.id.vn/" />
+        <meta property="og:title" content="LuTrip - Khám phá Việt Nam" />
+        <meta
+          property="og:description"
+          content="Đặt tour du lịch, vé máy bay, khách sạn và vé giải trí tại Việt Nam. Khám phá những địa điểm tuyệt đẹp từ Bắc vào Nam."
+        />
+        <meta
+          property="og:image"
+          content="https://res.cloudinary.com/de5rurcwt/image/upload/v1761762361/6_bdb1li.jpg"
+        />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="LuTrip - Khám phá Việt Nam" />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://lutrip.id.vn/" />
+        <meta property="twitter:title" content="LuTrip - Khám phá Việt Nam" />
+        <meta
+          property="twitter:description"
+          content="Đặt tour du lịch, vé máy bay, khách sạn và vé giải trí tại Việt Nam"
+        />
+        <meta
+          property="twitter:image"
+          content="https://res.cloudinary.com/de5rurcwt/image/upload/v1761762361/6_bdb1li.jpg"
+        />
       </head>
       <body
         suppressHydrationWarning
