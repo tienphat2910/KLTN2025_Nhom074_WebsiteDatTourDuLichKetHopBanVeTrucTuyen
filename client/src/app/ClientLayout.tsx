@@ -1,25 +1,19 @@
 "use client";
 
 import { AuthProvider } from "@/contexts/AuthContext";
-import { PageLoader } from "@/components/Loading";
-import { usePageLoading } from "@/hooks/usePageLoading";
+import { LoadingProvider } from "@/contexts/LoadingContext";
+import { Toaster } from "sonner";
+import { RouteGuard } from "@/components/Auth";
 import Chatbot from "@/components/Chatbot";
+import PageTransition from "@/components/Loading/PageTransition";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const { isLoading, progress } = usePageLoading();
-
   return (
-    <>
-      <PageLoader
-        isLoading={isLoading}
-        type="fullscreen"
-        progress={progress}
-        showProgress={true}
-        message="Chào mừng bạn đến với LuTrip"
-      />
+    <RouteGuard>
+      <PageTransition />
       {children}
       <Chatbot />
-    </>
+    </RouteGuard>
   );
 }
 
@@ -29,8 +23,11 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </AuthProvider>
+    <LoadingProvider>
+      <AuthProvider>
+        <LayoutContent>{children}</LayoutContent>
+        <Toaster position="top-right" richColors closeButton duration={3000} />
+      </AuthProvider>
+    </LoadingProvider>
   );
 }
