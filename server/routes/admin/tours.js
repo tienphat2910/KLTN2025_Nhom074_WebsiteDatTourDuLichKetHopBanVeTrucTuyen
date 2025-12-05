@@ -278,6 +278,47 @@ router.put('/:id', auth, async (req, res) => {
         }
 
         const tourData = req.body;
+        const tourId = req.params.id;
+
+        // Check if there are active bookings for this tour
+        const BookingTour = require('../models/BookingTour');
+
+        // Get current tour to compare changes
+        const currentTour = await Tour.findById(tourId);
+        if (!currentTour) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy tour để cập nhật'
+            });
+        }
+
+        // Check for active bookings
+        const activeBookings = await BookingTour.find({
+            tourId: tourId
+        }).populate({
+            path: 'bookingId',
+            select: 'status'
+        });
+
+        const hasActiveBookings = activeBookings.some(bt =>
+            bt.bookingId && bt.bookingId.status !== 'cancelled'
+        );
+
+        // Detect price/important info changes
+        const priceChanged = tourData.priceByAge &&
+            (tourData.priceByAge.adult !== currentTour.priceByAge?.adult ||
+                tourData.priceByAge.child !== currentTour.priceByAge?.child ||
+                tourData.priceByAge.infant !== currentTour.priceByAge?.infant);
+
+        const durationChanged = tourData.duration && tourData.duration !== currentTour.duration;
+        const descriptionChanged = tourData.description && tourData.description !== currentTour.description;
+
+        // Warn if important changes and has active bookings
+        if (hasActiveBookings && (priceChanged || durationChanged || descriptionChanged)) {
+            // Continue with update but log warning
+            console.warn(`⚠️ Tour ${tourId} updated with active bookings. Changes: ${priceChanged ? 'Price ' : ''
+                }${durationChanged ? 'Duration ' : ''}${descriptionChanged ? 'Description' : ''}`);
+        }
 
         // Generate slug if title changed and slug not provided
         if (tourData.title && !tourData.slug) {
@@ -294,22 +335,16 @@ router.put('/:id', auth, async (req, res) => {
         }
 
         const updatedTour = await Tour.findByIdAndUpdate(
-            req.params.id,
+            tourId,
             tourData,
             { new: true, runValidators: true }
         ).populate('destinationId', 'name slug region');
 
-        if (!updatedTour) {
-            return res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy tour để cập nhật'
-            });
-        }
-
         res.status(200).json({
             success: true,
-            message: 'Cập nhật tour thành công',
-            data: updatedTour
+            message: 'Cập nhật tour thành công' + (hasActiveBookings && (priceChanged || durationChanged) ? '. Lưu ý: Tour đã được cập nhật nhưng vẫn có booking đang hoạt động.' : ''),
+            data: updatedTour,
+            warning: hasActiveBookings && (priceChanged || durationChanged) ? 'Tour này có booking đang hoạt động. Những thay đổi sẽ không áp dụng cho booking cũ.' : null
         });
     } catch (error) {
         console.error('Update tour error:', error);
@@ -355,6 +390,30 @@ router.delete('/:id', auth, async (req, res) => {
             });
         }
 
+        // Check if there are any active bookings for this tour
+        const BookingTour = require('../models/BookingTour');
+        const Booking = require('../models/Booking');
+
+        // Find all booking tours for this tour
+        const activeBookings = await BookingTour.find({
+            tourId: req.params.id
+        }).populate({
+            path: 'bookingId',
+            select: 'status'
+        });
+
+        // Check if any booking is not cancelled
+        const hasActiveBookings = activeBookings.some(bt =>
+            bt.bookingId && bt.bookingId.status !== 'cancelled'
+        );
+
+        if (hasActiveBookings) {
+            return res.status(409).json({
+                success: false,
+                message: 'Không thể xóa tour có booking đang hoạt động. Vui lòng hủy tất cả booking liên quan trước khi xóa tour.'
+            });
+        }
+
         const deletedTour = await Tour.findByIdAndDelete(req.params.id);
 
         if (!deletedTour) {
@@ -363,6 +422,9 @@ router.delete('/:id', auth, async (req, res) => {
                 message: 'Không tìm thấy tour để xóa'
             });
         }
+
+        // Also delete related booking tours
+        await BookingTour.deleteMany({ tourId: req.params.id });
 
         res.status(200).json({
             success: true,
