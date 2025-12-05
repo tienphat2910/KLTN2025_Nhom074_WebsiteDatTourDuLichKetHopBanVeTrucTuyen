@@ -79,7 +79,7 @@ export default function FlightScheduleManagement() {
 
     // Dynamic import to avoid SSR issues
     import("socket.io-client").then(({ default: io }) => {
-      const socket = io(env.API_BASE_URL.replace("/api", ""), {
+      const socket = io((env.API_BASE_URL || "").replace("/api", ""), {
         auth: { token },
         transports: ["websocket", "polling"]
       });

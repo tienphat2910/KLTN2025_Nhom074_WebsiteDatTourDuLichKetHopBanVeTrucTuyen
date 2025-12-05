@@ -27,7 +27,7 @@ class SocketService {
     try {
       // Try to dynamically import socket.io-client
       const { io } = await import("socket.io-client");
-      const socketUrl = env.API_BASE_URL.replace("/api", "");
+      const socketUrl = (env.API_BASE_URL || "").replace("/api", "");
 
       this.socket = io(socketUrl, {
         auth: {
