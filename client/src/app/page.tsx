@@ -19,7 +19,7 @@ const services = [
     description: "Khám phá những điểm đến tuyệt vời tại Việt Nam",
     icon: Mountain,
     href: "/tours",
-    gradient: "from-blue-500 to-purple-600",
+    iconBgColor: "bg-green-500",
     bgColor: "bg-white"
   },
   {
@@ -27,7 +27,7 @@ const services = [
     description: "Đặt vé máy bay giá tốt nhất",
     icon: Plane,
     href: "/flights",
-    gradient: "from-green-500 to-blue-500",
+    iconBgColor: "bg-blue-500",
     bgColor: "bg-[#87CEFA]/20"
   },
   {
@@ -35,7 +35,7 @@ const services = [
     description: "Đặt vé các điểm vui chơi giải trí",
     icon: Ticket,
     href: "/activity",
-    gradient: "from-amber-400 to-orange-500",
+    iconBgColor: "bg-orange-500",
     bgColor: "bg-orange-50/80"
   }
 ];
@@ -316,7 +316,7 @@ export default function Home() {
                     className={`${service.bgColor} backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white/20 h-full flex flex-col`}
                   >
                     <div
-                      className={`w-16 h-16 bg-gradient-to-r ${service.gradient} rounded-lg flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform duration-300 flex-shrink-0`}
+                      className={`w-16 h-16 ${service.iconBgColor} rounded-lg flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform duration-300 flex-shrink-0`}
                     >
                       <service.icon className="w-8 h-8 text-white" />
                     </div>

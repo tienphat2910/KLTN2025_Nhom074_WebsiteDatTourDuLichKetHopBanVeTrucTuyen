@@ -538,7 +538,7 @@ export default function PaymentSuccessPage() {
   // Show loading while checking authentication
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
+      <div className="min-h-screen flex items-center justify-center bg-blue-50">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
           <div>Đang kiểm tra đăng nhập...</div>
@@ -550,7 +550,7 @@ export default function PaymentSuccessPage() {
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
+      <div className="min-h-screen flex items-center justify-center bg-blue-50">
         <div>Đang chuyển hướng đến trang đăng nhập...</div>
       </div>
     );
@@ -559,7 +559,7 @@ export default function PaymentSuccessPage() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100 py-8 pt-20 lg:pt-30">
+      <div className="min-h-screen bg-blue-50 py-8 pt-20 lg:pt-30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-2xl">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {loading ? (
@@ -576,10 +576,10 @@ export default function PaymentSuccessPage() {
                 <div
                   className={`p-6 text-white ${
                     paymentStatus === "success"
-                      ? "bg-gradient-to-r from-green-500 to-green-600"
+                      ? "bg-green-600"
                       : paymentStatus === "failed"
-                      ? "bg-gradient-to-r from-red-500 to-red-600"
-                      : "bg-gradient-to-r from-yellow-500 to-yellow-600"
+                      ? "bg-red-600"
+                      : "bg-yellow-600"
                   }`}
                 >
                   <div className="text-center">
@@ -706,7 +706,7 @@ export default function PaymentSuccessPage() {
                       <div className="space-y-3">
                         <button
                           onClick={handleGoToBookings}
-                          className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-300"
+                          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
                         >
                           Xem đơn hàng của tôi
                         </button>
@@ -766,7 +766,7 @@ export default function PaymentSuccessPage() {
                       <div className="space-y-3">
                         <button
                           onClick={handleRetryBooking}
-                          className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-300"
+                          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
                         >
                           Thử lại
                         </button>
@@ -796,7 +796,7 @@ export default function PaymentSuccessPage() {
                       <div className="space-y-3">
                         <button
                           onClick={handleGoToBookings}
-                          className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-300"
+                          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
                         >
                           Kiểm tra đặt đơn của tôi
                         </button>

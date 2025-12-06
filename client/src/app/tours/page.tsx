@@ -313,7 +313,7 @@ export default function Tours() {
                           <span className="text-gray-500 text-sm">/người</span>
                         </div>
                         <button
-                          className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-[1.02] transition-[transform,shadow] duration-150 ease-out will-change-transform"
+                          className="bg-[#99CCFF] text-white px-6 py-2 rounded-lg hover:bg-[#77BBFF] hover:shadow-lg transform hover:scale-[1.02] transition-[transform,shadow] duration-150 ease-out will-change-transform"
                           onClick={() => handleBookTour(tour.slug)}
                         >
                           Đặt Tour
@@ -402,7 +402,7 @@ export default function Tours() {
                         <span className="text-gray-500 text-sm">/người</span>
                       </div>
                       <button
-                        className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-[1.02] transition-[transform,shadow] duration-150 ease-out will-change-transform"
+                        className="bg-[#99CCFF] text-white px-6 py-2 rounded-lg hover:bg-[#77BBFF] hover:shadow-lg transform hover:scale-[1.02] transition-[transform,shadow] duration-150 ease-out will-change-transform"
                         onClick={() => handleBookTour(tour.slug)}
                       >
                         Đặt Tour

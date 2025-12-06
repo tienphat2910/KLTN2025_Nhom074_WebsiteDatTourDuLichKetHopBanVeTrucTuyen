@@ -134,7 +134,7 @@ const TourCard = ({
           </div>
           <Link
             href={`/tours/detail/${tour.slug}`}
-            className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all duration-300 flex-shrink-0"
+            className="bg-[#99CCFF] text-white px-6 py-2 rounded-lg hover:bg-[#77BBFF] hover:shadow-lg transition-all duration-300 flex-shrink-0"
           >
             Xem chi tiết
           </Link>

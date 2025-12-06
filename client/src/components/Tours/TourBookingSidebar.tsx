@@ -213,7 +213,7 @@ export default function TourBookingSidebar({
         <button
           onClick={onBookTour}
           disabled={(tour?.availableSeats || 0) === 0}
-          className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-4 md:py-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-base"
+          className="w-full bg-[#99CCFF] text-white font-semibold py-4 md:py-4 rounded-lg hover:bg-[#77BBFF] hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-base"
         >
           {(tour?.availableSeats || 0) === 0 ? "Hết chỗ" : "Đặt Tour Ngay"}
         </button>
