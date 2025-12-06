@@ -27,6 +27,8 @@ export default function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDestinationsOpen, setIsDestinationsOpen] = useState(false);
   const [isToursOpen, setIsToursOpen] = useState(false);
+  const [mobileDestinationsOpen, setMobileDestinationsOpen] = useState(false);
+  const [mobileToursOpen, setMobileToursOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
   const [destinations, setDestinations] = useState<Destination[]>([]);
@@ -54,6 +56,8 @@ export default function Header() {
   const toursRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Load destinations and tours from API
   useEffect(() => {
@@ -87,6 +91,11 @@ export default function Header() {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+    // Reset mobile dropdowns when closing menu
+    if (isMobileMenuOpen) {
+      setMobileDestinationsOpen(false);
+      setMobileToursOpen(false);
+    }
   };
 
   const toggleSearch = () => {
@@ -115,8 +124,8 @@ export default function Header() {
     }
     // Mobile menu close
     setIsMobileMenuOpen(false);
-    setIsDestinationsOpen(false);
-    setIsToursOpen(false);
+    setMobileDestinationsOpen(false);
+    setMobileToursOpen(false);
   };
 
   // Handle search input change with real API search
@@ -250,22 +259,40 @@ export default function Header() {
         setShowSuggestions(false);
       }
 
-      // Close destinations dropdown if click is outside destinations container
+      // Close destinations dropdown if click is outside destinations container (desktop only)
       if (
         destinationsRef.current &&
-        !destinationsRef.current.contains(target)
+        !destinationsRef.current.contains(target) &&
+        !mobileMenuRef.current?.contains(target)
       ) {
         setIsDestinationsOpen(false);
       }
 
-      // Close tours dropdown if click is outside tours container
-      if (toursRef.current && !toursRef.current.contains(target)) {
+      // Close tours dropdown if click is outside tours container (desktop only)
+      if (
+        toursRef.current &&
+        !toursRef.current.contains(target) &&
+        !mobileMenuRef.current?.contains(target)
+      ) {
         setIsToursOpen(false);
       }
 
       // Close user menu if click is outside user menu container
       if (userMenuRef.current && !userMenuRef.current.contains(target)) {
         setIsUserMenuOpen(false);
+      }
+
+      // Close mobile menu if click is outside mobile menu container and button
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(target) &&
+        mobileMenuButtonRef.current &&
+        !mobileMenuButtonRef.current.contains(target)
+      ) {
+        setIsMobileMenuOpen(false);
+        // Also close any open dropdowns in mobile menu
+        setIsDestinationsOpen(false);
+        setIsToursOpen(false);
       }
     };
 
@@ -283,6 +310,16 @@ export default function Header() {
   const toggleTours = () => {
     setIsToursOpen((prev) => !prev);
     setIsDestinationsOpen(false);
+  };
+
+  const toggleMobileDestinations = () => {
+    setMobileDestinationsOpen((prev) => !prev);
+    setMobileToursOpen(false);
+  };
+
+  const toggleMobileTours = () => {
+    setMobileToursOpen((prev) => !prev);
+    setMobileDestinationsOpen(false);
   };
 
   return (
@@ -781,7 +818,11 @@ export default function Header() {
 
               {/* Mobile Menu Button */}
               <button
-                onClick={toggleMobileMenu}
+                ref={mobileMenuButtonRef}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMobileMenu();
+                }}
                 className="mobile-menu-button text-slate-700 hover:text-blue-600 transition-colors p-2"
               >
                 <svg
@@ -939,19 +980,22 @@ export default function Header() {
 
           {/* Mobile Navigation Menu */}
           {isMobileMenuOpen && (
-            <div className="mobile-nav xl:hidden mt-4 pb-4 border-t border-gray-200 animate-slide-down">
-              <div className="flex flex-col space-y-2 pt-4">
+            <div
+              ref={mobileMenuRef}
+              className="mobile-nav xl:hidden bg-white border-t border-gray-200 animate-slide-down max-h-[calc(100vh-73px)] overflow-y-auto"
+            >
+              <div className="flex flex-col space-y-2 p-4">
                 {/* Mobile Destinations Section */}
-                <div className="mb-4">
+                <div className="mb-2">
                   <button
-                    onClick={toggleDestinations}
+                    onClick={toggleMobileDestinations}
                     className="w-full flex items-center justify-between font-medium text-slate-700 hover:text-blue-600 px-4 py-3 rounded-xl transition-all duration-300"
                   >
                     <span>Địa Điểm</span>
                     <svg
-                      className={`w-4 h-4 transition-transform duration-300 $(
-                        isDestinationsOpen ? "rotate-180" : ""
-                      )`}
+                      className={`w-4 h-4 transition-transform duration-300 ${
+                        mobileDestinationsOpen ? "rotate-180" : ""
+                      }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -966,8 +1010,8 @@ export default function Header() {
                   </button>
 
                   {/* Mobile Destinations Dropdown */}
-                  {isDestinationsOpen && (
-                    <div className="mt-2 ml-4 space-y-1">
+                  {mobileDestinationsOpen && (
+                    <div className="mt-2 ml-4 space-y-1 animate-slide-down">
                       {/* Popular destinations */}
                       <div className="mb-3">
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
@@ -982,7 +1026,7 @@ export default function Header() {
                               }`}
                               className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               onClick={() => {
-                                setIsDestinationsOpen(false);
+                                setMobileDestinationsOpen(false);
                                 setIsMobileMenuOpen(false);
                               }}
                             >
@@ -1011,7 +1055,7 @@ export default function Header() {
                               }`}
                               className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               onClick={() => {
-                                setIsDestinationsOpen(false);
+                                setMobileDestinationsOpen(false);
                                 setIsMobileMenuOpen(false);
                               }}
                             >
@@ -1031,7 +1075,7 @@ export default function Header() {
                         href="/destinations"
                         className="block mx-2 mt-3 py-2 text-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-medium text-sm"
                         onClick={() => {
-                          setIsDestinationsOpen(false);
+                          setMobileDestinationsOpen(false);
                           setIsMobileMenuOpen(false);
                         }}
                       >
@@ -1042,16 +1086,16 @@ export default function Header() {
                 </div>
 
                 {/* Tours Section */}
-                <div className="mb-4">
+                <div className="mb-2">
                   <button
-                    onClick={toggleTours}
+                    onClick={toggleMobileTours}
                     className="w-full flex items-center justify-between font-medium text-slate-700 hover:text-blue-600 px-4 py-3 rounded-xl transition-all duration-300"
                   >
                     <span>Du Lịch</span>
                     <svg
-                      className={`w-4 h-4 transition-transform duration-300 $(
-                        isToursOpen ? "rotate-180" : ""
-                      )`}
+                      className={`w-4 h-4 transition-transform duration-300 ${
+                        mobileToursOpen ? "rotate-180" : ""
+                      }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1066,8 +1110,8 @@ export default function Header() {
                   </button>
 
                   {/* Mobile Tours Dropdown */}
-                  {isToursOpen && (
-                    <div className="mt-2 ml-4 space-y-1">
+                  {mobileToursOpen && (
+                    <div className="mt-2 ml-4 space-y-1 animate-slide-down">
                       {/* Popular Destinations with Tours */}
                       <div className="mb-3">
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
@@ -1080,7 +1124,7 @@ export default function Header() {
                               href={`/tours/${destination.slug}`}
                               className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               onClick={() => {
-                                setIsToursOpen(false);
+                                setMobileToursOpen(false);
                                 setIsMobileMenuOpen(false);
                               }}
                             >
@@ -1107,7 +1151,7 @@ export default function Header() {
                               href={`/tours/detail/${tour.slug}`}
                               className="block px-2 py-1.5 text-xs text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               onClick={() => {
-                                setIsToursOpen(false);
+                                setMobileToursOpen(false);
                                 setIsMobileMenuOpen(false);
                               }}
                             >
@@ -1126,7 +1170,7 @@ export default function Header() {
                         href="/tours"
                         className="block mx-2 mt-3 py-2 text-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-medium text-sm"
                         onClick={() => {
-                          setIsToursOpen(false);
+                          setMobileToursOpen(false);
                           setIsMobileMenuOpen(false);
                         }}
                       >
@@ -1144,20 +1188,17 @@ export default function Header() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`relative font-medium transition-all duration-300 px-4 py-3 rounded-xl group overflow-hidden ${
                       pathname === item.href
-                        ? "text-blue-600 font-semibold bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-600"
-                        : "text-slate-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent"
+                        ? "text-blue-600 font-semibold bg-blue-50 border-l-4 border-blue-600"
+                        : "text-slate-700 hover:text-blue-600 hover:bg-blue-50"
                     }`}
                   >
                     <span className="relative z-10">{item.label}</span>
-                    {pathname !== item.href && (
-                      <span className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-transparent transform translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
-                    )}
                   </Link>
                 ))}
 
                 {/* Mobile Auth Section */}
                 {user ? (
-                  <>
+                  <div className="pt-4 border-t border-gray-200 space-y-2">
                     <div className="flex items-center space-x-3 px-4 py-2">
                       <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
                         {user.avatar ? (
@@ -1182,7 +1223,7 @@ export default function Header() {
                     <Link
                       href="/profile"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
+                      className="block text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-200 text-center"
                     >
                       Thông tin cá nhân
                     </Link>
@@ -1191,28 +1232,28 @@ export default function Header() {
                         setIsMobileMenuOpen(false);
                         handleLogout();
                       }}
-                      className="text-red-600 hover:text-red-700 font-medium transition-colors px-4 py-3 rounded-full hover:bg-red-50 border border-red-200 text-center cursor-pointer"
+                      className="w-full text-red-600 hover:text-red-700 font-medium transition-colors px-4 py-3 rounded-lg hover:bg-red-50 border border-red-200 text-center cursor-pointer"
                     >
                       Đăng xuất
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <div className="pt-4 border-t border-gray-200 space-y-2">
                     <Link
                       href="/login"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-full hover:bg-gray-50 border border-gray-200 text-center"
+                      className="block text-slate-700 hover:text-blue-600 font-medium transition-colors px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-200 text-center"
                     >
                       Đăng nhập
                     </Link>
                     <Link
                       href="/register"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-4 py-3 rounded-full hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-center shadow-md"
+                      className="block bg-blue-600 text-white font-medium px-4 py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 text-center shadow-md"
                     >
                       Đăng ký
                     </Link>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
