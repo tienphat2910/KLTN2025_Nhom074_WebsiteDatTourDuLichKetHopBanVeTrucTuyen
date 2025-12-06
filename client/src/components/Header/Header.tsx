@@ -59,6 +59,30 @@ export default function Header() {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Generate random avatar color based on user email/name
+  const getAvatarColor = (text: string) => {
+    const colors = [
+      "bg-blue-500",
+      "bg-purple-500",
+      "bg-green-500",
+      "bg-orange-500",
+      "bg-red-500",
+      "bg-pink-500",
+      "bg-indigo-500",
+      "bg-teal-500",
+      "bg-cyan-500",
+      "bg-amber-500"
+    ];
+
+    // Simple hash function to get consistent color for same user
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      hash = text.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   // Load destinations and tours from API
   useEffect(() => {
     const loadData = async () => {
@@ -719,7 +743,13 @@ export default function Header() {
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center space-x-1 xl:space-x-2 text-slate-700 hover:text-blue-600 font-medium transition-colors px-2 xl:px-3 py-2 rounded-full hover:bg-blue-50 cursor-pointer text-sm xl:text-base"
                   >
-                    <div className="w-7 h-7 xl:w-8 xl:h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs xl:text-sm font-semibold overflow-hidden">
+                    <div
+                      className={`w-7 h-7 xl:w-8 xl:h-8 ${
+                        user.avatar
+                          ? ""
+                          : getAvatarColor(user.email || user.fullName)
+                      } rounded-full flex items-center justify-center text-white text-xs xl:text-sm font-semibold overflow-hidden`}
+                    >
                       {user.avatar ? (
                         <img
                           src={user.avatar}
@@ -1200,7 +1230,13 @@ export default function Header() {
                 {user ? (
                   <div className="pt-4 border-t border-gray-200 space-y-2">
                     <div className="flex items-center space-x-3 px-4 py-2">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
+                      <div
+                        className={`w-10 h-10 ${
+                          user.avatar
+                            ? ""
+                            : getAvatarColor(user.email || user.fullName)
+                        } rounded-full flex items-center justify-center text-white font-semibold overflow-hidden`}
+                      >
                         {user.avatar ? (
                           <img
                             src={user.avatar}

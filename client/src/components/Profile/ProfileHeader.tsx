@@ -19,6 +19,30 @@ interface ProfileHeaderProps {
   isEditing: boolean;
 }
 
+// Generate random avatar color based on user email/name
+const getAvatarColor = (text: string) => {
+  const colors = [
+    "bg-blue-500",
+    "bg-purple-500",
+    "bg-green-500",
+    "bg-orange-500",
+    "bg-red-500",
+    "bg-pink-500",
+    "bg-indigo-500",
+    "bg-teal-500",
+    "bg-cyan-500",
+    "bg-amber-500"
+  ];
+
+  // Simple hash function to get consistent color for same user
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+};
+
 export default function ProfileHeader({
   user,
   onAvatarChange,
@@ -109,7 +133,11 @@ export default function ProfileHeader({
                 }}
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+              <div
+                className={`w-full h-full flex items-center justify-center ${getAvatarColor(
+                  user.email
+                )}`}
+              >
                 <span className="text-3xl font-bold text-white">
                   {user.fullName.charAt(0).toUpperCase()}
                 </span>
