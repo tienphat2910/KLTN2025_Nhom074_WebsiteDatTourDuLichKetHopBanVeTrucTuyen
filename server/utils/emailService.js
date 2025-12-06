@@ -1,16 +1,40 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const { auth } = require('../config/firebase');
 const { sendEmailVerification, sendPasswordResetEmail } = require('firebase/auth');
 
-// Create nodemailer transporter
-const createTransporter = () => {
-    return nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
+// Initialize SendGrid
+if (!process.env.SENDGRID_API_KEY) {
+    console.error('❌ ERROR: SENDGRID_API_KEY not configured!');
+    console.error('Please set SENDGRID_API_KEY in environment variables');
+} else {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// Helper: Send email using SendGrid API
+const sendEmail = async (mailOptions) => {
+    try {
+        const msg = {
+            from: process.env.SENDGRID_FROM_EMAIL || 'noreply@lutrip.com',
+            to: mailOptions.to,
+            subject: mailOptions.subject,
+            html: mailOptions.html
+        };
+
+        // Add reply-to if configured
+        if (process.env.SENDGRID_REPLY_TO) {
+            msg.replyTo = process.env.SENDGRID_REPLY_TO;
         }
-    });
+
+        await sgMail.send(msg);
+        console.log('✅ Email sent via SendGrid to:', mailOptions.to);
+        return true;
+    } catch (error) {
+        console.error('❌ SendGrid error:', error);
+        if (error.response) {
+            console.error('Error details:', error.response.body);
+        }
+        throw error;
+    }
 };
 
 // Generate OTP
@@ -21,8 +45,6 @@ const generateOTP = () => {
 // Send OTP email using nodemailer
 const sendOTPEmail = async (email, otp, type = 'verification') => {
     try {
-        const transporter = createTransporter();
-
         const subject = type === 'verification'
             ? 'Mã xác thực email - LuTrip'
             : 'Mã đặt lại mật khẩu - LuTrip';
@@ -165,13 +187,13 @@ const sendOTPEmail = async (email, otp, type = 'verification') => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
+            from: `"LuTrip" <${process.env.EMAIL_USER || 'noreply@lutrip.com'}>`,
             to: email,
             subject: subject,
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ OTP email sent to: ${email}`);
         return true;
     } catch (error) {
@@ -262,7 +284,7 @@ const formatDateOnly = (dateString) => {
 // Send Tour Booking Confirmation Email
 const sendTourBookingEmail = async (userEmail, bookingData) => {
     try {
-        const transporter = createTransporter();
+
 
         // Debug log
         console.log('📧 Tour booking email data:', {
@@ -456,7 +478,7 @@ const sendTourBookingEmail = async (userEmail, bookingData) => {
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ Tour booking confirmation email sent to: ${userEmail}`);
         return true;
     } catch (error) {
@@ -468,7 +490,7 @@ const sendTourBookingEmail = async (userEmail, bookingData) => {
 // Send Activity Booking Confirmation Email
 const sendActivityBookingEmail = async (userEmail, bookingData) => {
     try {
-        const transporter = createTransporter();
+
 
         const htmlContent = `
 <!DOCTYPE html>
@@ -675,7 +697,7 @@ const sendActivityBookingEmail = async (userEmail, bookingData) => {
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ Activity booking confirmation email sent to: ${userEmail}`);
         return true;
     } catch (error) {
@@ -687,7 +709,7 @@ const sendActivityBookingEmail = async (userEmail, bookingData) => {
 // Send Flight Booking Confirmation Email
 const sendFlightBookingEmail = async (userEmail, bookingData) => {
     try {
-        const transporter = createTransporter();
+
 
         // Check if this is a round trip booking
         const isRoundTrip = bookingData.returnFlightBooking && bookingData.returnFlightBooking.flightId;
@@ -1007,7 +1029,7 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ Flight booking confirmation email sent to: ${userEmail}`);
         return true;
     } catch (error) {
@@ -1019,7 +1041,7 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
 // Send Cancellation Request Submitted Email
 const sendCancellationRequestSubmittedEmail = async (userEmail, requestData) => {
     try {
-        const transporter = createTransporter();
+
 
         const bookingTypeLabel =
             requestData.bookingType === 'tour' ? 'Tour du lịch' :
@@ -1148,7 +1170,7 @@ const sendCancellationRequestSubmittedEmail = async (userEmail, requestData) => 
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ Cancellation request submitted email sent to: ${userEmail}`);
         return true;
     } catch (error) {
@@ -1160,7 +1182,7 @@ const sendCancellationRequestSubmittedEmail = async (userEmail, requestData) => 
 // Send Cancellation Request Approved Email
 const sendCancellationRequestApprovedEmail = async (userEmail, requestData) => {
     try {
-        const transporter = createTransporter();
+
 
         const bookingTypeLabel =
             requestData.bookingType === 'tour' ? 'Tour du lịch' :
@@ -1301,7 +1323,7 @@ const sendCancellationRequestApprovedEmail = async (userEmail, requestData) => {
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ Cancellation request approved email sent to: ${userEmail}`);
         return true;
     } catch (error) {
@@ -1313,7 +1335,7 @@ const sendCancellationRequestApprovedEmail = async (userEmail, requestData) => {
 // Send Password Reset Success Email
 const sendPasswordResetSuccessEmail = async (email, userData) => {
     try {
-        const transporter = createTransporter();
+
 
         const htmlContent = `
 <!DOCTYPE html>
@@ -1430,7 +1452,7 @@ const sendPasswordResetSuccessEmail = async (email, userData) => {
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ Password reset success email sent to: ${email}`);
         return true;
     } catch (error) {
@@ -1442,7 +1464,7 @@ const sendPasswordResetSuccessEmail = async (email, userData) => {
 // Send Cancellation Request Rejected Email
 const sendCancellationRequestRejectedEmail = async (userEmail, requestData) => {
     try {
-        const transporter = createTransporter();
+
 
         const bookingTypeLabel =
             requestData.bookingType === 'tour' ? 'Tour du lịch' :
@@ -1582,7 +1604,7 @@ const sendCancellationRequestRejectedEmail = async (userEmail, requestData) => {
             html: htmlContent
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`✅ Cancellation request rejected email sent to: ${userEmail}`);
         return true;
     } catch (error) {
@@ -1593,6 +1615,7 @@ const sendCancellationRequestRejectedEmail = async (userEmail, requestData) => {
 
 
 module.exports = {
+    sendEmail,
     generateOTP,
     sendOTPEmail,
     sendFirebaseVerificationEmail,
@@ -1606,3 +1629,4 @@ module.exports = {
     sendCancellationRequestRejectedEmail,
     sendPasswordResetSuccessEmail
 };
+

@@ -1,0 +1,149 @@
+[
+  {
+    "id": "A001",
+    "name": "Sân bay Quốc tế Nội Bài",
+    "city": "Hà Nội",
+    "icao": "VVNB",
+    "iata": "HAN"
+  },
+  {
+    "id": "A002",
+    "name": "Sân bay Quốc tế Cam Ranh",
+    "city": "Nha Trang",
+    "icao": "VVCR",
+    "iata": "CXR"
+  },
+  {
+    "id": "A003",
+    "name": "Sân bay Quốc tế Phú Quốc",
+    "city": "Phú Quốc",
+    "icao": "VVPQ",
+    "iata": "PQC"
+  },
+  {
+    "id": "A004",
+    "name": "Sân bay Quốc tế Tân Sơn Nhất",
+    "city": "TP. Hồ Chí Minh",
+    "icao": "VVTS",
+    "iata": "SGN"
+  },
+  {
+    "id": "A005",
+    "name": "Sân bay Quốc tế Đà Nẵng",
+    "city": "Đà Nẵng",
+    "icao": "VVDN",
+    "iata": "DAD"
+  },
+  {
+    "id": "A006",
+    "name": "Sân bay Quốc tế Cần Thơ",
+    "city": "Cần Thơ",
+    "icao": "VVCT",
+    "iata": "VCA"
+  },
+  {
+    "id": "A007",
+    "name": "Sân bay Quốc tế Phú Bài",
+    "city": "Huế",
+    "icao": "VVPB",
+    "iata": "HUI"
+  },
+  {
+    "id": "A008",
+    "name": "Sân bay Quốc tế Vân Đồn",
+    "city": "Quảng Ninh",
+    "icao": "VVVD",
+    "iata": "VDO"
+  },
+  {
+    "id": "A009",
+    "name": "Sân bay Phù Cát",
+    "city": "Quy Nhơn - Bình Định",
+    "icao": "VVPC",
+    "iata": "UIH"
+  },
+  {
+    "id": "A010",
+    "name": "Sân bay Liên Khương",
+    "city": "Đà Lạt - Lâm Đồng",
+    "icao": "VVDL",
+    "iata": "DLI"
+  },
+  {
+    "id": "A011",
+    "name": "Sân bay Đồng Hới",
+    "city": "Quảng Bình",
+    "icao": "VVDH",
+    "iata": "VDH"
+  },
+  {
+    "id": "A012",
+    "name": "Sân bay Quốc tế Cát Bi",
+    "city": "Hải Phòng",
+    "icao": "VVCI",
+    "iata": "HPH"
+  },
+  {
+    "id": "A013",
+    "name": "Sân bay Chu Lai",
+    "city": "Quảng Nam",
+    "icao": "VVCA",
+    "iata": "VCL"
+  },
+  {
+    "id": "A014",
+    "name": "Sân bay Tuy Hòa",
+    "city": "Phú Yên",
+    "icao": "VVTH",
+    "iata": "TBB"
+  },
+  {
+    "id": "A015",
+    "name": "Sân bay Pleiku",
+    "city": "Gia Lai",
+    "icao": "VVPK",
+    "iata": "PXU"
+  },
+  {
+    "id": "A016",
+    "name": "Sân bay Buôn Ma Thuột",
+    "city": "Đắk Lắk",
+    "icao": "VVBM",
+    "iata": "BMV"
+  },
+  {
+    "id": "A017",
+    "name": "Sân bay Rạch Giá",
+    "city": "Kiên Giang",
+    "icao": "VVRG",
+    "iata": "VKG"
+  },
+  {
+    "id": "A018",
+    "name": "Sân bay Cà Mau",
+    "city": "Cà Mau",
+    "icao": "VVCM",
+    "iata": "CAH"
+  },
+  {
+    "id": "A019",
+    "name": "Sân bay Điện Biên Phủ",
+    "city": "Điện Biên",
+    "icao": "VVDB",
+    "iata": "DIN"
+  },
+  {
+    "id": "A020",
+    "name": "Sân bay Thọ Xuân",
+    "city": "Thanh Hóa",
+    "icao": "VVTX",
+    "iata": "THD"
+  },
+  {
+    "id": "A021",
+    "name": "Sân bay Quốc tế Vinh",
+    "city": "Nghệ An",
+    "icao": "VVVH",
+    "iata": "VII"
+  }
+]
