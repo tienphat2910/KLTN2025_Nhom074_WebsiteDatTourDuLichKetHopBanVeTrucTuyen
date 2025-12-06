@@ -14,7 +14,10 @@ if (!process.env.SENDGRID_API_KEY) {
 const sendEmail = async (mailOptions) => {
     try {
         const msg = {
-            from: process.env.SENDGRID_FROM_EMAIL || 'noreply@lutrip.com',
+            from: {
+                email: process.env.SENDGRID_FROM_EMAIL,
+                name: 'Lutrip'
+            },
             to: mailOptions.to,
             subject: mailOptions.subject,
             html: mailOptions.html
@@ -187,7 +190,6 @@ const sendOTPEmail = async (email, otp, type = 'verification') => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER || 'noreply@lutrip.com'}>`,
             to: email,
             subject: subject,
             html: htmlContent
@@ -472,7 +474,6 @@ const sendTourBookingEmail = async (userEmail, bookingData) => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: userEmail,
             subject: `✅ Xác nhận đặt tour #${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
             html: htmlContent
@@ -691,7 +692,6 @@ const sendActivityBookingEmail = async (userEmail, bookingData) => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: userEmail,
             subject: `✅ Xác nhận đặt hoạt động #${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
             html: htmlContent
@@ -1023,7 +1023,6 @@ const sendFlightBookingEmail = async (userEmail, bookingData) => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: userEmail,
             subject: `✈️ Xác nhận đặt vé máy bay ${isRoundTrip ? 'khứ hồi ' : ''}#${bookingData.booking._id.toString().slice(-8).toUpperCase()} - LuTrip`,
             html: htmlContent
@@ -1164,7 +1163,6 @@ const sendCancellationRequestSubmittedEmail = async (userEmail, requestData) => 
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: userEmail,
             subject: `📨 Đã nhận yêu cầu hủy #${requestData._id.toString().slice(-8).toUpperCase()} - LuTrip`,
             html: htmlContent
@@ -1317,7 +1315,6 @@ const sendCancellationRequestApprovedEmail = async (userEmail, requestData) => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: userEmail,
             subject: `✅ Yêu cầu hủy đã được chấp nhận #${requestData._id.toString().slice(-8).toUpperCase()} - LuTrip`,
             html: htmlContent
@@ -1446,7 +1443,6 @@ const sendPasswordResetSuccessEmail = async (email, userData) => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: '✅ Mật khẩu đã được đặt lại thành công - LuTrip',
             html: htmlContent
@@ -1598,7 +1594,6 @@ const sendCancellationRequestRejectedEmail = async (userEmail, requestData) => {
         `;
 
         const mailOptions = {
-            from: `"LuTrip" <${process.env.EMAIL_USER}>`,
             to: userEmail,
             subject: `❌ Yêu cầu hủy đã bị từ chối #${requestData._id.toString().slice(-8).toUpperCase()} - LuTrip`,
             html: htmlContent
