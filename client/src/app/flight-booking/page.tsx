@@ -21,7 +21,8 @@ import {
   parseSeatmapToRows,
   getSeatInfo,
   getSeatType,
-  createZaloPayPayment
+  createZaloPayPayment,
+  createMoMoPayment
 } from "@/services/amadeusBookingService";
 import { discountService } from "@/services/discountService";
 import { Discount } from "@/types/discount";
@@ -533,8 +534,38 @@ export default function AmadeusBookingPage() {
           }
         } else if (paymentMethod === "momo") {
           // MoMo integration - similar flow
-          toast.info("Tính năng thanh toán MoMo đang được phát triển");
-          setCurrentStep(5);
+          toast.loading("Đang tạo đơn thanh toán MoMo...", {
+            id: "payment"
+          });
+
+          try {
+            const paymentResponse = await createMoMoPayment(bookingId);
+
+            if (paymentResponse.success && paymentResponse.data?.payUrl) {
+              // Save booking ID to localStorage for payment success page
+              localStorage.setItem("pendingAmadeusBookingId", bookingId);
+
+              toast.success("Đang chuyển đến trang thanh toán MoMo...", {
+                id: "payment"
+              });
+              // Redirect to MoMo payment page
+              window.location.href = paymentResponse.data.payUrl;
+              return;
+            } else {
+              toast.error(
+                paymentResponse.message || "Lỗi tạo thanh toán MoMo",
+                { id: "payment" }
+              );
+              // Still show confirmation but with pending payment
+              setCurrentStep(5);
+            }
+          } catch (paymentError) {
+            console.error("Payment error:", paymentError);
+            toast.error("Lỗi tạo thanh toán. Vui lòng thanh toán sau.", {
+              id: "payment"
+            });
+            setCurrentStep(5);
+          }
         } else {
           // Bank transfer or cash - just show confirmation
           toast.success(

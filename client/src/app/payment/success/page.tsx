@@ -155,10 +155,19 @@ export default function PaymentSuccessPage() {
       return;
     }
 
-    // Get pending booking data from localStorage - try tour, flight, and activity
+    // Get pending booking data from localStorage - try tour, flight, activity, and Amadeus
     const pendingTourData = localStorage.getItem("pendingBooking");
     const pendingFlightData = localStorage.getItem("pendingFlightBooking");
     const pendingActivityData = localStorage.getItem("pendingActivityBooking");
+    const pendingAmadeusBookingId = localStorage.getItem(
+      "pendingAmadeusBookingId"
+    );
+
+    // Check if this is an Amadeus booking
+    if (pendingAmadeusBookingId) {
+      await handleAmadeusMoMoPayment(pendingAmadeusBookingId);
+      return;
+    }
 
     if (!pendingTourData && !pendingFlightData && !pendingActivityData) {
       setPaymentStatus("error");
@@ -334,6 +343,79 @@ export default function PaymentSuccessPage() {
       toast.error("Thanh toán ZaloPay thất bại!");
       clearPendingBookings();
     }
+  };
+
+  // Handle Amadeus booking MoMo payment (booking already created, just update status)
+  const handleAmadeusMoMoPayment = async (bookingId: string) => {
+    console.log("🛫 Handling Amadeus MoMo Payment for booking:", bookingId);
+
+    setPaymentInfo({
+      orderId,
+      amount,
+      message,
+      resultCode,
+      transId,
+      method: "momo",
+      bookingType: "amadeus_flight"
+    });
+
+    // Check if payment was successful (resultCode = "0")
+    if (resultCode === "0") {
+      try {
+        // Check payment status from server to update booking
+        const statusResponse = await checkAmadeusPaymentStatus(bookingId);
+
+        console.log("📦 Amadeus Payment Status Response:", statusResponse);
+
+        if (statusResponse.success && statusResponse.data) {
+          const { paymentStatus: serverPaymentStatus, bookingReference } =
+            statusResponse.data;
+
+          setPaymentInfo((prev: any) => ({
+            ...prev,
+            bookingReference,
+            bookingId
+          }));
+
+          if (serverPaymentStatus === "paid") {
+            setPaymentStatus("success");
+            setBookingCreated(true);
+            toast.success(
+              "Thanh toán thành công! Đặt vé máy bay đã được xác nhận."
+            );
+          } else {
+            // Payment successful on MoMo but server hasn't updated yet
+            // This can happen due to callback delay
+            setPaymentStatus("success");
+            setBookingCreated(true);
+            toast.success("Thanh toán thành công! Đơn đặt vé đang được xử lý.");
+          }
+        } else {
+          // Still show success since MoMo confirmed
+          setPaymentStatus("success");
+          setBookingCreated(true);
+          toast.success(
+            "Thanh toán thành công! Đơn đặt vé đang được xác nhận."
+          );
+        }
+      } catch (error) {
+        console.error("Error checking Amadeus payment status:", error);
+        // Still show success since MoMo returned resultCode = "0"
+        setPaymentStatus("success");
+        setBookingCreated(true);
+        toast.success(
+          "Thanh toán thành công! Vui lòng kiểm tra đơn đặt vé của bạn."
+        );
+      }
+    } else {
+      setPaymentStatus("failed");
+      toast.error(
+        `Thanh toán MoMo thất bại: ${message || "Lỗi không xác định"}`
+      );
+    }
+
+    // Clear pending Amadeus booking ID
+    localStorage.removeItem("pendingAmadeusBookingId");
   };
 
   // Handle Amadeus booking payment (booking already created, just update status)

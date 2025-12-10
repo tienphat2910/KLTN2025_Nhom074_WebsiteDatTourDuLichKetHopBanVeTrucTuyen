@@ -62,17 +62,6 @@ const adminSidebarItems = [
     icon: MapPin
   },
   {
-    title: "Đặt chỗ",
-    href: "/admin/bookings",
-    icon: Calendar
-  },
-  {
-    title: "Yêu cầu hủy",
-    href: "/admin/cancellation-requests",
-    icon: AlertCircle,
-    showBadge: true
-  },
-  {
     title: "Mã giảm giá",
     href: "/admin/discounts",
     icon: Percent
@@ -82,7 +71,7 @@ const adminSidebarItems = [
     href: "/admin/analytics",
     icon: BarChart3
   }
-];
+] as const;
 
 const staffSidebarItems = [
   {
@@ -99,9 +88,9 @@ const staffSidebarItems = [
     title: "Yêu cầu hủy",
     href: "/staff/cancellation-requests",
     icon: AlertCircle,
-    showBadge: true
+    showBadge: true as const
   }
-];
+] as const;
 
 interface AdminSidebarProps {
   className?: string;
@@ -201,11 +190,11 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
                   </div>
-                  {item.showBadge && pendingCount > 0 && (
+                  {"showBadge" in item && item.showBadge && pendingCount > 0 ? (
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
                       {pendingCount > 9 ? "9+" : pendingCount}
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </Link>
             );

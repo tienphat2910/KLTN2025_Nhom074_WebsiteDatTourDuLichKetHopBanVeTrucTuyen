@@ -443,6 +443,37 @@ export async function createZaloPayPayment(bookingId: string): Promise<{
 }
 
 /**
+ * Create MoMo payment for booking
+ */
+export async function createMoMoPayment(bookingId: string): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    payUrl: string;
+    orderId: string;
+    bookingId: string;
+    bookingReference: string;
+  };
+}> {
+  try {
+    const response = await axios.post(
+      `${API_URL}/amadeus-bookings/${bookingId}/payment/momo`,
+      {},
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating MoMo payment:", error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(
+        error.response.data?.message || "Lỗi tạo thanh toán MoMo"
+      );
+    }
+    throw error;
+  }
+}
+
+/**
  * Check payment status
  */
 export async function checkPaymentStatus(bookingId: string): Promise<{

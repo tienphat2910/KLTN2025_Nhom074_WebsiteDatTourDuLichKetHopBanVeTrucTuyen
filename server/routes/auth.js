@@ -92,6 +92,15 @@ router.post('/register', async (req, res) => {
             });
         }
 
+        // Check if firebaseUid already exists (shouldn't happen but extra safety)
+        const userWithSameFirebaseUid = await User.findOne({ firebaseUid: firebaseResult.uid });
+        if (userWithSameFirebaseUid) {
+            return res.status(409).json({
+                success: false,
+                message: 'Tài khoản Firebase này đã tồn tại'
+            });
+        }
+
         // Generate OTP
         const otp = generateOTP();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -1073,6 +1082,14 @@ router.post('/google', async (req, res) => {
             // Update existing user
             user.lastLogin = new Date();
             if (!user.firebaseUid) {
+                // Check if this firebaseUid is already used by another user
+                const existingFirebaseUser = await User.findOne({ firebaseUid: uid });
+                if (existingFirebaseUser && existingFirebaseUser._id.toString() !== user._id.toString()) {
+                    return res.status(409).json({
+                        success: false,
+                        message: 'Tài khoản Google này đã được liên kết với email khác'
+                    });
+                }
                 user.firebaseUid = uid;
             }
             if (!user.avatar && photoURL) {
@@ -1085,6 +1102,15 @@ router.post('/google', async (req, res) => {
             await user.save();
         } else {
             console.log('➕ Creating new user:', email);
+            // Check if this firebaseUid is already used
+            const existingFirebaseUser = await User.findOne({ firebaseUid: uid });
+            if (existingFirebaseUser) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Tài khoản Google này đã được sử dụng'
+                });
+            }
+
             // Create new user
             user = new User({
                 email,

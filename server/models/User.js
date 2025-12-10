@@ -92,6 +92,7 @@ const userSchema = new mongoose.Schema({
     firebaseUid: {
         type: String,
         default: null
+        // No unique constraint - will be handled at application level
     },
     lastLogin: {
         type: Date,
