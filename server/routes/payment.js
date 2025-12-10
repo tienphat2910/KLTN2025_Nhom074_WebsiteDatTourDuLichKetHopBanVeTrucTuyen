@@ -229,8 +229,7 @@ router.post('/callback', async (req, res) => {
          * resultCode = 9000: giao dịch được cấp quyền (authorization) thành công.
          * resultCode <> 0: giao dịch thất bại.
          */
-        console.log('MoMo callback received:');
-        console.log(req.body);
+        console.log('📞 MoMo callback received:', req.body);
 
         const {
             partnerCode,
@@ -248,24 +247,69 @@ router.post('/callback', async (req, res) => {
             signature
         } = req.body;
 
-        // TODO: Verify signature to ensure the callback is from MoMo
-        // TODO: Update order status in database based on resultCode
-        // TODO: Send notification to user about payment status
-
-        if (resultCode === 0) {
-            console.log(`✅ Payment successful for order ${orderId}, transaction ${transId}`);
-            // Handle successful payment
-        } else if (resultCode === 9000) {
-            console.log(`⚠️ Payment authorized for order ${orderId}, transaction ${transId}`);
-            // Handle authorized payment
-        } else {
-            console.log(`❌ Payment failed for order ${orderId}, resultCode: ${resultCode}, message: ${message}`);
-            // Handle failed payment
+        // Parse extraData to determine booking type
+        let parsedExtraData = {};
+        try {
+            if (extraData) {
+                parsedExtraData = JSON.parse(extraData);
+            }
+        } catch (e) {
+            console.warn('Could not parse extraData:', e.message);
         }
 
-        return res.status(204).json(req.body);
+        const { bookingType } = parsedExtraData;
+
+        // Handle successful payment
+        if (resultCode === 0) {
+            console.log(`✅ Payment successful for order ${orderId}, transaction ${transId}`);
+
+            // Handle Amadeus booking payment
+            if (bookingType === 'amadeus_flight') {
+                const AmadeusBooking = require('../models/AmadeusBooking');
+                const User = require('../models/User');
+
+                const booking = await AmadeusBooking.findOne({ momoOrderId: orderId });
+
+                if (booking) {
+                    booking.paymentStatus = 'paid';
+                    booking.status = 'confirmed';
+                    booking.paidAt = new Date();
+                    booking.momoTransId = transId;
+                    booking.momoResponse = {
+                        resultCode,
+                        message,
+                        transId,
+                        amount,
+                        responseTime
+                    };
+                    await booking.save();
+
+                    console.log(`✅ Amadeus booking ${booking.bookingReference} payment confirmed`);
+
+                    // Send confirmation email
+                    try {
+                        const user = await User.findById(booking.userId);
+                        if (user && user.email) {
+                            const { sendEmail } = require('../utils/emailService');
+                            // TODO: Create proper email template for Amadeus booking
+                            console.log(`📧 Sending confirmation email to ${user.email}`);
+                        }
+                    } catch (emailError) {
+                        console.warn('Email sending error:', emailError.message);
+                    }
+                } else {
+                    console.warn('⚠️ Amadeus booking not found for orderId:', orderId);
+                }
+            }
+        } else if (resultCode === 9000) {
+            console.log(`⚠️ Payment authorized for order ${orderId}, transaction ${transId}`);
+        } else {
+            console.log(`❌ Payment failed for order ${orderId}, resultCode: ${resultCode}, message: ${message}`);
+        }
+
+        return res.status(204).end();
     } catch (error) {
-        console.error('MoMo callback error:', error);
+        console.error('❌ MoMo callback error:', error);
         return res.status(500).json({
             success: false,
             message: error.message

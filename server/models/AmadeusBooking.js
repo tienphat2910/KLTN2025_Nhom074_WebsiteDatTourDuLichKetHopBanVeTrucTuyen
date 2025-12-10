@@ -247,6 +247,17 @@ const amadeusBookingSchema = new mongoose.Schema({
         return_message: String
     },
 
+    // MoMo fields
+    momoOrderId: String,
+    momoTransId: String,
+    momoResponse: {
+        resultCode: Number,
+        message: String,
+        transId: String,
+        amount: Number,
+        responseTime: Number
+    },
+
     // Booking status
     status: {
         type: String,

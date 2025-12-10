@@ -922,6 +922,156 @@ router.post('/:id/payment/zalopay', auth, async (req, res) => {
 
 /**
  * @swagger
+ * /api/amadeus-bookings/{id}/payment/momo:
+ *   post:
+ *     summary: Tạo thanh toán MoMo cho booking
+ *     tags: [Amadeus Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: MoMo order created
+ */
+router.post('/:id/payment/momo', auth, async (req, res) => {
+    try {
+        const booking = await AmadeusBooking.findOne({
+            _id: req.params.id,
+            userId: req.user._id
+        });
+
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy booking'
+            });
+        }
+
+        if (booking.paymentStatus === 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: 'Booking này đã được thanh toán'
+            });
+        }
+
+        // Create MoMo payment
+        const axios = require('axios');
+        const crypto = require('crypto');
+        const momoConfig = require('../config/momo');
+
+        const {
+            accessKey,
+            secretKey,
+            partnerCode,
+            redirectUrl,
+            ipnUrl,
+            requestType,
+            lang,
+            autoCapture,
+            endpoint
+        } = momoConfig;
+
+        const amount = Math.round(booking.totalAmount).toString();
+        const outboundSegment = booking.outboundFlight?.itineraries?.[0]?.segments?.[0];
+        const orderInfo = `Thanh toán vé máy bay ${booking.bookingReference} - ${outboundSegment?.departure?.iataCode || ''} → ${outboundSegment?.arrival?.iataCode || ''}`;
+
+        const orderId = partnerCode + new Date().getTime();
+        const requestId = orderId;
+        const extraData = JSON.stringify({
+            bookingId: booking._id.toString(),
+            bookingType: 'amadeus_flight',
+            bookingReference: booking.bookingReference
+        });
+
+        // Create raw signature string
+        const rawSignature =
+            'accessKey=' + accessKey +
+            '&amount=' + amount +
+            '&extraData=' + extraData +
+            '&ipnUrl=' + ipnUrl +
+            '&orderId=' + orderId +
+            '&orderInfo=' + orderInfo +
+            '&partnerCode=' + partnerCode +
+            '&redirectUrl=' + redirectUrl +
+            '&requestId=' + requestId +
+            '&requestType=' + requestType;
+
+        // Generate signature
+        const signature = crypto
+            .createHmac('sha256', secretKey)
+            .update(rawSignature)
+            .digest('hex');
+
+        // Create request body for MoMo API
+        const requestBody = JSON.stringify({
+            partnerCode: partnerCode,
+            partnerName: 'LuTrip',
+            storeId: 'LuTripStore',
+            requestId: requestId,
+            amount: amount,
+            orderId: orderId,
+            orderInfo: orderInfo,
+            redirectUrl: redirectUrl,
+            ipnUrl: ipnUrl,
+            lang: lang,
+            requestType: requestType,
+            autoCapture: autoCapture,
+            extraData: extraData,
+            orderGroupId: '',
+            signature: signature,
+        });
+
+        // Send request to MoMo
+        const momoResponse = await axios({
+            method: 'POST',
+            url: endpoint,
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(requestBody),
+            },
+            data: requestBody,
+        });
+
+        if (momoResponse.data.resultCode === 0) {
+            // Update booking with MoMo transaction ID
+            booking.momoOrderId = orderId;
+            booking.momoTransId = momoResponse.data.transId;
+            booking.paymentMethod = 'momo';
+            await booking.save();
+
+            res.json({
+                success: true,
+                data: {
+                    payUrl: momoResponse.data.payUrl,
+                    orderId: orderId,
+                    bookingId: booking._id,
+                    bookingReference: booking.bookingReference
+                },
+                message: 'Tạo đơn hàng MoMo thành công'
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: momoResponse.data.message || 'Lỗi tạo đơn hàng MoMo'
+            });
+        }
+    } catch (error) {
+        console.error('Create MoMo order error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi tạo đơn hàng MoMo: ' + error.message
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/amadeus-bookings/{id}/payment/status:
  *   get:
  *     summary: Kiểm tra trạng thái thanh toán
@@ -961,6 +1111,74 @@ router.get('/:id/payment/status', auth, async (req, res) => {
                     paidAt: booking.paidAt
                 }
             });
+        }
+
+        // Query MoMo if we have MoMo order ID
+        if (booking.momoOrderId) {
+            const axios = require('axios');
+            const crypto = require('crypto');
+            const momoConfig = require('../config/momo');
+
+            const {
+                accessKey,
+                secretKey,
+                partnerCode,
+                queryEndpoint
+            } = momoConfig;
+
+            const requestId = booking.momoOrderId;
+            const orderId = booking.momoOrderId;
+            const lang = 'vi';
+
+            // Create signature for query
+            const rawSignature = `accessKey=${accessKey}&orderId=${orderId}&partnerCode=${partnerCode}&requestId=${requestId}`;
+            const signature = crypto
+                .createHmac('sha256', secretKey)
+                .update(rawSignature)
+                .digest('hex');
+
+            try {
+                const momoResponse = await axios.post(queryEndpoint, {
+                    partnerCode,
+                    requestId,
+                    orderId,
+                    lang,
+                    signature
+                });
+
+                if (momoResponse.data.resultCode === 0) {
+                    // Payment successful - update booking
+                    booking.paymentStatus = 'paid';
+                    booking.status = 'confirmed';
+                    booking.paidAt = new Date();
+                    booking.momoResponse = momoResponse.data;
+                    await booking.save();
+
+                    // Send confirmation email
+                    try {
+                        const user = await User.findById(req.user._id);
+                        if (user && user.email) {
+                            await sendBookingConfirmationEmail(user.email, booking);
+                        }
+                    } catch (emailError) {
+                        console.warn('Email sending error:', emailError.message);
+                    }
+                }
+
+                return res.json({
+                    success: true,
+                    data: {
+                        bookingId: booking._id,
+                        bookingReference: booking.bookingReference,
+                        paymentStatus: booking.paymentStatus,
+                        paymentMethod: booking.paymentMethod,
+                        paidAt: booking.paidAt,
+                        momoStatus: momoResponse.data
+                    }
+                });
+            } catch (momoError) {
+                console.error('MoMo query error:', momoError);
+            }
         }
 
         // Query ZaloPay if we have transaction ID
