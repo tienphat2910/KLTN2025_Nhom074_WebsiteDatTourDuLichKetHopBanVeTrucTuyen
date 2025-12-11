@@ -363,13 +363,13 @@ export default function BookingTourPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-100">
+    <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="py-8 mt-16 sm:mt-20">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6">
+            <div className="bg-blue-600 text-white p-6">
               <h1 className="text-2xl font-bold mb-2">
                 Đặt Tour: {tour.title}
               </h1>
@@ -452,7 +452,7 @@ export default function BookingTourPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold py-4 rounded-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 text-lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 text-lg"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center">
