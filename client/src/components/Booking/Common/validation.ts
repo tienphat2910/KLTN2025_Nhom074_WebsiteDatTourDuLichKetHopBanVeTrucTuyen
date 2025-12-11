@@ -545,18 +545,26 @@ export const validateAmadeusPassengers = (
 };
 
 // Common Validation
-export const validatePaymentMethod = (paymentMethod: string): boolean => {
+export const validatePaymentMethod = (
+  paymentMethod: string
+): { isValid: boolean; message: string } => {
   if (!paymentMethod) {
-    toast.error("Vui lòng chọn hình thức thanh toán!");
-    return false;
+    return {
+      isValid: false,
+      message: "Vui lòng chọn hình thức thanh toán!"
+    };
   }
-  return true;
+  return { isValid: true, message: "" };
 };
 
-export const validateScheduledDate = (scheduledDate: string): boolean => {
+export const validateScheduledDate = (
+  scheduledDate: string
+): { isValid: boolean; message: string } => {
   if (!scheduledDate) {
-    toast.error("Vui lòng chọn ngày tham gia!");
-    return false;
+    return {
+      isValid: false,
+      message: "Vui lòng chọn ngày tham gia!"
+    };
   }
-  return true;
+  return { isValid: true, message: "" };
 };

@@ -17,7 +17,8 @@ import {
   SpecialRequest,
   validateFlightPassengers,
   validatePaymentMethod,
-  FlightPassenger
+  FlightPassenger,
+  PassengerValidationError
 } from "@/components/Booking/Common";
 import {
   FlightPassengerForm,
@@ -109,6 +110,11 @@ export default function BookingFlightPage() {
   // Discount information
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(null);
+
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<
+    PassengerValidationError[]
+  >([]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -270,11 +276,21 @@ export default function BookingFlightPage() {
     }
 
     // Validate passenger information
-    if (!validateFlightPassengers(passengers, adults)) {
+    const validation = validateFlightPassengers(passengers, adults);
+    setValidationErrors(validation.errors);
+    if (!validation.isValid) {
+      if (validation.errors.length > 0) {
+        const firstError = validation.errors[0];
+        toast.error(
+          `Hành khách ${firstError.index + 1}: ${firstError.message}`
+        );
+      }
       return;
     }
 
-    if (!validatePaymentMethod(paymentMethod)) {
+    const paymentValidation = validatePaymentMethod(paymentMethod);
+    if (!paymentValidation.isValid) {
+      toast.error(paymentValidation.message);
       return;
     }
 

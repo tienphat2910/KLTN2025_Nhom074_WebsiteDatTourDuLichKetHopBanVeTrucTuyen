@@ -26,7 +26,10 @@ import {
 } from "@/services/amadeusBookingService";
 import { discountService } from "@/services/discountService";
 import { Discount } from "@/types/discount";
-import { validateAmadeusPassengers } from "@/components/Booking/Common/validation";
+import {
+  validateAmadeusPassengers,
+  PassengerValidationError
+} from "@/components/Booking/Common/validation";
 import {
   Plane,
   Users,
@@ -104,6 +107,11 @@ export default function AmadeusBookingPage() {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [validatingDiscount, setValidatingDiscount] = useState(false);
   const [specialRequests, setSpecialRequests] = useState("");
+
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<
+    PassengerValidationError[]
+  >([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -419,7 +427,20 @@ export default function AmadeusBookingPage() {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1: // Passengers
-        return validateAmadeusPassengers(passengers, contactInfo);
+        const validation = validateAmadeusPassengers(passengers, contactInfo);
+        setValidationErrors(validation.errors);
+        if (!validation.isValid && validation.errors.length > 0) {
+          // Show first error as toast for now
+          const firstError = validation.errors[0];
+          if (firstError.index >= 0) {
+            toast.error(
+              `Hành khách ${firstError.index + 1}: ${firstError.message}`
+            );
+          } else {
+            toast.error(firstError.message);
+          }
+        }
+        return validation.isValid;
 
       case 2: // Seats (optional)
         return true;
