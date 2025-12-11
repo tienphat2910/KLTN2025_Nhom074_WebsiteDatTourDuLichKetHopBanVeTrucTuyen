@@ -12,10 +12,7 @@ import { tourService, Tour } from "@/services/tourService";
 import { activityService } from "@/services/activityService";
 import { LoadingSpinner } from "@/components/Loading";
 
-const navItems = [
-  { href: "/flights", label: "Vé Máy Bay" },
-  { href: "/activity", label: "Giải Trí" }
-];
+const navItems = [{ href: "/flights", label: "Vé Máy Bay" }];
 
 export default function Header() {
   const pathname = usePathname();
@@ -460,21 +457,6 @@ export default function Header() {
                           </Link>
                         ))}
                       </div>
-                    </div>
-
-                    {/* View All Link */}
-                    <div className="px-4 pt-3 border-t border-gray-100 mt-3">
-                      <Link
-                        href="/destinations"
-                        className={`block w-full text-center py-2 rounded-md transition-colors font-medium text-sm ${
-                          pathname.startsWith("/destinations")
-                            ? "bg-blue-600 text-white"
-                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                        }`}
-                        onClick={() => setIsDestinationsOpen(false)}
-                      >
-                        Xem tất cả địa điểm
-                      </Link>
                     </div>
                   </div>
                 )}
@@ -1099,18 +1081,6 @@ export default function Header() {
                           ))}
                         </div>
                       </div>
-
-                      {/* View all */}
-                      <Link
-                        href="/destinations"
-                        className="block mx-2 mt-3 py-2 text-center bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-medium text-sm"
-                        onClick={() => {
-                          setMobileDestinationsOpen(false);
-                          setIsMobileMenuOpen(false);
-                        }}
-                      >
-                        Xem tất cả địa điểm
-                      </Link>
                     </div>
                   )}
                 </div>

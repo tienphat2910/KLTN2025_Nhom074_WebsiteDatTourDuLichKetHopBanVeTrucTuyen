@@ -26,6 +26,7 @@ import {
 } from "@/services/amadeusBookingService";
 import { discountService } from "@/services/discountService";
 import { Discount } from "@/types/discount";
+import { validateAmadeusPassengers } from "@/components/Booking/Common/validation";
 import {
   Plane,
   Users,
@@ -418,25 +419,7 @@ export default function AmadeusBookingPage() {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1: // Passengers
-        for (const p of passengers) {
-          if (!p.firstName.trim() || !p.lastName.trim()) {
-            toast.error("Vui lòng nhập đầy đủ họ và tên hành khách");
-            return false;
-          }
-          if (!p.dateOfBirth) {
-            toast.error("Vui lòng nhập ngày sinh hành khách");
-            return false;
-          }
-          if (p.type === "ADULT" && !p.identityNumber?.trim()) {
-            toast.error("Vui lòng nhập CCCD/Hộ chiếu cho người lớn");
-            return false;
-          }
-        }
-        if (!contactInfo.email || !contactInfo.phone) {
-          toast.error("Vui lòng nhập thông tin liên hệ");
-          return false;
-        }
-        return true;
+        return validateAmadeusPassengers(passengers, contactInfo);
 
       case 2: // Seats (optional)
         return true;
