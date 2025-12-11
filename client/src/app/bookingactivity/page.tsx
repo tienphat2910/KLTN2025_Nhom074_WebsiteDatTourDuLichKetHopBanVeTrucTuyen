@@ -492,7 +492,8 @@ export default function BookingActivityPage() {
               <PaymentMethod
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
-                showCash={true}
+                showCash={false}
+                showBankTransfer={false}
               />
 
               {/* Price Summary - Using Component */}
