@@ -17,7 +17,8 @@ import {
   SpecialRequest,
   validateTourPassengers,
   validatePaymentMethod,
-  TourPassenger
+  TourPassenger,
+  PassengerValidationError
 } from "@/components/Booking/Common";
 import { TourPassengerForm, TourPriceSummary } from "@/components/Booking/Tour";
 
@@ -39,6 +40,11 @@ export default function BookingTourPage() {
   const [passengers, setPassengers] = useState<TourPassenger[]>([]);
   const [note, setNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
+
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<
+    PassengerValidationError[]
+  >([]);
 
   // Discount information
   const [discountCode, setDiscountCode] = useState("");
@@ -152,11 +158,21 @@ export default function BookingTourPage() {
     }
 
     // Validate passenger information
-    if (!validateTourPassengers(passengers)) {
+    const validation = validateTourPassengers(passengers);
+    setValidationErrors(validation.errors);
+    if (!validation.isValid) {
+      if (validation.errors.length > 0) {
+        const firstError = validation.errors[0];
+        toast.error(
+          `Hành khách ${firstError.index + 1}: ${firstError.message}`
+        );
+      }
       return;
     }
 
-    if (!validatePaymentMethod(paymentMethod)) {
+    const paymentValidation = validatePaymentMethod(paymentMethod);
+    if (!paymentValidation.isValid) {
+      toast.error(paymentValidation.message);
       return;
     }
 

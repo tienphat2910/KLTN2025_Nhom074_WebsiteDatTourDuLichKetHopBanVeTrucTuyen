@@ -19,7 +19,8 @@ import {
   validateActivityParticipants,
   validatePaymentMethod,
   validateScheduledDate,
-  ActivityParticipant
+  ActivityParticipant,
+  PassengerValidationError
 } from "@/components/Booking/Common";
 import {
   ActivityInfo,
@@ -53,6 +54,11 @@ export default function BookingActivityPage() {
   // Discount information
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(null);
+
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<
+    PassengerValidationError[]
+  >([]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -194,15 +200,27 @@ export default function BookingActivityPage() {
     }
 
     // Validate participant information
-    if (!validateActivityParticipants(participants)) {
+    const validation = validateActivityParticipants(participants);
+    setValidationErrors(validation.errors);
+    if (!validation.isValid) {
+      if (validation.errors.length > 0) {
+        const firstError = validation.errors[0];
+        toast.error(
+          `Người tham gia ${firstError.index + 1}: ${firstError.message}`
+        );
+      }
       return;
     }
 
-    if (!validateScheduledDate(scheduledDate)) {
+    const scheduledDateValidation = validateScheduledDate(scheduledDate);
+    if (!scheduledDateValidation.isValid) {
+      toast.error(scheduledDateValidation.message);
       return;
     }
 
-    if (!validatePaymentMethod(paymentMethod)) {
+    const paymentValidation = validatePaymentMethod(paymentMethod);
+    if (!paymentValidation.isValid) {
+      toast.error(paymentValidation.message);
       return;
     }
 
