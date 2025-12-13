@@ -642,12 +642,6 @@ export function TourManagement() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => handleEditTour(tour)}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Chỉnh sửa
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
                               onClick={() =>
                                 handleTourAction("toggle-active", tour._id)
                               }
