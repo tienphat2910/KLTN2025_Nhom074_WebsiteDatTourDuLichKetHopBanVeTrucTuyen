@@ -566,5 +566,29 @@ export const validateScheduledDate = (
       message: "Vui lòng chọn ngày tham gia!"
     };
   }
+
+  const now = new Date();
+  const currentHour = now.getHours();
+  const selectedDate = new Date(scheduledDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  selectedDate.setHours(0, 0, 0, 0);
+
+  // If selected date is in the past
+  if (selectedDate < today) {
+    return {
+      isValid: false,
+      message: "Ngày tham gia phải từ hôm nay trở đi!"
+    };
+  }
+
+  // If selected date is today and current time is after 17:00
+  if (selectedDate.getTime() === today.getTime() && currentHour >= 17) {
+    return {
+      isValid: false,
+      message: "Đã quá 17h, vui lòng chọn ngày tham gia từ ngày mai trở đi!"
+    };
+  }
+
   return { isValid: true, message: "" };
 };
