@@ -180,16 +180,56 @@ async function analyzeIntentAndGetData(message) {
     const extractedDestination = await extractDestination(message);
     console.log('🤖 Extracted destination:', extractedDestination);
 
+    // Check xem có phải activity không (đầm sen, vé vui chơi, v.v.)
+    const normalizedMessage = normalizeText(message);
+    const allActivities = await Activity.find({ isActive: true })
+        .populate('destinationId', 'name slug')
+        .sort({ createdAt: -1 })
+        .lean();
+
+    const matchedActivities = allActivities.filter(activity => {
+        const normalizedActivityName = normalizeText(activity.name || '');
+        const lowerActivityName = (activity.name || '').toLowerCase();
+        const lowerMessage = message.toLowerCase();
+
+        // Exact match hoặc contains
+        return normalizedActivityName.includes(normalizedMessage) ||
+            normalizedMessage.includes(normalizedActivityName) ||
+            lowerActivityName.includes(lowerMessage) ||
+            lowerMessage.includes(lowerActivityName);
+    });
+
+    console.log('🤖 Matched activities by name:', matchedActivities.length);
+    if (matchedActivities.length > 0) {
+        console.log('🤖 First matched activity:', matchedActivities[0].name);
+    }
+
     // Detect intent dựa trên keywords và destination
+    // ƯU TIÊN 0: Nếu tìm thấy activity theo tên cụ thể
+    if (matchedActivities.length > 0) {
+        relevantData.intent = 'activity';
+        relevantData.activities = matchedActivities.slice(0, 10);
+        console.log('🤖 Detected activity by name - returning matched activities');
+        return relevantData;
+    }
+
     // ƯU TIÊN 1: Nếu có destination cụ thể, xử lý trước
     if (extractedDestination) {
         relevantData.intent = 'specific_destination';
         console.log('🤖 Detected specific destination intent');
 
-        // Query tất cả tours active - populate both destinationId and destinationIds
-        const allTours = await Tour.find({ isActive: true })
+        // Query tất cả tours active và chưa hết hạn - populate both destinationId and destinationIds
+        // Sort theo createdAt để lấy tour mới nhất
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+
+        const allTours = await Tour.find({
+            isActive: true,
+            startDate: { $gte: today } // Chỉ lấy tour chưa khởi hành
+        })
             .populate('destinationId')
             .populate('destinationIds')
+            .sort({ createdAt: -1 }) // Mới nhất trước
             .limit(100)
             .lean();
         console.log('🤖 All tours:', allTours.length);
@@ -295,8 +335,14 @@ async function analyzeIntentAndGetData(message) {
         relevantData.intent = 'beach';
         console.log('🤖 Detected beach intent');
 
-        // Query tất cả tours active trước
-        const allTours = await Tour.find({ isActive: true }).populate('destinationId').limit(20).lean();
+        // Query tất cả tours active và chưa hết hạn trước
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const allTours = await Tour.find({
+            isActive: true,
+            startDate: { $gte: today }
+        }).populate('destinationId').sort({ createdAt: -1 }).limit(20).lean();
         console.log('🤖 All tours:', allTours.length);
 
         // Filter tours có destination chứa Phú Quốc hoặc các từ khóa biển
@@ -343,10 +389,15 @@ async function analyzeIntentAndGetData(message) {
             relevantData.intent = 'tour';
             console.log('🤖 Detected general tour intent');
 
-            // Lấy tất cả tours active
-            relevantData.tours = await Tour.find({ isActive: true })
-                .populate('destinationId')
-                .limit(15)
+            // Lấy tất cả tours active và chưa hết hạn
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            relevantData.tours = await Tour.find({
+                isActive: true,
+                startDate: { $gte: today }
+            })
+                .populate('destinationId').sort({ createdAt: -1 }).limit(15)
                 .lean();
             console.log('🤖 General tours found:', relevantData.tours.length);
         }
@@ -355,17 +406,24 @@ async function analyzeIntentAndGetData(message) {
         lowerMessage.includes('trải nghiệm') || lowerMessage.includes('thể thao')) {
         relevantData.intent = 'activity';
         relevantData.activities = await Activity.find({ isActive: true })
+            .populate('destinationId', 'name slug')
+            .sort({ createdAt: -1 })
             .limit(10)
             .lean();
         console.log('🤖 Activities found:', relevantData.activities.length);
     } else {
-        // Default: lấy một số tours ngẫu nhiên để gợi ý
+        // Default: lấy một số tours chưa hết hạn để gợi ý
         relevantData.intent = 'general';
         console.log('🤖 General intent - getting random tours');
 
-        relevantData.tours = await Tour.find({ isActive: true })
-            .populate('destinationId')
-            .limit(8)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        relevantData.tours = await Tour.find({
+            isActive: true,
+            startDate: { $gte: today }
+        })
+            .populate('destinationId').sort({ createdAt: -1 }).limit(8)
             .lean();
         console.log('🤖 Random tours found:', relevantData.tours.length);
     }
@@ -430,20 +488,37 @@ THÔNG TIN VỀ LUTRIP:
 - Website: lutrip.vn
 
 VAI TRÒ CỦA BẠN:
-1. Tư vấn và hướng dẫn khách hàng tìm tour, vé máy bay, khách sạn phù hợp
-2. Phân tích dữ liệu thực từ database để đưa ra câu trả lời chính xác
-3. KHÔNG sử dụng câu trả lời mẫu cứng - luôn dựa vào thông tin có sẵn
-4. Nếu không có dữ liệu phù hợp, hãy nói rõ và gợi ý khách hàng liên hệ tư vấn thêm
-5. Khuyến khích khách hàng click vào các gợi ý để xem chi tiết
+1. Bạn có thể trả lời MỌI CÂU HỎI - không chỉ giới hạn về du lịch
+2. ƯU TIÊN trả lời bằng kiến thức chung của bạn TRƯỚC, SAU ĐÓ mới dựa vào database
+3. Với câu hỏi về kinh nghiệm du lịch, gợi ý điểm đến: Tư vấn chi tiết dựa trên kiến thức về địa điểm đó (điểm tham quan, ẩm thực, văn hóa, mẹo du lịch...)
+4. SAU KHI tư vấn bằng kiến thức, nếu có tours trong database thì giới thiệu thêm
+5. Nếu không có tours trong database, KHÔNG SAO - vẫn tư vấn hết mình về địa điểm đó
+6. Phân tích dữ liệu thực từ database khi có - KHÔNG sử dụng câu trả lời mẫu cứng
+7. Khuyến khích khách hàng click vào các gợi ý để xem chi tiết (chỉ khi có tours/activities)
 
 NGUYÊN TẮC HOẠT ĐỘNG:
-- Trả lời dựa trên dữ liệu thực tế từ database
-- Nếu có tours phù hợp, tóm tắt ngắn gọn số lượng và điểm nổi bật, đề cập "Xem các tour bên dưới"
-- Nếu KHÔNG có tours phù hợp (KHÔNG CÓ TOUR PHÙ HỢP TRONG DATABASE), nói rõ "Hiện tại chưa có tour đến [tên điểm đến] trong hệ thống" và gợi ý liên hệ hotline 1900 XXX XXX hoặc email support@lutrip.vn
-- TUYỆT ĐỐI KHÔNG đề cập đến "gợi ý bên dưới" hoặc "click vào gợi ý" khi KHÔNG có tour phù hợp
-- Sử dụng emoji phù hợp (✈️ 🏖️ 🎉 🌟)
+- Với câu hỏi CHUNG (toán học, thời tiết, kiến thức, đời sống): Trả lời trực tiếp, chính xác, thân thiện. VÍ DỤ: "1+1=2", "Thủ đô Việt Nam là Hà Nội"
+
+- Với câu hỏi về KINH NGHIỆM DU LỊCH, GỢI Ý ĐIỂM ĐẾN:
+  * BƯỚC 1: Tư vấn chi tiết bằng kiến thức của bạn về địa điểm đó:
+    - Các điểm tham quan nổi tiếng
+    - Ẩm thực đặc trưng
+    - Thời điểm đi tốt nhất
+    - Tips và lưu ý
+    - Phương tiện di chuyển
+  * BƯỚC 2: SAU ĐÓ mới kiểm tra database và giới thiệu tours (nếu có)
+  * Nếu KHÔNG có tours: KHÔNG SAO - vẫn đã tư vấn hữu ích ở bước 1
+  
+- Với câu hỏi về ĐẶT TOUR cụ thể: 
+  * Trả lời dựa trên dữ liệu thực tế từ database
+  * Nếu có tours phù hợp, tóm tắt ngắn gọn số lượng và điểm nổi bật, đề cập "Xem các tour mới nhất bên dưới"
+  * Nếu KHÔNG có tours phù hợp, nói rõ "Hiện tại chưa có tour đến [tên điểm đến] trong hệ thống" và gợi ý liên hệ hotline
+
+- TUYỆT ĐỐI KHÔNG đề cập đến "gợi ý bên dưới" hoặc "click vào gợi ý" khi KHÔNG có tour/activity nào
+- Sử dụng emoji phù hợp (✈️ 🏖️ 🎉 🌟 ➕ ✅ 🍜 🏛️)
 - Trả lời bằng tiếng Việt
 - CHỈ đề cập đến các gợi ý/items bên dưới khi CÓ tours trong database
+- Tour được gợi ý là các tour MỚI NHẤT và đang HOẠT ĐỘNG (isActive = true)
 
 LƯU Ý VỀ ĐỊA DANH:
 - Khi khách hỏi về các tỉnh Miền Tây (An Giang, Cà Mau, Bạc Liêu, Sóc Trăng, v.v.), tours sẽ được hiển thị dưới tên chung "ĐBSCL - Cần Thơ"
@@ -451,9 +526,34 @@ LƯU Ý VỀ ĐỊA DANH:
 - Tương tự cho Tây Nguyên: Kon Tum, Gia Lai, Đắk Lắk đều thuộc vùng "Tây Nguyên"
 
 QUAN TRỌNG: 
-1. KHÔNG sử dụng các câu trả lời mẫu như "Phú Quốc có nhiều tour hấp dẫn". Hãy phân tích dữ liệu thực và trả lời dựa trên số lượng tours có sẵn.
-2. Khi KHÔNG có tours, ĐỪNG nói về "gợi ý" hay "tour bên dưới" - chỉ nói không có và hướng dẫn liên hệ tư vấn.
-3. Khi khách hỏi về tỉnh cụ thể nhưng tours hiển thị destination tổng hợp (ĐBSCL, Tây Nguyên), hãy giải thích rõ ràng.`;
+1. ƯU TIÊN TƯ VẤN BẰNG KIẾN THỨC TRƯỚC: Khi người dùng hỏi về kinh nghiệm, gợi ý du lịch, hãy tư vấn chi tiết về địa điểm đó trước (điểm tham quan, ẩm thực, văn hóa, tips...) rồi mới giới thiệu tours trong hệ thống
+2. KHÔNG sử dụng các câu trả lời mẫu như "Phú Quốc có nhiều tour hấp dẫn". Hãy phân tích dữ liệu thực và trả lời dựa trên số lượng tours có sẵn.
+3. Khi KHÔNG có tours nhưng CÓ câu hỏi về kinh nghiệm du lịch: Vẫn tư vấn hết mình về địa điểm đó, SAU ĐÓ mới nói "Nếu cần đặt tour, vui lòng liên hệ..."
+4. Khi khách hỏi về tỉnh cụ thể nhưng tours hiển thị destination tổng hợp (ĐBSCL, Tây Nguyên), hãy giải thích rõ ràng.
+
+VÍ DỤ CÁCH TRẢ LỜI TỐT:
+Câu hỏi: "Gợi ý kinh nghiệm du lịch TP.HCM"
+Trả lời: 
+"TP. Hồ Chí Minh là thành phố sôi động với nhiều điều thú vị! 🌟
+
+📍 Điểm tham quan nổi tiếng:
+- Nhà thờ Đức Bà, Bưu điện Trung tâm
+- Dinh Độc Lập, Bảo tàng Chiến tranh
+- Phố đi bộ Nguyễn Huệ
+- Chợ Bến Thành
+
+🍜 Ẩm thực đặc trưng:
+- Bánh mì Huỳnh Hoa
+- Phở, hủ tiếu, cơm tấm
+- Cafe phin sữa đá
+
+💡 Tips:
+- Đi taxi công nghệ để tránh bị chặt chém
+- Nên đi vào buổi sáng sớm hoặc chiều tối tránh nắng
+
+[NẾU CÓ TOURS]: Ngoài ra, LuTrip có X tour khởi hành từ TP.HCM đến các vùng lân cận. Xem gợi ý bên dưới!
+[NẾU KHÔNG CÓ]: Nếu bạn cần book tour từ TP.HCM, liên hệ hotline 1900 XXX XXX nhé!"`;
+
 
 /**
  * @swagger
@@ -609,11 +709,12 @@ Assistant:`;
 
         await chatHistory.save();
 
-        // Chuẩn bị items để hiển thị - CHỈ hiển thị khi có tours thực sự phù hợp
+        // Chuẩn bị items để hiển thị - CHỈ hiển thị khi có tours/activities thực sự phù hợp
         const suggestedItems = [];
 
         console.log('🤖 Creating suggested items...');
         console.log('🤖 relevantData.tours length:', relevantData.tours.length);
+        console.log('🤖 relevantData.activities length:', relevantData.activities.length);
         console.log('🤖 relevantData.intent:', relevantData.intent);
         console.log('🤖 First tour title:', relevantData.tours[0]?.title?.substring(0, 50));
 
@@ -635,11 +736,24 @@ Assistant:`;
             console.log('🤖 Added tour items:', tourItems.length);
             console.log('🤖 First tour item title:', tourItems[0]?.title?.substring(0, 50));
         } else {
-            console.log('🤖 No suggested items - no matching tours found or destination not in system');
+            console.log('🤖 No tour items - no matching tours found or destination not in system');
         }
 
-        // KHÔNG thêm destinations hay activities nếu không có tours
-        // User chỉ muốn thấy tours liên quan đến destination họ hỏi
+        // Thêm activities nếu có
+        if (relevantData.activities && relevantData.activities.length > 0) {
+            const activityItems = relevantData.activities.slice(0, 5).map(activity => ({
+                type: 'activity',
+                id: activity._id,
+                slug: activity.slug,
+                title: activity.name,
+                description: activity.description,
+                price: activity.price,
+                destination: activity.destinationId?.name,
+                image: activity.images?.[0] || '/images/activity-default.jpg'
+            }));
+            suggestedItems.push(...activityItems);
+            console.log('🤖 Added activity items:', activityItems.length);
+        }
 
         console.log('🤖 Total suggested items:', suggestedItems.length);
 
@@ -656,23 +770,49 @@ Assistant:`;
         let fallbackResponse = "Xin chào! Hiện tại hệ thống đang bận. ";
         let fallbackItems = null;
 
-        if (relevantData && relevantData.tours.length > 0) {
+        if (relevantData && (relevantData.tours.length > 0 || relevantData.activities.length > 0)) {
             const tourCount = relevantData.tours.length;
-            const firstTour = relevantData.tours[0];
-            fallbackResponse += `Chúng tôi có ${tourCount} tour phù hợp. Xem gợi ý bên dưới nhé! 🌟`;
+            const activityCount = relevantData.activities.length;
+
+            if (tourCount > 0 && activityCount > 0) {
+                fallbackResponse += `Chúng tôi có ${tourCount} tour và ${activityCount} hoạt động phù hợp. Xem gợi ý bên dưới nhé! 🌟`;
+            } else if (tourCount > 0) {
+                fallbackResponse += `Chúng tôi có ${tourCount} tour phù hợp. Xem gợi ý bên dưới nhé! 🌟`;
+            } else {
+                fallbackResponse += `Chúng tôi có ${activityCount} hoạt động phù hợp. Xem gợi ý bên dưới nhé! 🌟`;
+            }
 
             // Tạo suggested items từ data đã query
-            fallbackItems = relevantData.tours.slice(0, 3).map(tour => ({
-                type: 'tour',
-                id: tour._id,
-                slug: tour.slug,
-                title: tour.title,
-                description: tour.description,
-                price: tour.price,
-                duration: tour.duration,
-                destination: tour.destinationId?.name,
-                image: tour.images?.[0] || '/images/tour-default.jpg'
-            }));
+            const items = [];
+
+            if (relevantData.tours.length > 0) {
+                items.push(...relevantData.tours.slice(0, 3).map(tour => ({
+                    type: 'tour',
+                    id: tour._id,
+                    slug: tour.slug,
+                    title: tour.title,
+                    description: tour.description,
+                    price: tour.price,
+                    duration: tour.duration,
+                    destination: tour.destinationId?.name,
+                    image: tour.images?.[0] || '/images/tour-default.jpg'
+                })));
+            }
+
+            if (relevantData.activities.length > 0) {
+                items.push(...relevantData.activities.slice(0, 3).map(activity => ({
+                    type: 'activity',
+                    id: activity._id,
+                    slug: activity.slug,
+                    title: activity.name,
+                    description: activity.description,
+                    price: activity.price,
+                    destination: activity.destinationId?.name,
+                    image: activity.images?.[0] || '/images/activity-default.jpg'
+                })));
+            }
+
+            fallbackItems = items;
         } else {
             fallbackResponse += "Vui lòng liên hệ hotline 1900 XXX XXX để được tư vấn trực tiếp.";
         }
@@ -718,9 +858,16 @@ router.post("/suggest-tours", async (req, res) => {
             return res.status(400).json({ error: "Query không được để trống" });
         }
 
-        // Lấy tours từ database
-        const tours = await Tour.find({ isActive: true })
+        // Lấy tours từ database - Mới nhất, đang active và chưa hết hạn
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const tours = await Tour.find({
+            isActive: true,
+            startDate: { $gte: today }
+        })
             .populate("destinationId")
+            .sort({ createdAt: -1 }) // Mới nhất trước
             .limit(20)
             .lean();
 

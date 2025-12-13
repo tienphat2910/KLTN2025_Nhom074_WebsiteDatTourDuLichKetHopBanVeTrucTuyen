@@ -260,26 +260,28 @@ export default function Chatbot() {
                           <p className="text-xs font-medium text-gray-600 mb-2">
                             Gợi ý cho bạn:
                           </p>
-                          <div className="grid gap-2">
+                          <div className="grid gap-2 max-w-full">
                             {message.suggestedItems.map((item, idx) => (
                               <div
                                 key={idx}
                                 onClick={() => handleItemClick(item)}
-                                className="bg-gray-50 hover:bg-gray-100 p-2 rounded-lg cursor-pointer transition-colors border border-gray-200"
+                                className="bg-gray-50 hover:bg-gray-100 p-2 rounded-lg cursor-pointer transition-colors border border-gray-200 overflow-hidden"
                               >
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
                                     {item.type === "tour" && (
-                                      <span className="text-xs">Tour</span>
+                                      <span className="text-[10px]">Tour</span>
                                     )}
                                     {item.type === "destination" && (
-                                      <span className="text-xs">Diem den</span>
+                                      <span className="text-[10px]">Đ.đến</span>
                                     )}
                                     {item.type === "activity" && (
-                                      <span className="text-xs">Hoat dong</span>
+                                      <span className="text-[10px]">
+                                        H.động
+                                      </span>
                                     )}
                                   </div>
-                                  <div className="flex-1 min-w-0">
+                                  <div className="flex-1 min-w-0 overflow-hidden">
                                     <p className="text-xs font-medium text-gray-800 truncate">
                                       {item.title}
                                     </p>
