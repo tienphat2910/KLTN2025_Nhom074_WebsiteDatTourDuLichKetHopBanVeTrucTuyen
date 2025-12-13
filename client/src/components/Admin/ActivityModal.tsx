@@ -705,6 +705,9 @@ export function ActivityModal({
                   }
                   placeholder="0"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Thường bằng 70-80% giá người lớn
+                </p>
               </div>
               <div>
                 <Label htmlFor="price-baby">Em bé (VNĐ)</Label>
