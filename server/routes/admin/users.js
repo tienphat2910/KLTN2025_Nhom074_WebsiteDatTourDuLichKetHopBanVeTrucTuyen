@@ -1,5 +1,8 @@
 const express = require('express');
 const User = require('../../models/User.js');
+const BookingFlight = require('../../models/BookingFlight');
+const BookingTour = require('../../models/BookingTour');
+const BookingActivity = require('../../models/BookingActivity');
 const { validateEmail } = require('../../utils/emailValidation');
 const admin = require('../../middleware/admin');
 const router = express.Router();
@@ -240,6 +243,69 @@ router.get('/', admin, async (req, res) => {
             .skip(skip)
             .limit(parseInt(limit));
 
+        // Get booking stats for each user
+        const usersWithStats = await Promise.all(users.map(async (user) => {
+            const userId = user._id;
+
+            // Get stats from all booking types
+            const [flightStats, tourStats, activityStats] = await Promise.all([
+                BookingFlight.aggregate([
+                    {
+                        $match: {
+                            userId: userId,
+                            status: 'completed'
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            count: { $sum: 1 },
+                            total: { $sum: '$totalPrice' }
+                        }
+                    }
+                ]),
+                BookingTour.aggregate([
+                    {
+                        $match: {
+                            userId: userId,
+                            status: 'completed'
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            count: { $sum: 1 },
+                            total: { $sum: '$finalTotal' }
+                        }
+                    }
+                ]),
+                BookingActivity.aggregate([
+                    {
+                        $match: {
+                            userId: userId,
+                            status: 'completed'
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            count: { $sum: 1 },
+                            total: { $sum: '$finalTotal' }
+                        }
+                    }
+                ])
+            ]);
+
+            const totalBookings = (flightStats[0]?.count || 0) + (tourStats[0]?.count || 0) + (activityStats[0]?.count || 0);
+            const totalSpent = (flightStats[0]?.total || 0) + (tourStats[0]?.total || 0) + (activityStats[0]?.total || 0);
+
+            return {
+                ...user.toObject(),
+                totalBookings,
+                totalSpent
+            };
+        }));
+
         // Get total count for pagination
         const total = await User.countDocuments(filter);
 
@@ -247,7 +313,7 @@ router.get('/', admin, async (req, res) => {
             success: true,
             message: 'Lấy danh sách người dùng thành công',
             data: {
-                users,
+                users: usersWithStats,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: Math.ceil(total / limit),

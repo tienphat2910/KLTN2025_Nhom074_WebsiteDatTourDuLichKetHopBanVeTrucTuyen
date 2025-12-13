@@ -153,47 +153,97 @@ async function getMonthlyRevenue() {
  * Get top customers by total spending
  */
 async function getTopCustomers(limit = 5) {
-    const customers = await Booking.aggregate([
-        {
-            $match: {
-                status: 'completed' // Only completed bookings for revenue
-            }
-        },
-        {
-            $group: {
-                _id: '$userId',
-                totalSpent: { $sum: '$totalPrice' },
-                bookingCount: { $sum: 1 }
-            }
-        },
-        {
-            $sort: { totalSpent: -1 }
-        },
-        {
-            $limit: limit
-        },
-        {
-            $lookup: {
-                from: 'users',
-                localField: '_id',
-                foreignField: '_id',
-                as: 'user'
-            }
-        },
-        {
-            $unwind: '$user'
-        },
-        {
-            $project: {
-                name: '$user.name',
-                email: '$user.email',
-                totalSpent: 1,
-                bookingCount: 1
-            }
-        }
-    ]);
+    try {
+        // Aggregate from all booking types
+        const [flightCustomers, tourCustomers, activityCustomers] = await Promise.all([
+            // Flight bookings
+            BookingFlight.aggregate([
+                {
+                    $match: {
+                        status: 'completed'
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$userId',
+                        totalSpent: { $sum: '$totalPrice' },
+                        bookingCount: { $sum: 1 }
+                    }
+                }
+            ]),
+            // Tour bookings
+            BookingTour.aggregate([
+                {
+                    $match: {
+                        status: 'completed'
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$userId',
+                        totalSpent: { $sum: '$finalTotal' },
+                        bookingCount: { $sum: 1 }
+                    }
+                }
+            ]),
+            // Activity bookings
+            BookingActivity.aggregate([
+                {
+                    $match: {
+                        status: 'completed'
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$userId',
+                        totalSpent: { $sum: '$finalTotal' },
+                        bookingCount: { $sum: 1 }
+                    }
+                }
+            ])
+        ]);
 
-    return customers;
+        // Merge all customer data
+        const customerMap = new Map();
+
+        [...flightCustomers, ...tourCustomers, ...activityCustomers].forEach(customer => {
+            const userId = customer._id.toString();
+            if (customerMap.has(userId)) {
+                const existing = customerMap.get(userId);
+                existing.totalSpent += customer.totalSpent;
+                existing.bookingCount += customer.bookingCount;
+            } else {
+                customerMap.set(userId, {
+                    _id: customer._id,
+                    totalSpent: customer.totalSpent,
+                    bookingCount: customer.bookingCount
+                });
+            }
+        });
+
+        // Convert to array and sort
+        const customers = Array.from(customerMap.values())
+            .sort((a, b) => b.totalSpent - a.totalSpent)
+            .slice(0, limit);
+
+        // Lookup user details
+        const customersWithDetails = await User.populate(customers, {
+            path: '_id',
+            select: 'fullName email'
+        });
+
+        // Format response
+        return customersWithDetails.map(customer => ({
+            _id: customer._id._id,
+            name: customer._id.fullName,
+            email: customer._id.email,
+            totalSpent: customer.totalSpent,
+            bookingCount: customer.bookingCount
+        }));
+    } catch (error) {
+        console.error('Error getting top customers:', error);
+        return [];
+    }
 }
 
 /**
