@@ -142,9 +142,10 @@ router.get('/', async (req, res) => {
             filter.endDate = { $lte: end };
         }
 
-        // No additional filter for isActive - show all tours for admin management
+        // Filter to show only active tours for users
         const enhancedFilter = {
-            ...filter
+            ...filter,
+            isActive: true
         };
 
         console.log('🔍 Tour filter:', enhancedFilter);
@@ -247,7 +248,7 @@ router.get('/featured', async (req, res) => {
         // First try to find featured tours
         let featuredTours = await Tour.find({
             isFeatured: true,
-            isActive: { $ne: false } // Include tours where isActive is true or undefined
+            isActive: true
         })
             .limit(parseInt(limit))
             .sort({ createdAt: -1 })
@@ -256,7 +257,7 @@ router.get('/featured', async (req, res) => {
         // If no featured tours found, get the latest tours as fallback
         if (featuredTours.length === 0) {
             featuredTours = await Tour.find({
-                isActive: { $ne: false }
+                isActive: true
             })
                 .limit(parseInt(limit))
                 .sort({ createdAt: -1 })
@@ -338,8 +339,10 @@ router.get('/debug', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
     try {
-        const tour = await Tour.findById(req.params.id)
-            .populate('destinationId', 'name slug region image description country');
+        const tour = await Tour.findOne({
+            _id: req.params.id,
+            isActive: true
+        }).populate('destinationId', 'name slug region image description country');
 
         if (!tour) {
             return res.status(404).json({

@@ -391,23 +391,15 @@ router.delete('/:id', auth, async (req, res) => {
         }
 
         // Check if there are any active bookings for this tour
-        const BookingTour = require('../models/BookingTour');
-        const Booking = require('../models/Booking');
+        const BookingTour = require('../../models/BookingTour');
 
-        // Find all booking tours for this tour
+        // Find all booking tours for this tour that are not cancelled
         const activeBookings = await BookingTour.find({
-            tourId: req.params.id
-        }).populate({
-            path: 'bookingId',
-            select: 'status'
+            tourId: req.params.id,
+            status: { $ne: 'cancelled' }
         });
 
-        // Check if any booking is not cancelled
-        const hasActiveBookings = activeBookings.some(bt =>
-            bt.bookingId && bt.bookingId.status !== 'cancelled'
-        );
-
-        if (hasActiveBookings) {
+        if (activeBookings.length > 0) {
             return res.status(409).json({
                 success: false,
                 message: 'Không thể xóa tour có booking đang hoạt động. Vui lòng hủy tất cả booking liên quan trước khi xóa tour.'

@@ -81,37 +81,32 @@ export function TourManagement() {
       }
       setError(null);
 
-      const response = await tourService.getTours({
+      // Build filter params for admin endpoint
+      const params: any = {
         page,
-        limit: 10, // Load 10 tours per page
-        title: searchTerm || undefined
-        // Note: Regular API doesn't support isActive/isFeatured filters directly
-        // We'll filter on the client side for now
-      });
+        limit: 10,
+        search: searchTerm || undefined
+      };
+
+      // Add isActive filter if needed
+      if (activeFilter === "active") {
+        params.isActive = true;
+      } else if (activeFilter === "inactive") {
+        params.isActive = false;
+      }
+      // If activeFilter is "all", don't add isActive param to get all tours
+
+      // Add isFeatured filter if needed
+      if (featuredFilter === "featured") {
+        params.isFeatured = true;
+      } else if (featuredFilter === "not-featured") {
+        params.isFeatured = false;
+      }
+
+      const response = await tourService.getToursAdmin(params);
 
       if (response.success && response.data) {
-        let tours = response.data.tours;
-
-        // Apply client-side filtering for admin features
-        if (activeFilter !== "all") {
-          if (activeFilter === "active") {
-            // Show tours that are available for booking (not expired, not full, regardless of isActive)
-            tours = tours.filter((tour) => {
-              const status = getTourStatus(tour);
-              return status !== "expired" && status !== "full";
-            });
-          } else if (activeFilter === "inactive") {
-            // Show tours that are manually deactivated
-            tours = tours.filter((tour) => tour.isActive === false);
-          }
-        }
-
-        if (featuredFilter !== "all") {
-          const isFeatured = featuredFilter === "featured";
-          tours = tours.filter((tour) => tour.isFeatured === isFeatured);
-        }
-
-        setTours(tours);
+        setTours(response.data.tours);
         setCurrentPage(response.data.pagination.currentPage);
         setTotalPages(response.data.pagination.totalPages);
         setTotalTours(response.data.pagination.totalTours);
@@ -282,25 +277,23 @@ export function TourManagement() {
           }
           break;
         case "delete":
-          // Show confirmation dialog
+          // Show confirmation dialog for permanent deletion
           if (
             window.confirm(
-              "Bạn có chắc chắn muốn ẩn tour này? Các tour đã ẩn sẽ không hiển thị cho khách hàng."
+              "⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN tour này?\n\nThao tác này KHÔNG THỂ HOÀN TÁC và sẽ xóa hoàn toàn tour khỏi hệ thống.\n\nNếu bạn chỉ muốn tạm thời ẩn tour, vui lòng chọn 'Ẩn tour' thay vì 'Xóa tour'."
             )
           ) {
             try {
-              response = await tourService.updateTour(tourId, {
-                isActive: false
-              });
+              response = await tourService.deleteTour(tourId);
               if (response.success) {
-                toast.success("Đã ẩn tour thành công");
+                toast.success("Đã xóa tour thành công");
                 loadTours(currentPage, true);
               } else {
-                toast.error(response.message || "Không thể ẩn tour");
+                toast.error(response.message || "Không thể xóa tour");
               }
             } catch (error) {
               console.error("Error deleting tour:", error);
-              toast.error("Có lỗi xảy ra khi ẩn tour");
+              toast.error("Có lỗi xảy ra khi xóa tour");
             }
           }
           break;
@@ -689,7 +682,7 @@ export function TourManagement() {
                               className="text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Ẩn tour
+                              Xóa tour
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
