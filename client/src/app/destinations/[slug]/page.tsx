@@ -93,10 +93,14 @@ export default function DestinationDetailPage() {
 
       setIsLoadingContent(true);
       try {
+        // Only load tours that haven't started yet
+        const today = new Date().toISOString().split("T")[0];
+
         // Load tours for this destination
         const toursResponse = await tourService.getTours({
           destination: destination._id,
-          limit: 20 // Load more for horizontal scroll
+          limit: 20, // Load more for horizontal scroll
+          start: today // Only show tours from today onwards
         });
 
         if (toursResponse.success) {

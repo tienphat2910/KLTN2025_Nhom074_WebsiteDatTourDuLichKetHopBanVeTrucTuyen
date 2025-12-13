@@ -251,10 +251,7 @@ export default function ToursByDestinationPage() {
             } transition-opacity duration-500`}
           >
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-2xl">
-              Tour Du Lịch{" "}
-              <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                {destination.name}
-              </span>
+              Tour Du Lịch {destination.name}
             </h1>
             <p className="text-xl text-white/90 mb-4 drop-shadow-lg">
               {destination.description

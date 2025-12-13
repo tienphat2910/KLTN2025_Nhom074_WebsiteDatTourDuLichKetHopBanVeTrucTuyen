@@ -33,6 +33,7 @@ export default function ActivityDetail() {
   const [babyCount, setBabyCount] = useState(0);
   const [seniorCount, setSeniorCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState("");
+  const [dateError, setDateError] = useState("");
 
   useEffect(() => {
     if (!slug) return;
@@ -60,13 +61,37 @@ export default function ActivityDetail() {
     getPrice("senior") * seniorCount;
 
   const handleBooking = () => {
+    // Reset error
+    setDateError("");
+
+    // Validate date
     if (!selectedDate) {
-      alert("Vui lòng chọn ngày tham gia!");
+      setDateError("Vui lòng chọn ngày tham gia!");
+      return;
+    }
+
+    // Validate date based on time
+    const now = new Date();
+    const currentHour = now.getHours();
+    const selectedDateTime = new Date(selectedDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDateTime.setHours(0, 0, 0, 0);
+
+    if (selectedDateTime < today) {
+      setDateError("Ngày tham gia phải từ hôm nay trở đi!");
+      return;
+    }
+
+    if (selectedDateTime.getTime() === today.getTime() && currentHour >= 17) {
+      setDateError(
+        "Đã quá 17h, vui lòng chọn ngày tham gia từ ngày mai trở đi!"
+      );
       return;
     }
 
     if (!activity?._id) {
-      alert("Không tìm thấy thông tin hoạt động!");
+      setDateError("Không tìm thấy thông tin hoạt động!");
       return;
     }
 
@@ -337,13 +362,38 @@ export default function ActivityDetail() {
                     <label className="block font-medium text-gray-700 mb-2 text-left">
                       Chọn ngày tham gia
                     </label>
+                    {new Date().getHours() >= 17 && (
+                      <p className="text-sm text-orange-600 mb-2">
+                        ⚠️ Đã quá 17h, bạn chỉ có thể đặt hoạt động từ ngày mai
+                        trở đi
+                      </p>
+                    )}
                     <input
                       type="date"
                       value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      onChange={(e) => {
+                        setSelectedDate(e.target.value);
+                        setDateError("");
+                      }}
+                      min={(() => {
+                        const now = new Date();
+                        const currentHour = now.getHours();
+                        if (currentHour >= 17) {
+                          const tomorrow = new Date(now);
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          return tomorrow.toISOString().split("T")[0];
+                        }
+                        return now.toISOString().split("T")[0];
+                      })()}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                        dateError
+                          ? "border-red-500 focus:ring-red-500"
+                          : "border-orange-300 focus:ring-orange-500"
+                      }`}
                     />
+                    {dateError && (
+                      <p className="text-sm text-red-600 mt-1">{dateError}</p>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">
