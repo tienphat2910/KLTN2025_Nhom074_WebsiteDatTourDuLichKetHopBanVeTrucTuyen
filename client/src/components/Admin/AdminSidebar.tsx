@@ -7,18 +7,17 @@ import {
   LayoutDashboard,
   Users,
   MapPin,
-  Plane,
-  Package,
   Calendar,
   BarChart3,
-  Activity,
   Menu,
   Percent,
   LogOut,
   AlertCircle,
   Tickets,
-  TentTree
+  TentTree,
+  FileText
 } from "lucide-react";
+import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -67,6 +66,22 @@ const adminSidebarItems = [
     icon: Percent
   },
   {
+    title: "Đặt chỗ",
+    href: "/admin/bookings",
+    icon: Calendar
+  },
+  {
+    title: "Quản lý hóa đơn",
+    href: "/admin/invoices",
+    icon: FileText
+  },
+  {
+    title: "Yêu cầu hủy",
+    href: "/admin/cancellation-requests",
+    icon: AlertCircle,
+    showBadge: true as const
+  },
+  {
     title: "Thống kê",
     href: "/admin/analytics",
     icon: BarChart3
@@ -111,12 +126,12 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
   useEffect(() => {
     if (!isConnected || !socketService) return;
 
-    const handleNewRequest = (data: any) => {
+    const handleNewRequest = (data: unknown) => {
       console.log("🔔 AdminSidebar: New cancellation request:", data);
       loadPendingCount();
     };
 
-    const handleRequestProcessed = (data: any) => {
+    const handleRequestProcessed = (data: unknown) => {
       console.log("🔔 AdminSidebar: Request processed:", data);
       loadPendingCount();
     };
@@ -143,7 +158,7 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
         // Silently fail - don't log error for permission issues
         setPendingCount(0);
       }
-    } catch (error) {
+    } catch {
       // Silently fail - service already handles logging
       setPendingCount(0);
     }
@@ -160,9 +175,11 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
         {/* Logo */}
         <div className="flex items-center border-b px-6 py-5">
           <Link href={homeHref} className="flex items-center space-x-2">
-            <img
+            <Image
               src="/images/logo/logo-lutrip.png"
               alt="LuTrip Logo"
+              width={48}
+              height={48}
               className="h-12 w-auto"
             />
             <span className="text-xl font-bold">{roleLabel}</span>
@@ -210,9 +227,11 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
               <div className="flex items-center space-x-3 rounded-lg bg-muted/50 p-3 cursor-pointer hover:bg-muted transition-colors">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium overflow-hidden">
                   {user?.avatar ? (
-                    <img
+                    <Image
                       src={user.avatar}
                       alt={user.fullName || "User Avatar"}
+                      width={32}
+                      height={32}
                       className="h-full w-full object-cover"
                     />
                   ) : (

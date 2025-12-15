@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/select";
 import { Tour, ToursResponse } from "@/services/tourService";
 import { AddTourModal } from "@/components/Admin/AddTourModal";
+import { ViewTourDetailModal } from "@/components/Admin/ViewTourDetailModal";
 import { tourService } from "@/services/tourService";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/useSocket";
@@ -69,6 +70,8 @@ export function TourManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingTour, setViewingTour] = useState<Tour | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const { socketService } = useSocket();
@@ -309,6 +312,11 @@ export function TourManagement() {
   const handleEditTour = (tour: Tour) => {
     setEditingTour(tour);
     setIsModalOpen(true);
+  };
+
+  const handleViewTour = (tour: Tour) => {
+    setViewingTour(tour);
+    setIsViewModalOpen(true);
   };
 
   const handleAddTour = () => {
@@ -642,6 +650,13 @@ export function TourManagement() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                             <DropdownMenuItem
+                              onClick={() => handleViewTour(tour)}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
                               onClick={() =>
                                 handleTourAction("toggle-active", tour._id)
                               }
@@ -758,6 +773,13 @@ export function TourManagement() {
         onOpenChange={setIsModalOpen}
         tour={editingTour}
         onSave={handleSaveTour}
+      />
+
+      {/* View Tour Detail Modal */}
+      <ViewTourDetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        tour={viewingTour}
       />
     </div>
   );

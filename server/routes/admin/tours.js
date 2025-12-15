@@ -199,7 +199,7 @@ router.get('/', auth, async (req, res) => {
 
         // Get tours with pagination
         const tours = await Tour.find(filter)
-            .select('title slug description destinationId departureLocation startDate endDate price discount seats availableSeats isFeatured isActive createdAt updatedAt')
+            .select('title slug description destinationId departureLocation startDate endDate price discount seats availableSeats images itinerary duration isFeatured isActive createdAt updatedAt')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import {
@@ -17,7 +17,7 @@ import {
 export default function About() {
   const [activeSection, setActiveSection] = useState("");
 
-  const sections = [
+  const sections = useMemo(() => [
     { id: "story", title: "Câu chuyện của chúng tôi" },
     { id: "mission", title: "Sứ mệnh & Tầm nhìn" },
     { id: "values", title: "Giá trị cốt lõi" },
@@ -25,7 +25,7 @@ export default function About() {
     { id: "achievements", title: "Thành tựu" },
     { id: "partners", title: "Đối tác" },
     { id: "future", title: "Tương lai" }
-  ];
+  ], []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -51,7 +51,7 @@ export default function About() {
     handleScroll();
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [sections]);
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -214,8 +214,8 @@ export default function About() {
                       vọng:
                       <strong>
                         {" "}
-                        "Khiến việc du lịch trở nên dễ dàng và đáng nhớ hơn cho
-                        mọi người"
+                        &quot;Khiến việc du lịch trở nên dễ dàng và đáng nhớ hơn cho
+                        mọi người&quot;
                       </strong>
                     </p>
 
@@ -230,12 +230,12 @@ export default function About() {
 
                     <div className="bg-blue-50 p-6 rounded-lg mb-6">
                       <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                        Tại sao chọn tên "LuTrip"?
+                        Tại sao chọn tên &quot;LuTrip&quot;?
                       </h3>
                       <p className="text-blue-800">
-                        "Lu" trong tiếng Việt có nghĩa là "lữ" - đi du lịch,
+                        &quot;Lu&quot; trong tiếng Việt có nghĩa là &quot;lữ&quot; - đi du lịch,
                         đồng thời cũng là tên của một trong những thành viên
-                        sáng lập. "Trip" đại diện cho hành trình. LuTrip = Lữ +
+                        sáng lập. &quot;Trip&quot; đại diện cho hành trình. LuTrip = Lữ +
                         Trip = Hành trình du lịch. Một cái tên đơn giản nhưng
                         chứa đựng cả tâm huyết của chúng tôi.
                       </p>
