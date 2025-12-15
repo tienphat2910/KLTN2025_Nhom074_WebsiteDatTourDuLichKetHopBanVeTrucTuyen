@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { destinationService, Destination } from "@/services/destinationService";
 import LoadingSpinner from "@/components/Loading/LoadingSpinner";
+import PersonalizedRecommendations from "@/components/Recommendations/PersonalizedRecommendations";
 import { tourService, Tour } from "@/services/tourService";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
@@ -274,7 +275,12 @@ export default function Home() {
           </div>
         </div>
       </section>
-
+{/* Personalized recommendations (horizontal swiper) */}
+          <div className={`mt-8 ${isSectionVisible("tours") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"} transition-all duration-700`}>
+            <div className="container mx-auto px-4 max-w-7xl">
+              <PersonalizedRecommendations />
+            </div>
+          </div>
       {/* Services Section */}
       <section
         ref={servicesRef}
@@ -431,6 +437,8 @@ export default function Home() {
               ))}
             </div>
           )}
+
+          
 
           {/* Xem thêm button */}
           <div className="text-center mt-12">

@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { getUpsell } from '@/services/recommendationService';
 interface BookingTourData {
   tourId: string;
   numAdults: number;
@@ -56,6 +57,7 @@ export default function PaymentSuccessPage() {
   >("checking");
   const [paymentInfo, setPaymentInfo] = useState<any>(null);
   const [bookingCreated, setBookingCreated] = useState(false);
+  const [upsell, setUpsell] = useState<any | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "zalopay" | null>(
     null
   );
@@ -569,6 +571,27 @@ export default function PaymentSuccessPage() {
         toast.success(
           `Thanh toán thành công! Đặt ${bookingType} đã được xác nhận.`
         );
+        // Try to fetch upsell suggestions for this booking before clearing pending data
+        try {
+          let destQuery: string | undefined;
+          const br = bookingResponse?.data || bookingResponse;
+          // common fallbacks
+          destQuery =
+            br?.tour?.destinationId ||
+            br?.booking?.tour?.destinationId ||
+            bookingData?.tourId ||
+            bookingData?.destinationId ||
+            bookingData?.tour?.destinationSlug ||
+            bookingData?.tour?.destination?.slug;
+
+          if (destQuery) {
+            const ups = await getUpsell(String(destQuery));
+            if (ups?.success) setUpsell(ups.data);
+          }
+        } catch (e) {
+          console.warn('Upsell fetch failed:', e);
+        }
+
         clearPendingBookings();
       } else {
         console.error("❌ Booking creation failed:", {
@@ -799,6 +822,33 @@ export default function PaymentSuccessPage() {
                           Về trang chủ
                         </button>
                       </div>
+                      {/* Upsell suggestions */}
+                      {upsell && (upsell.activities?.length > 0 || upsell.flightsCTA) && (
+                        <div className="mt-6 text-left">
+                          <h4 className="text-lg font-semibold mb-3">Gợi ý cho chuyến đi này</h4>
+                          {upsell.activities?.length > 0 && (
+                            <div className="overflow-x-auto">
+                              <div className="flex gap-4">
+                                {upsell.activities.map((a: any) => (
+                                  <div key={a._id} className="w-64 bg-white p-3 rounded-lg shadow">
+                                    <img src={a.thumbnail || a.image || '/images/logo/logo.png'} alt={a.title} className="h-36 w-full object-cover rounded" />
+                                    <h5 className="mt-2 font-semibold text-sm line-clamp-2">{a.title}</h5>
+                                    <p className="text-sm text-gray-600">{Number(a.price?.adult || a.price || 0).toLocaleString('vi-VN')} đ</p>
+                                    <div className="mt-2">
+                                      <a href={`/activities/${a._id}`} className="text-blue-600 font-medium">Đặt ngay</a>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {upsell.flightsCTA && (
+                            <div className="mt-4">
+                              <a href={`/flights?to=${upsell.flightsCTA.destinationSlug}`} className="inline-block bg-yellow-500 text-white px-4 py-2 rounded-lg font-semibold">{upsell.flightsCTA.label || 'Tìm vé máy bay'}</a>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

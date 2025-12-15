@@ -556,6 +556,39 @@ export default function AdminBookingPage() {
   }, []);
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
+    const current = bookings.find((b) => b._id === bookingId);
+    if (!current) {
+      toast.error("Booking không tồn tại");
+      return;
+    }
+
+    // If booking already cancelled, do not allow changes
+    if (current.status === "cancelled") {
+      toast.error("Không thể thay đổi trạng thái của booking đã hủy");
+      return;
+    }
+
+    // Allow cancelling from any state
+    if (newStatus !== "cancelled") {
+      const order = ["pending", "confirmed", "completed"];
+      const curIdx = order.indexOf(current.status as string);
+      const newIdx = order.indexOf(newStatus);
+
+      if (curIdx === -1 || newIdx === -1) {
+        toast.error("Trạng thái không hợp lệ");
+        return;
+      }
+
+      // No-op if same status
+      if (newIdx === curIdx) return;
+
+      // Only allow forward step by one (pending -> confirmed -> completed)
+      if (newIdx !== curIdx + 1) {
+        toast.error("Chỉ được chuyển trạng thái theo thứ tự: Chờ xác nhận → Xác nhận → Hoàn thành");
+        return;
+      }
+    }
+
     try {
       setIsUpdatingStatus(true);
       const response = await bookingService.updateBookingStatus(
@@ -591,27 +624,7 @@ export default function AdminBookingPage() {
     }
   };
 
-  const handleDeleteBooking = async (bookingId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa booking này?")) {
-      return;
-    }
-
-    try {
-      const response = await bookingService.deleteBooking(bookingId);
-
-      if (response.success) {
-        toast.success("Xóa booking thành công");
-        // Reload data with current filters
-        loadBookings(1, undefined, undefined); // Load all bookings
-        loadStats();
-      } else {
-        toast.error(response.message || "Không thể xóa booking");
-      }
-    } catch (error) {
-      console.error("Delete booking error:", error);
-      toast.error("Lỗi kết nối server");
-    }
-  };
+  
 
   const handleCreateTestData = async () => {
     try {
@@ -1048,7 +1061,6 @@ export default function AdminBookingPage() {
           bookings={paginatedBookings}
           isLoading={isLoading}
           onStatusChange={handleStatusChange}
-          onDeleteBooking={handleDeleteBooking}
           isUpdatingStatus={isUpdatingStatus}
           totalBookings={totalBookings}
         />

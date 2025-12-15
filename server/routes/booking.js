@@ -167,14 +167,49 @@ router.get('/:id', auth, async (req, res) => {
 // Update booking - Require authentication, only if user owns it
 router.put('/:id', auth, async (req, res) => {
     try {
-        const booking = await Booking.findOneAndUpdate(
-            { _id: req.params.id, userId: req.user._id },
-            req.body,
-            { new: true }
-        );
+        // Find the booking owned by the authenticated user
+        const booking = await Booking.findOne({ _id: req.params.id, userId: req.user._id });
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Not found' });
         }
+
+        // Server-side status transition validation to prevent client bypass
+        const allowedFlow = ['pending', 'confirmed', 'completed'];
+        if (req.body && typeof req.body.status !== 'undefined') {
+            const current = booking.status;
+            const next = req.body.status;
+
+            // If already cancelled, disallow any changes
+            if (current === 'cancelled' && next !== 'cancelled') {
+                return res.status(409).json({ success: false, message: 'Cannot modify a cancelled booking' });
+            }
+
+            // Allow cancelling from any state
+            if (next === 'cancelled') {
+                // proceed
+            } else {
+                const curIdx = allowedFlow.indexOf(current);
+                const nextIdx = allowedFlow.indexOf(next);
+
+                // If either status isn't in the allowed flow, reject
+                if (curIdx === -1 || nextIdx === -1) {
+                    return res.status(400).json({ success: false, message: 'Invalid status value' });
+                }
+
+                // Allow only forward stepwise transition (e.g., pending -> confirmed)
+                if (nextIdx !== curIdx && nextIdx !== curIdx + 1) {
+                    return res.status(409).json({ success: false, message: 'Invalid status transition' });
+                }
+            }
+        }
+
+        // Apply updates
+        Object.keys(req.body || {}).forEach(key => {
+            booking[key] = req.body[key];
+        });
+
+        await booking.save();
+
         res.json({ success: true, data: booking });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
