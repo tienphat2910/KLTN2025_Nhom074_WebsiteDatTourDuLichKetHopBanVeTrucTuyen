@@ -275,7 +275,12 @@ export default function Home() {
           </div>
         </div>
       </section>
-
+{/* Personalized recommendations (horizontal swiper) */}
+          <div className={`mt-8 ${isSectionVisible("tours") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"} transition-all duration-700`}>
+            <div className="container mx-auto px-4 max-w-7xl">
+              <PersonalizedRecommendations />
+            </div>
+          </div>
       {/* Services Section */}
       <section
         ref={servicesRef}
@@ -433,10 +438,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Personalized recommendations (horizontal swiper) */}
-          <div className={`mt-8 ${isSectionVisible("tours") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"} transition-all duration-700`}>
-            <PersonalizedRecommendations />
-          </div>
+          
 
           {/* Xem thêm button */}
           <div className="text-center mt-12">
