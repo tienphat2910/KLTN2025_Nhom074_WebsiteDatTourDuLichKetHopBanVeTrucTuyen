@@ -13,7 +13,19 @@ export async function getPersonalizedRecommendations() {
     return data;
   } catch (error) {
     console.error('Recommendation service error:', error);
-    return { success: false, message: error.message };
+    let message = 'Unknown error';
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof error === 'string') {
+      message = error;
+    } else {
+      try {
+        message = JSON.stringify(error);
+      } catch (e) {
+        // keep fallback message
+      }
+    }
+    return { success: false, message };
   }
 }
 
