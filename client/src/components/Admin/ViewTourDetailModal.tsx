@@ -137,7 +137,7 @@ export function ViewTourDetailModal({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">{tour.title}</DialogTitle>
-          <DialogDescription className="flex items-center gap-2 flex-wrap mt-2">
+          <div className="flex items-center gap-2 flex-wrap mt-2">
             <Badge variant={tour.isActive !== false ? "default" : "secondary"}>
               {getTourStatus()}
             </Badge>
@@ -150,7 +150,7 @@ export function ViewTourDetailModal({
             <span className="text-sm text-muted-foreground">
               Mã tour: {tour.slug}
             </span>
-          </DialogDescription>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">

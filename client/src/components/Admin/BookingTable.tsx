@@ -37,7 +37,7 @@ interface BookingTableProps {
   bookings: Booking[];
   isLoading: boolean;
   onStatusChange: (bookingId: string, newStatus: string) => void;
-  onDeleteBooking: (bookingId: string) => void;
+  onDeleteBooking?: (bookingId: string) => void;
   isUpdatingStatus?: boolean;
   totalBookings?: number;
 }
@@ -194,7 +194,7 @@ export function BookingTable({
                           onValueChange={(value) =>
                             onStatusChange(booking._id, value)
                           }
-                          disabled={isUpdatingStatus}
+                          disabled={isUpdatingStatus || booking.status === "cancelled"}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue />
@@ -211,15 +211,17 @@ export function BookingTable({
                           </SelectContent>
                         </Select>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDeleteBooking(booking._id)}
-                          className="text-red-600 hover:text-red-700"
-                          disabled={isUpdatingStatus}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {onDeleteBooking && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDeleteBooking(booking._id)}
+                            className="text-red-600 hover:text-red-700"
+                            disabled={isUpdatingStatus}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

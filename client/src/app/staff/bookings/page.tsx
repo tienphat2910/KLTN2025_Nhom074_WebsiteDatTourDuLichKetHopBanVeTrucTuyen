@@ -410,22 +410,7 @@ export default function StaffBookingPage() {
     }
   };
 
-  const handleDeleteBooking = async (bookingId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa booking này?")) return;
-
-    try {
-      const response = await bookingService.deleteBooking(bookingId);
-      if (response.success) {
-        toast.success("Xóa booking thành công");
-        loadBookings(1, undefined, undefined);
-        loadStats();
-      } else {
-        toast.error(response.message || "Không thể xóa booking");
-      }
-    } catch (error) {
-      toast.error("Lỗi kết nối server");
-    }
-  };
+  
 
   const handleExportExcel = async () => {
     try {
@@ -567,7 +552,6 @@ export default function StaffBookingPage() {
           bookings={paginatedBookings}
           isLoading={isLoading}
           onStatusChange={handleStatusChange}
-          onDeleteBooking={handleDeleteBooking}
           isUpdatingStatus={isUpdatingStatus}
           totalBookings={totalBookings}
         />

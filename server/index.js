@@ -52,6 +52,8 @@ app.use('/api/admin/users', require('./routes/admin/users'));
 app.use('/api/admin/invoices', require('./routes/admin/invoices'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/amadeus-bookings', require('./routes/amadeusbookings'));
+// Recommendations
+app.use('/api/recommendations', require('./routes/recommendations'));
 
 
 // Kết nối MongoDB
