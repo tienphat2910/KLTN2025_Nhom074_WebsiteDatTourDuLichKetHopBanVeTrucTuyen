@@ -90,43 +90,59 @@ async function generateTourItinerary(tourInfo) {
 
     console.log(`🤖 Generating itinerary for ${numDays} days tour: ${title}`);
 
-    const prompt = `Bạn là chuyên gia lập lịch trình du lịch chuyên nghiệp tại Việt Nam.
+    const prompt = `
+Bạn là **chuyên gia lập lịch trình du lịch chuyên nghiệp tại Việt Nam**, am hiểu thời gian, địa lý, di chuyển, ẩm thực và các hoạt động theo từng vùng miền.
 
-THÔNG TIN TOUR:
-- Tên: ${title}
-- Mô tả: ${description}
+INPUT TOUR:
+- Tên tour: ${title}
+- Mô tả tour: ${description}
 - Khởi hành từ: ${departureLocation}
-- Điểm đến: ${destination}
-- Thời gian: ${duration}
+- Điểm đến chính: ${destination}
+- Số ngày: ${numDays}
+- Thời lượng tour: ${duration}
 - Giá người lớn: ${adultPrice?.toLocaleString('vi-VN')} đ
 
-YÊU CẦU:
-Hãy tạo lịch trình chi tiết cho tour ${numDays} ngày này. Mỗi ngày cần có:
-1. Tiêu đề ngắn gọn, hấp dẫn (VD: "Ngày 1: TP.HCM - Động Phong Nha")
-2. Mô tả chi tiết các hoạt động theo timeline (sáng/trưa/chiều/tối)
-3. Bao gồm: di chuyển, tham quan, ăn uống, nghỉ ngơi
-4. Phù hợp với điểm đến và thời gian tour
-5. Thực tế, hợp lý về mặt địa lý và thời gian
+YÊU CẦU TẠO LỊCH TRÌNH:
+1. Tạo lịch trình **chi tiết từng ngày** cho tour này.
+2. Mỗi ngày cần có:
+   - **title**: tiêu đề ngắn, hấp dẫn (ví dụ: "Ngày 1: Khởi hành & Khám phá Thành phố")
+   - **description**: mô tả chi tiết các hoạt động theo timeline (sáng/trưa/chiều/tối), gồm:
+     * thời gian cụ thể từng hoạt động (ví dụ: 08:00 – 09:30),
+     * điểm đến/điểm tham quan,
+     * di chuyển, ăn uống, nghỉ ngơi,
+     * gợi ý địa phương, ẩm thực đặc trưng nếu phù hợp,
+     * đảm bảo tính **thực tế**, hợp lý về mặt địa lý & thời gian.
+3. Lịch trình phải logic, tuân theo trình tự thời gian trong ngày.
+4. Không tạo các hoạt động vô nghĩa hoặc không liên quan.
 
-FORMAT TRẢ VỀ (JSON):
+OUTPUT PHẢI LÀ **JSON 100%** theo cấu trúc:
 {
   "day1": {
     "title": "Tiêu đề ngày 1",
-    "description": "Mô tả chi tiết hoạt động ngày 1 (200-300 từ)"
+    "description": "Chi tiết hoạt động ngày 1"
   },
   "day2": {
     "title": "Tiêu đề ngày 2",
-    "description": "Mô tả chi tiết hoạt động ngày 2"
+    "description": "Chi tiết hoạt động ngày 2"
   },
   ...
 }
 
-VÍ DỤ MÔ TẢ TỐT:
-"Sáng: 06:00 - Khởi hành từ TP.HCM đi Quảng Bình. Điểm dừng chân ăn trưa tại Nha Trang.
-Chiều: Tiếp tục hành trình Bắc Trung Bộ, ngắm cảnh ven đường đèo Hải Vân.
-Tối: 20:00 - Đến Đồng Hới, nhận phòng khách sạn. Dùng bữa tối tại nhà hàng. Tự do khám phá chợ đêm Đồng Hới."
+**QUY TẮC & CONSTRAINTS:**
+- Chỉ trả về **JSON**, KHÔNG kèm bất kỳ text mô tả hay giải thích ngoài object JSON.
+- Không có key thừa, không có comment, không có chú thích.
+- Sử dụng ngôn ngữ tiếng Việt trong nội dung title & description.
+- Mỗi mô tả ngày cần tối thiểu **180 – 250 từ** để đảm bảo chi tiết.
+- Cố gắng dùng thời gian phù hợp với các hoạt động thực tế (ví dụ: ăn sáng 07:00 - 08:00; tham quan 09:00 - 12:00; ăn trưa…).
+- Mỗi ngày phải có các phần rõ ràng: Sáng – Trưa – Chiều – Tối, càng rõ ràng càng tốt.
+- Định dạng mô tả theo logic timeline (ví dụ: “Sáng: 08:00 – 10:00 …”).
 
-CHỈ TRẢ VỀ JSON, KHÔNG KÈM TEXT THỪA.`;
+**MẪU MIỄN LỜI GIẢN TỐT CHO MÔ TẢ:**
+"Sáng: 06:30 - Ăn sáng tại nhà hàng địa phương với món đặc sản. 08:00 - Khởi hành tham quan di tích lịch sử. Trưa: 12:00 - Dùng cơm trưa tại quán nổi tiếng. Chiều: 14:00 - Tham quan khu vườn thú. Tối: 19:00 - Dùng buffet hải sản, tự do khám phá chợ đêm..."  
+
+CHỈ TRẢ VỀ **JSON** THEO CẤU TRÚC YÊU CẦU Ở TRÊN.
+`;
+
 
     // Use retry mechanism with model fallback
     let text = await generateWithRetry(prompt);
