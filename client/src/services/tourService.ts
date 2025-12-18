@@ -535,5 +535,50 @@ export const tourService = {
         message: "Lỗi kết nối server"
       };
     }
+  },
+
+  // Generate AI Itinerary (Admin only)
+  generateItinerary: async (tourData: {
+    title: string;
+    description?: string;
+    departure?: string;
+    destination?: string;
+    duration?: string;
+    adultPrice?: number;
+  }): Promise<ApiResponse<ItineraryObject>> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        return {
+          success: false,
+          message: "Vui lòng đăng nhập để sử dụng tính năng này"
+        };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/admin/tours/generate-itinerary`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(tourData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || "Không thể tạo lịch trình tự động"
+        };
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Lỗi khi tạo lịch trình tự động"
+      };
+    }
   }
 };

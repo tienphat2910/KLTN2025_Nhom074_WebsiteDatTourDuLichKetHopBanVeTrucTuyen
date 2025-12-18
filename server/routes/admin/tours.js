@@ -433,6 +433,95 @@ router.delete('/:id', auth, async (req, res) => {
 
 /**
  * @swagger
+ * /api/admin/tours/generate-itinerary:
+ *   post:
+ *     summary: Generate tour itinerary using AI (Admin only)
+ *     tags: [Admin Tours]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - duration
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               departureLocation:
+ *                 type: string
+ *               destination:
+ *                 type: string
+ *               duration:
+ *                 type: string
+ *               adultPrice:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Itinerary generated successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+router.post('/generate-itinerary', auth, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Chỉ admin mới có quyền tạo lịch trình'
+            });
+        }
+
+        const { generateTourItinerary } = require('../../utils/generateItinerary');
+        
+        const { title, description, departureLocation, destination, duration, adultPrice } = req.body;
+
+        // Validate required fields
+        if (!title || !duration) {
+            return res.status(400).json({
+                success: false,
+                message: 'Thiếu thông tin bắt buộc: title, duration'
+            });
+        }
+
+        console.log('🤖 Generating itinerary for tour:', title);
+
+        const itinerary = await generateTourItinerary({
+            title,
+            description: description || '',
+            departureLocation: departureLocation || 'TP. Hồ Chí Minh',
+            destination: destination || '',
+            duration,
+            adultPrice: adultPrice || 0
+        });
+
+        res.json({
+            success: true,
+            message: 'Tạo lịch trình thành công',
+            data: itinerary
+        });
+
+    } catch (error) {
+        console.error('❌ Generate itinerary API error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi tạo lịch trình tự động',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/admin/tours/upload-image:
  *   post:
  *     summary: Upload tour image (Admin only)

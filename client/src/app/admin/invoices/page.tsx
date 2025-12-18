@@ -39,10 +39,13 @@ import {
   DollarSign,
   Package,
   Activity as ActivityIcon,
+  Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import { invoiceService, type TourInvoiceSummary, type ActivityInvoiceSummary, type BookingUserDetail } from "@/services/invoiceService";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export default function AdminInvoicesPage() {
   const [tourInvoices, setTourInvoices] = useState<TourInvoiceSummary[]>([]);
@@ -181,6 +184,151 @@ export default function AdminInvoicesPage() {
   }, [activityBookings, activityBookingPage, activityBookingPageSize]);
 
   const activityBookingTotalPages = Math.max(1, Math.ceil(activityBookings.length / activityBookingPageSize));
+
+  // Export functions
+  const handleExportTourPDF = async (tourId: string, tourTitle: string) => {
+    try {
+      const token = localStorage.getItem('lutrip_admin_token');
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/invoices/tours/${tourId}/export/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `DanhSachKhachHang_${tourTitle.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Xuất PDF thành công');
+    } catch (error) {
+      console.error('Export PDF error:', error);
+      toast.error('Lỗi khi xuất PDF');
+    }
+  };
+
+  const handleExportTourExcel = async (tourId: string, tourTitle: string) => {
+    try {
+      const token = localStorage.getItem('lutrip_admin_token');
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/invoices/tours/${tourId}/export/excel`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `DanhSachKhachHang_${tourTitle.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Xuất Excel thành công');
+    } catch (error) {
+      console.error('Export Excel error:', error);
+      toast.error('Lỗi khi xuất Excel');
+    }
+  };
+
+  const handleExportActivityPDF = async (activityId: string, activityName: string) => {
+    try {
+      const token = localStorage.getItem('lutrip_admin_token');
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/invoices/activities/${activityId}/export/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `DanhSachKhachHang_${activityName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Xuất PDF thành công');
+    } catch (error) {
+      console.error('Export PDF error:', error);
+      toast.error('Lỗi khi xuất PDF');
+    }
+  };
+
+  const handleExportActivityExcel = async (activityId: string, activityName: string) => {
+    try {
+      const token = localStorage.getItem('lutrip_admin_token');
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admin/invoices/activities/${activityId}/export/excel`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `DanhSachKhachHang_${activityName.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Xuất Excel thành công');
+    } catch (error) {
+      console.error('Export Excel error:', error);
+      toast.error('Lỗi khi xuất Excel');
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -482,7 +630,29 @@ export default function AdminInvoicesPage() {
                 <FileText className="h-5 w-5" />
                 Chi tiết đặt tour: {selectedTour?.title}
               </DialogTitle>
-              <DialogDescription>Danh sách người dùng đã đặt tour này</DialogDescription>
+              <DialogDescription className="flex items-center justify-between">
+                <span>Danh sách người dùng đã đặt tour này</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportTourPDF(selectedTour!._id, selectedTour!.title)}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Xuất PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportTourExcel(selectedTour!._id, selectedTour!.title)}
+                    className="gap-2"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Xuất Excel
+                  </Button>
+                </div>
+              </DialogDescription>
             </DialogHeader>
 
             {detailsLoading ? (
@@ -548,7 +718,29 @@ export default function AdminInvoicesPage() {
                 <FileText className="h-5 w-5" />
                 Chi tiết đặt hoạt động: {selectedActivity?.name}
               </DialogTitle>
-              <DialogDescription>Danh sách người dùng đã đặt hoạt động này</DialogDescription>
+              <DialogDescription className="flex items-center justify-between">
+                <span>Danh sách người dùng đã đặt hoạt động này</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportActivityPDF(selectedActivity!._id, selectedActivity!.name)}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Xuất PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportActivityExcel(selectedActivity!._id, selectedActivity!.name)}
+                    className="gap-2"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Xuất Excel
+                  </Button>
+                </div>
+              </DialogDescription>
             </DialogHeader>
 
             {detailsLoading ? (

@@ -4,6 +4,7 @@ const ChatHistory = require("../models/ChatHistory");
 const Tour = require("../models/Tour");
 const Destination = require("../models/Destination");
 const Activity = require("../models/Activity");
+const chatbotUtils = require('../utils/chatbotUtils');
 const router = express.Router();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -84,7 +85,7 @@ const DESTINATION_ALIASES = {
     'tay nguyen': 'Tây Nguyên'
 };
 
-// Function để load destinations từ database
+// Function để load destinations từ database (cached)
 async function loadDestinations() {
     const now = Date.now();
     if (destinationsCache && (now - cacheTimestamp) < CACHE_DURATION) {
@@ -92,348 +93,31 @@ async function loadDestinations() {
     }
 
     try {
-        const destinations = await Destination.find({}).select('name slug').lean();
-        destinationsCache = destinations.map(dest => ({
-            name: dest.name,
-            slug: dest.slug,
-            normalizedName: normalizeText(dest.name),
-            normalizedSlug: normalizeText(dest.slug)
-        }));
-        cacheTimestamp = now;
-        console.log('🤖 Loaded destinations from DB:', destinationsCache.length);
-        return destinationsCache;
-    } catch (error) {
-        console.error('🤖 Error loading destinations:', error);
-        // Fallback về array cứng nếu không load được từ DB
-        return [
-            'hà nội', 'hanoi', 'sài gòn', 'ho chi minh', 'đà nẵng', 'da nang',
-            'phú quốc', 'phu quoc', 'nha trang', 'đà lạt', 'da lat', 'sapa', 'huế', 'hue',
-            'hội an', 'hoi an', 'quảng ninh', 'quang ninh', 'hạ long', 'ha long', 'cần thơ', 'can tho',
-            'vũng tàu', 'vung tau', 'phan thiết', 'phan thiet', 'mũi né', 'mui ne', 'kon tum', 'kontum',
-            'buôn ma thuột', 'buon ma thuot', 'pleiku', 'buôn đôn', 'buon don', 'dak lak', 'daklak',
-            'gia lai', 'gialai', 'tây nguyên', 'tay nguyen', 'an giang', 'angiang', 'miền tây', 'mien tay',
-            'cà mau', 'ca mau', 'bạc liêu', 'bac lieu', 'sóc trăng', 'soc trang', 'trà vinh', 'tra vinh',
-            'bến tre', 'ben tre', 'long xuyên', 'long xuyen', 'đồng tháp', 'dong thap'
-        ].map(name => ({
-            name: name,
-            slug: name,
-            normalizedName: normalizeText(name),
-            normalizedSlug: normalizeText(name)
-        }));
-    }
-}
-
-// Function để extract destination từ message
-async function extractDestination(message) {
-    const lowerMessage = message.toLowerCase();
-    const normalizedMessage = normalizeText(message);
-
-    // BƯỚC 1: Check alias mapping trước (An Giang → ĐBSCL - Cần Thơ)
-    for (const [alias, mainDestination] of Object.entries(DESTINATION_ALIASES)) {
-        const normalizedAlias = normalizeText(alias);
-        if (normalizedMessage.includes(normalizedAlias) || lowerMessage.includes(alias)) {
-            console.log(`🤖 Matched alias: "${alias}" → Main destination: "${mainDestination}"`);
-            return mainDestination;
-        }
-    }
-
-    // BƯỚC 2: Load destinations từ database
-    const destinations = await loadDestinations();
-
-    // BƯỚC 3: Exact match với destination trong DB
-    for (const dest of destinations) {
-        // Check normalized name và slug (exact match)
-        if (normalizedMessage === dest.normalizedName ||
-            normalizedMessage === dest.normalizedSlug) {
-            console.log('🤖 Exact matched destination:', dest.name);
-            return dest.name; // Return original name, not normalized
-        }
-    }
-
-    // BƯỚC 4: Partial match với destination trong DB
-    for (const dest of destinations) {
-        // Check if message contains destination name/slug
-        if (normalizedMessage.includes(dest.normalizedName) ||
-            normalizedMessage.includes(dest.normalizedSlug) ||
-            lowerMessage.includes(dest.name.toLowerCase()) ||
-            lowerMessage.includes(dest.slug.toLowerCase())) {
-            console.log('🤖 Partial matched destination:', dest.name);
-            return dest.name; // Return original name, not normalized
-        }
-    }
-
-    return null;
-}
-
-// Function để phân tích intent và lấy data phù hợp
-async function analyzeIntentAndGetData(message) {
-    const lowerMessage = message.toLowerCase();
-
-    let relevantData = {
-        destinations: [],
-        tours: [],
-        activities: [],
-        intent: 'general'
-    };
-
-    // Extract destination từ message - ƯU TIÊN TRƯỚC TIÊN
-    const extractedDestination = await extractDestination(message);
-    console.log('🤖 Extracted destination:', extractedDestination);
-
-    // Check xem có phải activity không (đầm sen, vé vui chơi, v.v.)
-    const normalizedMessage = normalizeText(message);
-    const allActivities = await Activity.find({ isActive: true })
-        .populate('destinationId', 'name slug')
-        .sort({ createdAt: -1 })
-        .lean();
-
-    const matchedActivities = allActivities.filter(activity => {
-        const normalizedActivityName = normalizeText(activity.name || '');
-        const lowerActivityName = (activity.name || '').toLowerCase();
-        const lowerMessage = message.toLowerCase();
-
-        // Exact match hoặc contains
-        return normalizedActivityName.includes(normalizedMessage) ||
-            normalizedMessage.includes(normalizedActivityName) ||
-            lowerActivityName.includes(lowerMessage) ||
-            lowerMessage.includes(lowerActivityName);
-    });
-
-    console.log('🤖 Matched activities by name:', matchedActivities.length);
-    if (matchedActivities.length > 0) {
-        console.log('🤖 First matched activity:', matchedActivities[0].name);
-    }
-
-    // Detect intent dựa trên keywords và destination
-    // ƯU TIÊN 0: Nếu tìm thấy activity theo tên cụ thể
-    if (matchedActivities.length > 0) {
-        relevantData.intent = 'activity';
-        relevantData.activities = matchedActivities.slice(0, 10);
-        console.log('🤖 Detected activity by name - returning matched activities');
-        return relevantData;
-    }
-
-    // ƯU TIÊN 1: Nếu có destination cụ thể, xử lý trước
-    if (extractedDestination) {
-        relevantData.intent = 'specific_destination';
-        console.log('🤖 Detected specific destination intent');
-
-        // Query tất cả tours active và chưa hết hạn - populate both destinationId and destinationIds
-        // Sort theo createdAt để lấy tour mới nhất
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Reset time to start of day
-
-        const allTours = await Tour.find({
-            isActive: true,
-            startDate: { $gte: today } // Chỉ lấy tour chưa khởi hành
-        })
-            .populate('destinationId')
-            .populate('destinationIds')
-            .sort({ createdAt: -1 }) // Mới nhất trước
-            .limit(100)
-            .lean();
-        console.log('🤖 All tours:', allTours.length);
-
-        // Filter tours theo destination được extract
-        relevantData.tours = allTours.filter(tour => {
-            const destName = tour.destinationId?.name || '';
-            const tourTitle = tour.title || '';
-            const tourDesc = tour.description || '';
-
-            // Check destinationIds array (new field)
-            const destinationNames = [];
-            if (tour.destinationIds && Array.isArray(tour.destinationIds)) {
-                tour.destinationIds.forEach(dest => {
-                    if (dest && dest.name) {
-                        destinationNames.push(dest.name);
-                    }
-                });
-            }
-
-            // Normalize để so sánh tốt hơn
-            const normalizedDestName = normalizeText(destName);
-            const normalizedTourTitle = normalizeText(tourTitle);
-            const normalizedTourDesc = normalizeText(tourDesc);
-            const normalizedExtracted = normalizeText(extractedDestination);
-
-            // Tách các phần của destination (vd: "ĐBSCL - Cần Thơ" → ["dbscl", "can tho"])
-            const extractedParts = normalizedExtracted.split(/[-\s]+/).filter(p => p.length > 2);
-            const destNameParts = normalizedDestName.split(/[-\s]+/).filter(p => p.length > 2);
-
-            // 1. Ưu tiên match destination name chính xác (destinationId)
-            // Check exact match
-            if (normalizedDestName === normalizedExtracted ||
-                destName.toLowerCase() === extractedDestination.toLowerCase()) {
-                console.log(`🤖 ✅ EXACT DESTINATION MATCH (destinationId) for "${extractedDestination}"`);
-                return true;
-            }
-
-            // Check if destination contains any part of extracted
-            if (extractedParts.some(part => normalizedDestName.includes(part)) ||
-                destNameParts.some(part => normalizedExtracted.includes(part))) {
-                console.log(`🤖 ✅ PARTIAL DESTINATION MATCH (destinationId) for "${extractedDestination}" in "${destName}"`);
-                return true;
-            }
-
-            // 2. Check destinationIds array
-            for (const dName of destinationNames) {
-                const normalized = normalizeText(dName);
-                const dNameParts = normalized.split(/[-\s]+/).filter(p => p.length > 2);
-
-                if (normalized === normalizedExtracted ||
-                    dName.toLowerCase() === extractedDestination.toLowerCase()) {
-                    console.log(`🤖 ✅ EXACT DESTINATION MATCH (destinationIds) for "${extractedDestination}"`);
-                    return true;
-                }
-
-                if (extractedParts.some(part => normalized.includes(part)) ||
-                    dNameParts.some(part => normalizedExtracted.includes(part))) {
-                    console.log(`🤖 ✅ PARTIAL DESTINATION MATCH (destinationIds) for "${extractedDestination}" in "${dName}"`);
-                    return true;
-                }
-            }
-
-            // 3. Match title chứa destination
-            if (normalizedTourTitle.includes(normalizedExtracted) ||
-                tourTitle.toLowerCase().includes(extractedDestination.toLowerCase())) {
-                console.log(`🤖 ✅ TITLE MATCH for "${extractedDestination}"`);
-                return true;
-            }
-
-            // 4. Cuối cùng match description
-            if (normalizedTourDesc.includes(normalizedExtracted) ||
-                tourDesc.toLowerCase().includes(extractedDestination.toLowerCase())) {
-                console.log(`🤖 ✅ DESCRIPTION MATCH for "${extractedDestination}"`);
-                return true;
-            }
-
-            return false;
-        });
-
-        console.log('🤖 Tours found for destination:', relevantData.tours.length);
-        if (relevantData.tours.length === 0) {
-            console.log('🤖 ❌ No tours matched!');
-            console.log('🤖 Looking for:', extractedDestination);
-            console.log('🤖 Normalized:', normalizeText(extractedDestination));
-            console.log('🤖 Checking sample tours in DB:');
-            allTours.slice(0, 5).forEach((tour, idx) => {
-                console.log(`  ${idx + 1}. Title: "${tour.title?.substring(0, 50)}"`);
-                console.log(`     destinationId.name: "${tour.destinationId?.name}"`);
-                console.log(`     destinationId.name (normalized): "${normalizeText(tour.destinationId?.name || '')}"`);
-                if (tour.destinationIds && tour.destinationIds.length > 0) {
-                    console.log(`     destinationIds: [${tour.destinationIds.map(d => `"${d?.name}"`).join(', ')}]`);
-                }
-                console.log('');
-            });
-        }
-
-        // KHÔNG lấy tours ngẫu nhiên nếu không tìm thấy - để trống
-        // User sẽ thấy message "không có tour" từ AI
-
-    } else if (lowerMessage.includes('phú quốc') || lowerMessage.includes('biển') || lowerMessage.includes('đi biển') ||
-        lowerMessage.includes('du lịch biển') || lowerMessage.includes('nghỉ dưỡng biển')) {
-        relevantData.intent = 'beach';
-        console.log('🤖 Detected beach intent');
-
-        // Query tất cả tours active và chưa hết hạn trước
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const allTours = await Tour.find({
-            isActive: true,
-            startDate: { $gte: today }
-        }).populate('destinationId').sort({ createdAt: -1 }).limit(20).lean();
-        console.log('🤖 All tours:', allTours.length);
-
-        // Filter tours có destination chứa Phú Quốc hoặc các từ khóa biển
-        relevantData.tours = allTours.filter(tour =>
-            tour.destinationId?.name?.toLowerCase().includes('phú quốc') ||
-            tour.title?.toLowerCase().includes('phú quốc') ||
-            tour.destinationId?.name?.toLowerCase().includes('biển') ||
-            tour.title?.toLowerCase().includes('biển') ||
-            tour.description?.toLowerCase().includes('biển')
-        );
-        console.log('🤖 Beach tours found:', relevantData.tours.length);
-
-        // Nếu không có tours biển cụ thể, lấy tours đến các điểm biển khác
-        if (relevantData.tours.length === 0) {
-            relevantData.tours = allTours.filter(tour =>
-                tour.destinationId?.name?.toLowerCase().includes('nha trang') ||
-                tour.destinationId?.name?.toLowerCase().includes('đà nẵng') ||
-                tour.destinationId?.name?.toLowerCase().includes('đà lạt') ||
-                tour.title?.toLowerCase().includes('nha trang') ||
-                tour.title?.toLowerCase().includes('đà nẵng')
-            );
-            console.log('🤖 Alternative beach tours found:', relevantData.tours.length);
-        }
-
-    } else if (lowerMessage.includes('tour') || lowerMessage.includes('du lịch') || lowerMessage.includes('đi') ||
-        lowerMessage.includes('đi chơi') || lowerMessage.includes('kỳ nghỉ')) {
-
-        // KIỂM TRA: Nếu message có format "tour [tên địa điểm]" nhưng không extract được destination
-        // → Có thể user hỏi về destination không có trong hệ thống
-        // → KHÔNG nên show random tours
-        const possibleLocationQuery = lowerMessage.match(/tour\s+([a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ\s]+)/i);
-
-        if (possibleLocationQuery && possibleLocationQuery[1]) {
-            const locationName = possibleLocationQuery[1].trim();
-            console.log('🤖 Detected potential location query:', locationName);
-            console.log('🤖 But no destination matched - user asking about unavailable destination');
-
-            // Không có destination match → Không có tours cho địa điểm này
-            relevantData.intent = 'specific_destination_not_found';
-            relevantData.tours = []; // Để trống, không show random tours
-            console.log('🤖 No tours - destination not in system');
+        if (chatbotUtils && typeof chatbotUtils.loadDestinations === 'function') {
+            destinationsCache = await chatbotUtils.loadDestinations();
         } else {
-            // Câu hỏi general về tour, không specify địa điểm cụ thể
-            relevantData.intent = 'tour';
-            console.log('🤖 Detected general tour intent');
-
-            // Lấy tất cả tours active và chưa hết hạn
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            relevantData.tours = await Tour.find({
-                isActive: true,
-                startDate: { $gte: today }
-            })
-                .populate('destinationId').sort({ createdAt: -1 }).limit(15)
-                .lean();
-            console.log('🤖 General tours found:', relevantData.tours.length);
+            destinationsCache = await Destination.find({}).lean();
         }
-
-    } else if (lowerMessage.includes('hoạt động') || lowerMessage.includes('giải trí') || lowerMessage.includes('vui chơi') ||
-        lowerMessage.includes('trải nghiệm') || lowerMessage.includes('thể thao')) {
-        relevantData.intent = 'activity';
-        relevantData.activities = await Activity.find({ isActive: true })
-            .populate('destinationId', 'name slug')
-            .sort({ createdAt: -1 })
-            .limit(10)
-            .lean();
-        console.log('🤖 Activities found:', relevantData.activities.length);
-    } else {
-        // Default: lấy một số tours chưa hết hạn để gợi ý
-        relevantData.intent = 'general';
-        console.log('🤖 General intent - getting random tours');
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        relevantData.tours = await Tour.find({
-            isActive: true,
-            startDate: { $gte: today }
-        })
-            .populate('destinationId').sort({ createdAt: -1 }).limit(8)
-            .lean();
-        console.log('🤖 Random tours found:', relevantData.tours.length);
+        cacheTimestamp = Date.now();
+        return destinationsCache;
+    } catch (e) {
+        console.error('Error loading destinations:', e);
+        return [];
     }
-
-    return relevantData;
 }
 
 // Function tạo context từ data
 function createDataContext(data) {
     let context = '';
+
+    // PRIORITY 1: FAQ/Knowledge Base (chính xác nhất)
+    if (data.faqs && data.faqs.length > 0) {
+        context += `\nKIẾN THỨC CƠ SỞ (FAQ/POLICY - ƯU TIÊN TRÍCH DẪN):\n`;
+        data.faqs.forEach((faq, idx) => {
+            context += `${idx + 1}. [${faq.category.toUpperCase()}] ${faq.question}\n`;
+            context += `   Trả lời: ${faq.answer}\n\n`;
+        });
+    }
 
     if (data.tours.length > 0) {
         context += `\nTOUR CÓ SẴN (${data.tours.length} tour):\n`;
@@ -478,81 +162,117 @@ function createDataContext(data) {
 }
 
 // System prompt với thông tin về LuTrip
-const SYSTEM_PROMPT = `Bạn là trợ lý AI thông minh của LuTrip - nền tảng du lịch hàng đầu Việt Nam.
+const SYSTEM_PROMPT = `Bạn là CHUYÊN GIA TƯ VẤN DU LỊCH AI của LuTrip - nền tảng đặt tour & vé du lịch hàng đầu Việt Nam.
 
-THÔNG TIN VỀ LUTRIP:
-- LuTrip là nền tảng đặt chỗ du lịch trực tuyến
-- Cung cấp: Tour du lịch trong nước và quốc tế, Vé máy bay, Hoạt động giải trí, Đặt phòng khách sạn
-- Hotline hỗ trợ 24/7: 1900 XXX XXX
+═══════════════════════════════════════════════════════════════
+📋 THÔNG TIN DOANH NGHIỆP
+═══════════════════════════════════════════════════════════════
+- Tên: LuTrip (Vietnam Travel Platform)
+- Dịch vụ: Tour trong nước & quốc tế | Vé máy bay | Hoạt động giải trí | Khách sạn
+- Hotline 24/7: 1900 XXX XXX
 - Email: support@lutrip.vn
 - Website: lutrip.vn
+- Chính sách: Hủy tour linh hoạt, thanh toán đa dạng, bảo hiểm đầy đủ
 
-VAI TRÒ CỦA BẠN:
-1. Bạn có thể trả lời MỌI CÂU HỎI - không chỉ giới hạn về du lịch
-2. ƯU TIÊN trả lời bằng kiến thức chung của bạn TRƯỚC, SAU ĐÓ mới dựa vào database
-3. Với câu hỏi về kinh nghiệm du lịch, gợi ý điểm đến: Tư vấn chi tiết dựa trên kiến thức về địa điểm đó (điểm tham quan, ẩm thực, văn hóa, mẹo du lịch...)
-4. SAU KHI tư vấn bằng kiến thức, nếu có tours trong database thì giới thiệu thêm
-5. Nếu không có tours trong database, KHÔNG SAO - vẫn tư vấn hết mình về địa điểm đó
-6. Phân tích dữ liệu thực từ database khi có - KHÔNG sử dụng câu trả lời mẫu cứng
-7. Khuyến khích khách hàng click vào các gợi ý để xem chi tiết (chỉ khi có tours/activities)
+═══════════════════════════════════════════════════════════════
+🎯 VAI TRÒ & NĂNG LỰC CỦA BẠN
+═══════════════════════════════════════════════════════════════
+✅ BẠN CÓ THỂ:
+  • Trả lời MỌI câu hỏi (du lịch, đời sống, kiến thức chung)
+  • Tư vấn điểm đến, lịch trình, kinh nghiệm du lịch chi tiết
+  • Gợi ý tour/vé phù hợp dựa trên nhu cầu khách hàng
+  • Giải thích chính sách booking, thanh toán, hủy tour
+  • Hỗ trợ FAQ về giá, giấy tờ, thời gian, điều kiện tour
 
-NGUYÊN TẮC HOẠT ĐỘNG:
-- Với câu hỏi CHUNG (toán học, thời tiết, kiến thức, đời sống): Trả lời trực tiếp, chính xác, thân thiện. VÍ DỤ: "1+1=2", "Thủ đô Việt Nam là Hà Nội"
+❌ BẠN KHÔNG ĐƯỢC:
+  • Bịa đặt thông tin không có trong database
+  • Đưa ra cam kết không chính xác về giá/dịch vụ
+  • Tiết lộ thông tin cá nhân khách hàng
 
-- Với câu hỏi về KINH NGHIỆM DU LỊCH, GỢI Ý ĐIỂM ĐẾN:
-  * BƯỚC 1: Tư vấn chi tiết bằng kiến thức của bạn về địa điểm đó:
-    - Các điểm tham quan nổi tiếng
-    - Ẩm thực đặc trưng
-    - Thời điểm đi tốt nhất
-    - Tips và lưu ý
-    - Phương tiện di chuyển
-  * BƯỚC 2: SAU ĐÓ mới kiểm tra database và giới thiệu tours (nếu có)
-  * Nếu KHÔNG có tours: KHÔNG SAO - vẫn đã tư vấn hữu ích ở bước 1
-  
-- Với câu hỏi về ĐẶT TOUR cụ thể: 
-  * Trả lời dựa trên dữ liệu thực tế từ database
-  * Nếu có tours phù hợp, tóm tắt ngắn gọn số lượng và điểm nổi bật, đề cập "Xem các tour mới nhất bên dưới"
-  * Nếu KHÔNG có tours phù hợp, nói rõ "Hiện tại chưa có tour đến [tên điểm đến] trong hệ thống" và gợi ý liên hệ hotline
+═══════════════════════════════════════════════════════════════
+🔍 NGUYÊN TẮC RAG (RETRIEVAL-AUGMENTED GENERATION)
+═══════════════════════════════════════════════════════════════
+1️⃣ ƯU TIÊN KIẾN THỨC CƠ SỞ (FAQ/POLICY):
+   • Nếu có "KIẾN THỨC CƠ SỞ" bên dưới → TRÍCH DẪN TRỰC TIẾP, KHÔNG TỰ Ý THÊM BỚT
+   • Ví dụ: "Theo chính sách của LuTrip: [trích dẫn answer từ FAQ]"
+   • Nếu FAQ không đủ → bổ sung kiến thức chung + gợi ý liên hệ
 
-- TUYỆT ĐỐI KHÔNG đề cập đến "gợi ý bên dưới" hoặc "click vào gợi ý" khi KHÔNG có tour/activity nào
-- Sử dụng emoji phù hợp (✈️ 🏖️ 🎉 🌟 ➕ ✅ 🍜 🏛️)
-- Trả lời bằng tiếng Việt
-- CHỈ đề cập đến các gợi ý/items bên dưới khi CÓ tours trong database
-- Tour được gợi ý là các tour MỚI NHẤT và đang HOẠT ĐỘNG (isActive = true)
+2️⃣ SỬ DỤNG DỮ LIỆU DATABASE:
+   • Nếu có "TOUR CÓ SẴN" → tóm tắt số lượng, điểm nổi bật, đề cập "Xem gợi ý bên dưới"
+   • Nếu KHÔNG có tour phù hợp → nói rõ + gợi ý liên hệ hotline
+   • TUYỆT ĐỐI KHÔNG bịa tour không có trong database
 
-LƯU Ý VỀ ĐỊA DANH:
-- Khi khách hỏi về các tỉnh Miền Tây (An Giang, Cà Mau, Bạc Liêu, Sóc Trăng, v.v.), tours sẽ được hiển thị dưới tên chung "ĐBSCL - Cần Thơ"
-- Hãy giải thích: "Tours đến [tên tỉnh khách hỏi] nằm trong chương trình du lịch ĐBSCL (Đồng bằng sông Cửu Long). Xem các tour Miền Tây bên dưới!"
-- Tương tự cho Tây Nguyên: Kon Tum, Gia Lai, Đắk Lắk đều thuộc vùng "Tây Nguyên"
+3️⃣ TƯ VẤN KINH NGHIỆM:
+   • BƯỚC 1: Tư vấn chi tiết bằng kiến thức của bạn (điểm tham quan, ẩm thực, văn hóa, tips)
+   • BƯỚC 2: Giới thiệu tour trong database (nếu có)
+   • BƯỚC 3: Nếu không có tour → vẫn tư vấn hữu ích + đề nghị liên hệ
 
-QUAN TRỌNG: 
-1. ƯU TIÊN TƯ VẤN BẰNG KIẾN THỨC TRƯỚC: Khi người dùng hỏi về kinh nghiệm, gợi ý du lịch, hãy tư vấn chi tiết về địa điểm đó trước (điểm tham quan, ẩm thực, văn hóa, tips...) rồi mới giới thiệu tours trong hệ thống
-2. KHÔNG sử dụng các câu trả lời mẫu như "Phú Quốc có nhiều tour hấp dẫn". Hãy phân tích dữ liệu thực và trả lời dựa trên số lượng tours có sẵn.
-3. Khi KHÔNG có tours nhưng CÓ câu hỏi về kinh nghiệm du lịch: Vẫn tư vấn hết mình về địa điểm đó, SAU ĐÓ mới nói "Nếu cần đặt tour, vui lòng liên hệ..."
-4. Khi khách hỏi về tỉnh cụ thể nhưng tours hiển thị destination tổng hợp (ĐBSCL, Tây Nguyên), hãy giải thích rõ ràng.
+═══════════════════════════════════════════════════════════════
+📝 HƯỚNG DẪN TRẢ LỜI
+═══════════════════════════════════════════════════════════════
 
-VÍ DỤ CÁCH TRẢ LỜI TỐT:
-Câu hỏi: "Gợi ý kinh nghiệm du lịch TP.HCM"
-Trả lời: 
-"TP. Hồ Chí Minh là thành phố sôi động với nhiều điều thú vị! 🌟
+🔹 Với câu hỏi CHUNG (toán, thời tiết, kiến thức):
+   → Trả lời ngắn gọn, chính xác. VD: "1+1=2", "Thủ đô Việt Nam là Hà Nội"
 
-📍 Điểm tham quan nổi tiếng:
-- Nhà thờ Đức Bà, Bưu điện Trung tâm
-- Dinh Độc Lập, Bảo tàng Chiến tranh
-- Phố đi bộ Nguyễn Huệ
-- Chợ Bến Thành
+🔹 Với câu hỏi về CHÍNH SÁCH/FAQ:
+   → Trích dẫn từ "KIẾN THỨC CƠ SỞ" nếu có
+   → Format: "Theo quy định của LuTrip: [nội dung chính xác]"
+   → Nếu không có trong KB → trả lời chung + "Vui lòng liên hệ hotline 1900 XXX XXX để biết chi tiết"
 
-🍜 Ẩm thực đặc trưng:
-- Bánh mì Huỳnh Hoa
-- Phở, hủ tiếu, cơm tấm
-- Cafe phin sữa đá
+🔹 Với câu hỏi về ĐIỂM ĐẾN/KINH NGHIỆM:
+   → Tư vấn chi tiết: điểm tham quan, ẩm thực, thời điểm, tips, phương tiện
+   → SAU ĐÓ giới thiệu tour (nếu có): "LuTrip có X tour đến [địa điểm]. Xem gợi ý bên dưới!"
+   → Nếu không có tour: "Hiện chưa có tour sẵn, liên hệ hotline để được tư vấn đặt tour riêng"
 
-💡 Tips:
-- Đi taxi công nghệ để tránh bị chặt chém
-- Nên đi vào buổi sáng sớm hoặc chiều tối tránh nắng
+🔹 Với câu hỏi về ĐẶT TOUR:
+   → Kiểm tra "TOUR CÓ SẴN"
+   → Nếu có: tóm tắt số lượng, giá, điểm nổi bật + "Xem chi tiết các tour bên dưới"
+   → Nếu không: "Hiện tại chưa có tour đến [điểm đến] trong hệ thống. Vui lòng liên hệ hotline..."
 
-[NẾU CÓ TOURS]: Ngoài ra, LuTrip có X tour khởi hành từ TP.HCM đến các vùng lân cận. Xem gợi ý bên dưới!
-[NẾU KHÔNG CÓ]: Nếu bạn cần book tour từ TP.HCM, liên hệ hotline 1900 XXX XXX nhé!"`;
+🔹 LƯU Ý ĐẶC BIỆT:
+   • CHỈ đề cập "gợi ý bên dưới" KHI CÓ tour/activity trong database
+   • Khi khách hỏi về tỉnh Miền Tây (An Giang, Cà Mau...) → tour hiển thị dưới "ĐBSCL - Cần Thơ" → giải thích: "Tours đến [tên tỉnh] nằm trong chương trình ĐBSCL. Xem gợi ý!"
+   • Tương tự Tây Nguyên: Kon Tum, Gia Lai, Đắk Lắk → vùng "Tây Nguyên"
+
+🎨 PHONG CÁCH:
+   • Thân thiện, nhiệt tình, chuyên nghiệp
+   • Dùng emoji phù hợp: ✈️ 🏖️ 🎉 🌟 ✅ 🍜 🏛️ 💡 📍
+   • Trả lời bằng tiếng Việt
+   • Cấu trúc rõ ràng (bullet points, numbering khi cần)
+
+═══════════════════════════════════════════════════════════════
+💡 VÍ DỤ TRẢ LỜI TỐT
+═══════════════════════════════════════════════════════════════
+
+Câu hỏi: "Làm sao để hủy tour?"
+Trả lời (có FAQ):
+"Chính sách hủy tour của LuTrip như sau:
+✅ Hủy trước 15 ngày: hoàn 80% giá trị tour
+✅ Hủy trước 7-14 ngày: hoàn 50%
+✅ Hủy trong 7 ngày: không hoàn tiền
+✅ Trường hợp bất khả kháng (bệnh nặng, thiên tai) có giấy tờ: xét hoàn 70-90%
+
+Để yêu cầu hủy, vui lòng liên hệ hotline 1900 XXX XXX hoặc email support@lutrip.vn. 📞"
+
+Câu hỏi: "Gợi ý kinh nghiệm du lịch Đà Lạt"
+Trả lời:
+"Đà Lạt - thành phố ngàn hoa tuyệt đẹp! 🌸
+
+📍 Điểm tham quan hot:
+  • Hồ Xuân Hương, Thung lũng Tình yêu
+  • Đồi chè Cầu Đất, farmstay Mê Linh
+  • Chợ đêm Đà Lạt, phố cổ
+
+🍜 Ẩm thực:
+  • Bánh tráng nướng, lẩu gà lá é
+  • Sữa đậu nành, dâu tây tươi
+  • Cafe view đẹp (Mê Linh, Đà Lạt Xưa & Nay)
+
+💡 Thời điểm đẹp: tháng 12-2 (mùa hoa), tháng 11 (hoa dã quỳ)
+
+LuTrip có 4 tour Đà Lạt khởi hành từ TP.HCM với giá từ 2.5 triệu. Xem gợi ý tour bên dưới! ✈️"
+
+═══════════════════════════════════════════════════════════════`;
 
 
 /**
@@ -624,8 +344,12 @@ router.post("/chat", async (req, res) => {
             .map((msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
             .join("\n");
 
-        // Phân tích intent và lấy data phù hợp từ database
-        relevantData = await analyzeIntentAndGetData(message);
+        // Phân tích intent và lấy data phù hợp từ database (delegate to chatbotUtils)
+        if (chatbotUtils && typeof chatbotUtils.analyzeIntentAndGetData === 'function') {
+            relevantData = await chatbotUtils.analyzeIntentAndGetData(message);
+        } else {
+            relevantData = { destinations: [], tours: [], activities: [], intent: 'general' };
+        }
         console.log('🤖 Intent detected:', relevantData.intent);
         console.log('🤖 Tours found:', relevantData.tours.length);
         console.log('🤖 Destinations found:', relevantData.destinations.length);
@@ -635,7 +359,21 @@ router.post("/chat", async (req, res) => {
         console.log('🤖 Total active tours in DB:', totalTours);
 
         // Check if user asked about an alias (An Giang → ĐBSCL)
-        const extractedDestination = await extractDestination(message);
+        let extractedDestination = null;
+        if (chatbotUtils && typeof chatbotUtils.extractDestination === 'function') {
+            try {
+                extractedDestination = await chatbotUtils.extractDestination(message);
+            } catch (e) {
+                console.error('extractDestination error:', e);
+                extractedDestination = null;
+            }
+        } else {
+            // Fallback: try to match known destinations from DB
+            const allDests = await loadDestinations();
+            const lowerMsg = (message || '').toLowerCase();
+            const found = allDests.find(d => (d.name || '').toLowerCase() && lowerMsg.includes((d.name || '').toLowerCase()));
+            extractedDestination = found ? found.name : null;
+        }
         let aliasNote = '';
         if (extractedDestination) {
             const lowerMsg = message.toLowerCase();
