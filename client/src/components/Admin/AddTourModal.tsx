@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { destinationService, Destination } from "@/services/destinationService";
 import { tourService, Tour } from "@/services/tourService";
 import { toast } from "sonner";
-import { Upload, X, Search } from "lucide-react";
+import { Upload, X, Search, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { env } from "@/config/env";
 
@@ -85,6 +85,7 @@ export function AddTourModal({
   const [currentTab, setCurrentTab] = useState("basic");
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [isLoadingTourData, setIsLoadingTourData] = useState(false);
+  const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false);
   const [formData, setFormData] = useState<TourFormData>({
     title: "",
     description: "",
@@ -383,6 +384,58 @@ export function AddTourModal({
       );
     } finally {
       setUploadProgress(null);
+    }
+  };
+
+  const handleGenerateItinerary = async () => {
+    // Validate required fields for AI generation
+    if (!formData.title.trim()) {
+      toast.error("Vui lòng nhập tên tour trước khi tạo lịch trình");
+      return;
+    }
+    if (!formData.duration) {
+      toast.error("Vui lòng chọn thời gian tour trước khi tạo lịch trình");
+      return;
+    }
+
+    try {
+      setIsGeneratingItinerary(true);
+      toast.info("Đang tạo lịch trình bằng AI...");
+
+      // Find destination and departure names
+      const destinationName = destinations.find(
+        (d) => d._id === formData.destinationId
+      )?.name || "";
+      const departureName = destinations.find(
+        (d) => d._id === formData.departureLocationId
+      )?.name || "";
+
+      // Call AI generation API
+      const result = await tourService.generateItinerary({
+        title: formData.title,
+        description: formData.description,
+        departure: departureName,
+        destination: destinationName,
+        duration: formData.duration,
+        adultPrice: formData.pricingByAge.adult
+      });
+
+      if (result.success && result.data) {
+        // Update itinerary with AI-generated content
+        setFormData((prev) => ({
+          ...prev,
+          itinerary: result.data || {}
+        }));
+
+        toast.success("Tạo lịch trình thành công! Bạn có thể chỉnh sửa nội dung.");
+      } else {
+        toast.error(result.message || "Không thể tạo lịch trình tự động");
+      }
+    } catch (error) {
+      console.error("Generate itinerary error:", error);
+      toast.error("Lỗi khi tạo lịch trình. Vui lòng thử lại!");
+    } finally {
+      setIsGeneratingItinerary(false);
     }
   };
 
@@ -974,9 +1027,21 @@ export function AddTourModal({
           <TabsContent value="itinerary" className="space-y-4 mt-4">
             {getDurationDays() > 0 ? (
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Nhập lịch trình chi tiết cho {getDurationDays()} ngày
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Nhập lịch trình chi tiết cho {getDurationDays()} ngày
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGenerateItinerary}
+                    disabled={isGeneratingItinerary}
+                    className="gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {isGeneratingItinerary ? "Đang tạo..." : "Tạo bằng AI"}
+                  </Button>
+                </div>
 
                 {Object.keys(formData.itinerary)
                   .sort()
